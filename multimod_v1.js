@@ -35,27 +35,30 @@ const MODS = {
         key: 'sat-view', // Used for global state and document elements.
         labelEnable: 'Enable Satellite View', // Used for menu buttons.
         labelDisable: 'Disable Satellite View', // Used for menu buttons.
+        tooltip: 'Change guess map to satellite view. This will also remove all labels from the map.',
         options: {}, // Used when mod requires or allows configurable values.
     },
 
-    // Guess map rotates while you're trying to click
+    // Guess map rotates while you're trying to click.
     rotateMap: {
         show: true,
         key: 'rotate-map',
         labelEnable: 'Enable Map Rotation',
         labelDisable: 'Disable Map Rotation',
+        tooltip: 'Makes the guess map rotate while you are trying to click. Rotational speed can be configured.',
         options: {
             'Run every (s)': 0.1,
             'Degrees': 3,
         },
     },
 
-    // You can only pan when the map is fully zoomed out. Once you zoom, you can only zoom in.
+    // You will only be able to zoom in (no panning either).
     zoomInOnly: {
         show: true,
         key: 'zoom-in-only',
         labelEnable: 'Enable Zoom In Only',
         labelDisable: 'Disable Zoom In Only',
+        tooltip: 'Allows you to only zoom in. This prevents scanning unless you are in the right area at the right zoom level.',
         options: {},
     },
 };
@@ -100,7 +103,7 @@ const debugMap = (map, evt) => {
 // Global state. Load from local storage if it exists. Values used in this script will be from this global variable after loading.
 // ===============================================================================================================================
 
-let GOOGLE_STREETVIEW, GOOGLE_MAP, GOOGLE_SVC; // Set in the google API portion of the script.
+let GOOGLE_STREETVIEW, GOOGLE_MAP, GOOGLE_SVC; // Assigned in the google API portion of the script.
 
 const GG_STATE = {
     [MODS.satView.key]: {
@@ -337,7 +340,8 @@ const updateZoomInOnly = () => {
         });
     } else {
         if (ZOOM_LISTENER) {
-            GOOGLE_MAP.removeListener(ZOOM_LISTENER);
+            const google = window.google || unsafeWindow.google;
+            google.maps.event.removeListener(GOOGLE_MAP, ZOOM_LISTENER);
             ZOOM_LISTENER = undefined;
         }
         GOOGLE_MAP.minZoom = 1;
@@ -349,9 +353,60 @@ const updateZoomInOnly = () => {
 // -------------------------------------------------------------------------------------------------------------------------------
 
 
+// Add bindings and start the script.
+// ===============================================================================================================================
+
+// Must add each mod to this list to bind the buttons and hotkeys.
+const _BINDINGS = [
+    [MODS.satView, updateSatView],
+    [MODS.rotateMap, updateRotateMap],
+    [MODS.zoomInOnly, updateZoomInOnly],
+];
+
+const bindButtons = () => {
+    for (const [mod, callback] of _BINDINGS) {
+        if (!mod.show) {
+            continue;
+        }
+        const button = getButton(mod);
+        if (!button) {
+            console.error(`Mod ${mod.key} not found.`);
+            continue;
+        }
+        button.addEventListener('click', callback);
+    }
+};
+
+const addButtons = () => { // Add settings buttons to the active round.
+	const container = document.querySelector(`div[class^="game_canvas__"]`);
+	if (!container || document.getElementById('gg-settings-buttons')) {
+        return;
+    }
+
+    const buttonClass = 'gg-settings-option';
+	const element = document.createElement('div');
+	element.id = 'gg-settings-buttons';
+    element.className = 'gg-settings extra-pad';
+
+    let innerHTML = `<div class="gg-title">TPEBOP'S MODS</div>`;
+    for (const mod of Object.values(MODS)) {
+        if (!mod.show) {
+            continue;
+        }
+        innerHTML = innerHTML + `\n<div class="${buttonClass}" id="${getButtonID(mod)}">${getButtonText(mod)}</div>`;
+    }
+	element.innerHTML = innerHTML;
+
+	container.appendChild(element);
+	bindButtons();
+};
+
+// -------------------------------------------------------------------------------------------------------------------------------
 
 
-// Intercept google maps API files so we can add custom map behavior.
+
+
+// Intercept google maps API files so we can add custom map behavior. Configure GeoGuessr framework.
 // ===============================================================================================================================
 
 // Script injection, extracted from unityscript extracted from extenssr:
@@ -393,7 +448,7 @@ const injecter = (overrider) => {
 
 document.addEventListener('DOMContentLoaded', (event) => {
 	injecter(() => {
-		const google = window['google'] || unsafeWindow['google'];
+		const google = window.google || unsafeWindow.google;
 		if (!google) {
             return;
         }
@@ -419,7 +474,12 @@ document.addEventListener('DOMContentLoaded', (event) => {
 					minZoom: 0,
 				});
 				google.maps.event.addListenerOnce(this, 'idle', () => { // Actions on initial guess map load.
-					updateSatView();
+                    // Enable mods that were already enabled via localStorage.
+                    for (const [mod, callback] of _BINDINGS) {
+                        if (mod.show && isActive(mod)) {
+                            callback();
+                        }
+                    }
 				});
 
                 google.maps.event.addListener(this, 'dragstart', () => {
@@ -441,59 +501,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
 	});
 });
 
-// -------------------------------------------------------------------------------------------------------------------------------
-
-
-
-
-
-// Add bindings and start the script.
-// ===============================================================================================================================
-
-// Must add each mod to this list to bind the buttons and hotkeys.
-const _BINDINGS = [
-    [MODS.satView, updateSatView],
-    [MODS.rotateMap, updateRotateMap],
-    [MODS.zoomInOnly, updateZoomInOnly],
-];
-
-const bindButtons = () => {
-    for (const [mod, callback] of _BINDINGS) {
-        if (!mod.show) { // Allow users to disable stuff.
-            continue;
-        }
-        const button = getButton(mod);
-        if (!button) {
-            console.error(`Mod ${mod.key} not found.`);
-            continue;
-        }
-        button.addEventListener('click', callback);
-    }
-};
-
-const addButtons = () => { // Add settings buttons to the active round.
-	const container = document.querySelector(`div[class^="game_canvas__"]`);
-	if (!container || document.getElementById('gg-settings-buttons')) {
-        return;
-    }
-
-    const buttonClass = 'gg-settings-option';
-	const element = document.createElement('div');
-	element.id = 'gg-settings-buttons';
-    element.className = 'gg-settings extra-pad';
-
-    let innerHTML = `<div class="gg-title">TPEBOP'S MODS</div>`;
-    for (const mod of Object.values(MODS)) {
-        if (!mod.show) {
-            continue;
-        }
-        innerHTML = innerHTML + `\n<div class="${buttonClass}" id="${getButtonID(mod)}">${getButtonText(mod)}</div>`;
-    }
-	element.innerHTML = innerHTML;
-
-	container.appendChild(element);
-	bindButtons();
-};
 
 /* eslint-disable no-undef */
 GeoGuessrEventFramework.init().then(GEF => {
