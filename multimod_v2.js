@@ -291,25 +291,58 @@ const updateRotateMap = () => {
 
 
 
-// MOD: Zoom-in only.
+// MOD: Zoom-in only. You can zoom out and
 // ===============================================================================================================================
 
-let HAS_ZOOMED = false;
-let MIN_ZOOM = 1;
 let ZOOM_LISTENER;
+let HAS_ZOOMED_IN = false;
+let PREV_ZOOM;
+
+const boundToCurrent = () => {
+    const bounds = GOOGLE_MAP.getBounds();
+    const latLngBounds = {
+        north: bounds.Yh.hi,
+        south: bounds.Yh.lo,
+        west: bounds.Hh.lo,
+        east: bounds.Hh.hi,
+    };
+    const restriction = {
+        latLngBounds,
+        strictBounds: false,
+    };
+    GOOGLE_MAP.setRestriction(restriction);
+    GOOGLE_MAP.minZoom = GOOGLE_MAP.getZoom();
+};
 
 const updateZoomInOnly = () => {
     const mod = MODS.zoomInOnly;
     const active = toggleMod(mod);
+    if (PREV_ZOOM === undefined) {
+        PREV_ZOOM = GOOGLE_MAP.getZoom();
+    }
+
     if (active) {
-        debugger;
-        ZOOM_LISTENER = GOOGLE_MAP.addListener('idle', (evt) => {
-            debugger;
+        ZOOM_LISTENER = GOOGLE_MAP.addListener('zoom_changed', () => {
+            const newZoom = GOOGLE_MAP.getZoom();
+            if (newZoom > PREV_ZOOM) {
+                HAS_ZOOMED_IN = true;
+            }
+            if (HAS_ZOOMED_IN) {
+                const google = window.google || unsafeWindow.google;
+                google.maps.event.addListenerOnce(GOOGLE_MAP, 'idle', () => { // Zoom animation occurs after zoom is set.
+                    boundToCurrent();
+                });
+            }
+            PREV_ZOOM = newZoom;
         });
-    } else if (ZOOM_LISTENER) {
-        debugger
-        GOOGLE_MAP.removeEventListener(ZOOM_LISTENER);
-        ZOOM_LISTENER = undefined;
+    } else {
+        if (ZOOM_LISTENER) {
+            GOOGLE_MAP.removeListener(ZOOM_LISTENER);
+            ZOOM_LISTENER = undefined;
+        }
+        GOOGLE_MAP.minZoom = 1;
+        HAS_ZOOMED_IN = false;
+        PREV_ZOOM = undefined;
     }
 };
 
@@ -326,8 +359,7 @@ const updateZoomInOnly = () => {
 const overrideOnLoad = (googleScript, observer, overrider) => {
 	const oldOnload = googleScript.onload;
 	googleScript.onload = (event) => {
-        /* eslint-disable dot-notation */
-		const google = window['google'] || unsafeWindow['google'];
+		const google = window.google || unsafeWindow.google;
 		if (google) {
 			observer.disconnect();
 			overrider(google);
