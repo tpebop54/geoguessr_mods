@@ -196,7 +196,7 @@ const getOption = (mod, key, defaultValue) => {
 
 const toggleMod = (mod, options) => {
     if (!GOOGLE_MAP) {
-        const err = `Map not loaded. Cannot toggle ${mod.key}`;
+        const err = `Map not loaded. Cannot toggle ${mod.key}. Try refreshing the page and make sure to let it fully load.`;
         window.alert(err);
         throw new Error(err);
     }
@@ -300,8 +300,9 @@ const updateRotateMap = () => {
 let ZOOM_LISTENER;
 let HAS_ZOOMED_IN = false;
 let PREV_ZOOM;
+let INITIAL_BOUNDS;
 
-const boundToCurrent = () => {
+const getLatLngBounds = () => {
     const bounds = GOOGLE_MAP.getBounds();
     const latLngBounds = {
         north: bounds.Yh.hi,
@@ -309,12 +310,16 @@ const boundToCurrent = () => {
         west: bounds.Hh.lo,
         east: bounds.Hh.hi,
     };
+    return latLngBounds;
+}
+
+const setRestriction = (latLngBounds, zoom) => {
     const restriction = {
         latLngBounds,
         strictBounds: false,
     };
     GOOGLE_MAP.setRestriction(restriction);
-    GOOGLE_MAP.minZoom = GOOGLE_MAP.getZoom();
+    GOOGLE_MAP.minZoom = zoom;
 };
 
 const updateZoomInOnly = () => {
@@ -322,6 +327,9 @@ const updateZoomInOnly = () => {
     const active = toggleMod(mod);
     if (PREV_ZOOM === undefined) {
         PREV_ZOOM = GOOGLE_MAP.getZoom();
+    }
+    if (!INITIAL_BOUNDS) {
+        INITIAL_BOUNDS = getLatLngBounds();
     }
 
     if (active) {
@@ -333,7 +341,8 @@ const updateZoomInOnly = () => {
             if (HAS_ZOOMED_IN) {
                 const google = window.google || unsafeWindow.google;
                 google.maps.event.addListenerOnce(GOOGLE_MAP, 'idle', () => { // Zoom animation occurs after zoom is set.
-                    boundToCurrent();
+                    const latLngBounds = getLatLngBounds();
+                    setRestriction(latLngBounds, GOOGLE_MAP.getZoom());
                 });
             }
             PREV_ZOOM = newZoom;
@@ -341,12 +350,12 @@ const updateZoomInOnly = () => {
     } else {
         if (ZOOM_LISTENER) {
             const google = window.google || unsafeWindow.google;
-            google.maps.event.removeListener(GOOGLE_MAP, ZOOM_LISTENER);
+            google.maps.event.removeListener(ZOOM_LISTENER);
             ZOOM_LISTENER = undefined;
         }
-        GOOGLE_MAP.minZoom = 1;
         HAS_ZOOMED_IN = false;
         PREV_ZOOM = undefined;
+        setRestriction(INITIAL_BOUNDS, 1); // The maps API seems to only allow zooming back out the level when mod was disabled.
     }
 };
 
@@ -480,6 +489,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
                             callback();
                         }
                     }
+                    console.log('GeoGuessr mods initialized.');
 				});
 
                 google.maps.event.addListener(this, 'dragstart', () => {
@@ -574,5 +584,3 @@ const buttonMenuStyle = `
 GM_addStyle(buttonMenuStyle);
 
 // -------------------------------------------------------------------------------------------------------------------------------
-
-console.log('GeoGuessr mods initialized.');
