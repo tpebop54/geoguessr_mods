@@ -21,6 +21,9 @@ Heavy credit to https://miraclewhips.dev/ for geoguessr-event-framework, showing
 */
 
 
+// TODO: figure out how to keep persistence between rounds. It persists on page load but not on a new round.
+
+
 
 // Mods available in this script.
 // ===============================================================================================================================
@@ -194,14 +197,14 @@ const getOption = (mod, key, defaultValue) => {
     return value;
 };
 
-const toggleMod = (mod, options) => {
+const toggleMod = (mod, options, forceState = null) => {
     if (!GOOGLE_MAP) {
         const err = `Map not loaded. Cannot toggle ${mod.key}. Try refreshing the page and make sure to let it fully load.`;
         window.alert(err);
         throw new Error(err);
     }
     const previousState = isActive(mod);
-    const newState = previousState == null ? true : !previousState;
+    const newState = forceState != null ? forceState : !previousState;
 
     GG_STATE[mod.key].active = newState;
     getButton(mod).textContent = getButtonText(mod);
@@ -243,9 +246,9 @@ const getGuessMap = () => {
 // MOD: Satellite view.
 // ===============================================================================================================================
 
-const updateSatView = () => {
+const updateSatView = (forceState = null) => {
     const mod = MODS.satView;
-    const active = toggleMod(mod);
+    const active = toggleMod(mod, {}, forceState);
     GOOGLE_MAP.setMapTypeId(active ? 'satellite' : 'roadmap');
 };
 
@@ -266,9 +269,9 @@ const doRotation = (nDegrees) => {
 
 let ROTATION_INTERVAL;
 
-const updateRotateMap = () => {
+const updateRotateMap = (forceState = null) => {
     const mod = MODS.rotateMap;
-    const active = toggleMod(mod);
+    const active = toggleMod(mod, {}, forceState);
 
     if (active) {
         let nMilliseconds = Number(getOption(mod, 'Run every (s)')) * 1000;
@@ -294,7 +297,7 @@ const updateRotateMap = () => {
 
 
 
-// MOD: Zoom-in only. You can zoom out and
+// MOD: Zoom-in only.
 // ===============================================================================================================================
 
 let ZOOM_LISTENER;
@@ -322,9 +325,9 @@ const setRestriction = (latLngBounds, zoom) => {
     GOOGLE_MAP.minZoom = zoom;
 };
 
-const updateZoomInOnly = () => {
+const updateZoomInOnly = (forceState = null) => {
     const mod = MODS.zoomInOnly;
-    const active = toggleMod(mod);
+    const active = toggleMod(mod, {}, forceState);
     if (PREV_ZOOM === undefined) {
         PREV_ZOOM = GOOGLE_MAP.getZoom();
     }
@@ -382,7 +385,7 @@ const bindButtons = () => {
             console.error(`Mod ${mod.key} not found.`);
             continue;
         }
-        button.addEventListener('click', callback);
+        button.addEventListener('click', () => callback()); // Don't pass the click event since toggleMod doesn't need it.
     }
 };
 
@@ -455,6 +458,25 @@ const injecter = (overrider) => {
 	}).observe(document.documentElement, { childList: true, subtree: true });
 }
 
+const initMods = () => { // Enable mods that were already enabled via localStorage.
+    for (const [mod, callback] of _BINDINGS) {
+        if (mod.show && isActive(mod)) {
+            callback(true);
+        }
+    }
+};
+
+const initModsCallback = () => {
+    if (GOOGLE_MAP) {
+        const google = window.google || unsafeWindow.google;
+        google.maps.event.addListenerOnce(GOOGLE_MAP, 'idle', () => { // Actions on initial guess map load.
+            initMods();
+            console.log('GeoGuessr mods initialized.');
+        });
+    };
+};
+
+
 document.addEventListener('DOMContentLoaded', (event) => {
 	injecter(() => {
 		const google = window.google || unsafeWindow.google;
@@ -483,12 +505,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 					minZoom: 0,
 				});
 				google.maps.event.addListenerOnce(this, 'idle', () => { // Actions on initial guess map load.
-                    // Enable mods that were already enabled via localStorage.
-                    for (const [mod, callback] of _BINDINGS) {
-                        if (mod.show && isActive(mod)) {
-                            callback();
-                        }
-                    }
+                    initMods();
                     console.log('GeoGuessr mods initialized.');
 				});
 
@@ -514,6 +531,12 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
 /* eslint-disable no-undef */
 GeoGuessrEventFramework.init().then(GEF => {
+
+    GEF.events.addEventListener('round_start', (event) => {
+        console.log('Round details:', event.detail);
+        initModsCallback();
+    });
+
 	document.addEventListener('keypress', (e) => {
 		if (document.activeElement.tagName === 'INPUT') {
             return;
@@ -525,13 +548,15 @@ GeoGuessrEventFramework.init().then(GEF => {
             GOOGLE_MAP.setZoom(GOOGLE_MAP.getZoom() + 0.6);
         }
 	});
-});
 
-const observer = new MutationObserver(() => {
-	addButtons();
 });
 
 loadState();
+
+const observer = new MutationObserver(() => {
+	addButtons(); // TODO: this gets called way too much.
+});
+
 observer.observe(document.querySelector('#__next'), { subtree: true, childList: true });
 
 // -------------------------------------------------------------------------------------------------------------------------------
