@@ -13,16 +13,16 @@
 // ==/UserScript==
 
 
+// TODO:
+// - Figure out how to properly reset map bounds. Might have to reload the whole map or (hopefully not) page.
+// - Configuration menus for rotation and zoom
+
 
 /**
 CREDIT WHERE CREDIT IS DUE
 Heavy credit to https://miraclewhips.dev/ for geoguessr-event-framework, showing me how to overhaul google maps API behavior,
     and for adding the menu with mod toggles.
 */
-
-
-// TODO: figure out how to keep persistence between rounds. It persists on page load but not on a new round.
-
 
 
 // Mods available in this script.
