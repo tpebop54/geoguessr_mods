@@ -127,7 +127,7 @@ const THE_WINDOW = unsafeWindow || window;
             this.state.game_in_progress = true;
             this.state.current_game_id = data.token;
             this.state.is_challenge_link = data.type == 'challenge';
-            this.state.rounds = this.state.rounds; // Modified to include current round
+            this.state.rounds = data.rounds; // Modified to include current round
             if (data) {
                 this.state.map = {
                     id: data.map,
