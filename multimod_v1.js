@@ -391,7 +391,10 @@ const updateZoomInOnly = (forceState = null) => {
 // -------------------------------------------------------------------------------------------------------------------------------
 
 
-// MOD: Zoom-in only.
+
+
+
+// MOD: Hotter/Colder.
 // ===============================================================================================================================
 
 const getDistance = (p1, p2) => {
@@ -416,10 +419,12 @@ const getScore = () => {
     return score;
 };
 
-let SCORE_POPUP;
 
-document.addEventListener('map_click', (evt) => {
+const scoreListener = (evt) => {
     const score = getScore();
+    if (isNaN(score)) {
+        return;
+    }
 
     let fadeTarget = document.getElementById('score_div');
     if (!fadeTarget) {
@@ -439,14 +444,17 @@ document.addEventListener('map_click', (evt) => {
             clearInterval(fadeEffect);
         }
     }, 40);
-});
-
+};
 
 const updateHotterColder = (forceState = null) => {
     const mod = MODS.hotterColder;
     const active = toggleMod(mod, {}, forceState);
-    debugger
-    console.log('hotter colder');
+
+    if (active) {
+        document.addEventListener('map_click', scoreListener);
+    } else {
+        document.removeEventListener('map_click', scoreListener, false);
+    }
 };
 
 
