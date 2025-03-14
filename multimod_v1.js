@@ -4,7 +4,7 @@
 // @version      1.0
 // @author       tpebop
 // @match        *://*.geoguessr.com/*
-// @require      https://miraclewhips.dev/geoguessr-event-framework/geoguessr-event-framework.min.js?v=12
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/gg_evt_temp0.js
 // @icon         https://www.google.com/s2/favicons?domain=geoguessr.com
 // @grant        unsafeWindow
 // @grant        GM_addStyle
@@ -14,8 +14,16 @@
 
 
 // TODO:
-// - Figure out how to properly reset map bounds. Might have to reload the whole map or (hopefully not) page.
+// - Break this off into a base util thing
+// - Figure out how to properly reset map bounds. Might have to reload the whole map or (hopefully not) page
 // - Configuration menus for rotation and zoom
+// - Tooltips
+// - Disclaimer that using certain tools is cheating
+// - Clean up GG_STATE initialization
+// - Add event listeners to configs?
+// - Scoring algorithm: https://www.plonkit.net/beginners-guide#game-mechanics
+//      Likely have to pull map info from https://www.geoguessr.com/api/maps/62a44b22040f04bd36e8a914 -> bounds and maxErrorDistance
+// - Clean up const google = ...
 
 
 /**
@@ -64,6 +72,16 @@ const MODS = {
         tooltip: 'Allows you to only zoom in. This prevents scanning unless you are in the right area at the right zoom level.',
         options: {},
     },
+
+    // Show distance, would-be score, and/or hotter/colder as you click around.
+    hotterColder: {
+        show: true,
+        key: 'hotter-colder',
+        labelEnable: 'Enable Hotter/Colder',
+        labelDisable: 'Disable Hotter/Colder',
+        tooltip: 'When you make a guess, you will see the distance from the target, and/or it will tell you hotter/colder.',
+        options: {},
+    },
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -108,7 +126,7 @@ const debugMap = (map, evt) => {
 
 let GOOGLE_STREETVIEW, GOOGLE_MAP, GOOGLE_SVC; // Assigned in the google API portion of the script.
 
-const GG_STATE = {
+const GG_STATE = { // TODO: clean this up.
     [MODS.satView.key]: {
         active: false,
         options: {},
@@ -123,6 +141,10 @@ const GG_STATE = {
         active: false,
         options: {},
     },
+    [MODS.hotterColder.key]: {
+        active: false,
+        options: {},
+    },
 };
 
 const GG_DEFAULT = {} // Used for default options and restoring settings.
@@ -130,11 +152,11 @@ for (const mod of Object.values(MODS)) {
     GG_DEFAULT[mod.key] = JSON.parse(JSON.stringify(mod));
 }
 
-const STATE_VAR = 'gg_state'; // Key in window.localStorage.
+const STATE_KEY = 'gg_state'; // Key in window.localStorage.
 
 const loadState = () => { // Load state from local storage if it exists, else use default.
     try {
-        const stateStr = window.localStorage.getItem(STATE_VAR);
+        const stateStr = window.localStorage.getItem(STATE_KEY);
         if (!stateStr) {
             return GG_STATE;
         }
@@ -147,8 +169,12 @@ const loadState = () => { // Load state from local storage if it exists, else us
     }
 };
 
+let GG_ROUND; // Current round information. Set on round start, deleted on round end.
+let GG_MAP; // Current map info,
+let GG_CLICK; // [lat, lng] of latest map click.
+
 const saveState = () => { // State must be updated by calling function, e.g. GG_STATE.something = 1
-	window.localStorage.setItem(STATE_VAR, JSON.stringify(GG_STATE));
+	window.localStorage.setItem(STATE_KEY, JSON.stringify(GG_STATE));
 };
 
 let IS_DRAGGING = false;
@@ -237,6 +263,30 @@ const getGuessMap = () => {
     return div;
 };
 
+const getDistance = (p1, p2) => {
+    const google = window.google || unsafeWindow.google;
+    const ll1 = new google.maps.LatLng(p1.lat, p1.lng);
+    const ll2 = new google.maps.LatLng(p2.lat, p2.lng);
+    const dist = google.maps.geometry.spherical.computeDistanceBetween(ll1, ll2);
+    return dist;
+};
+
+const getScore = () => {
+    if (!GG_CLICK || !GG_ROUND) {
+        return;
+    }
+    const actual = { lat: GG_ROUND.lat, lng: GG_ROUND.lng };
+    const guess = GG_CLICK;
+    const dist = getDistance(actual, guess);
+
+    // Ref: https://www.plonkit.net/beginners-guide#game-mechanics --> score
+    debugger;
+};
+
+
+
+
+
 // -------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -248,7 +298,7 @@ const getGuessMap = () => {
 
 const updateSatView = (forceState = null) => {
     const mod = MODS.satView;
-    const active = toggleMod(mod, {}, forceState);
+    const active = toggleMod(mod, {}, forceState);8
     GOOGLE_MAP.setMapTypeId(active ? 'satellite' : 'roadmap');
 };
 
@@ -365,6 +415,21 @@ const updateZoomInOnly = (forceState = null) => {
 // -------------------------------------------------------------------------------------------------------------------------------
 
 
+// MOD: Zoom-in only.
+// ===============================================================================================================================
+
+
+const updateHotterColder = (forceState = null) => {
+    const mod = MODS.hotterColder;
+    const active = toggleMod(mod, {}, forceState);
+    debugger
+    console.log('hotter colder');
+};
+
+
+// -------------------------------------------------------------------------------------------------------------------------------
+
+
 // Add bindings and start the script.
 // ===============================================================================================================================
 
@@ -373,6 +438,7 @@ const _BINDINGS = [
     [MODS.satView, updateSatView],
     [MODS.rotateMap, updateRotateMap],
     [MODS.zoomInOnly, updateZoomInOnly],
+    [MODS.hotterColder, updateHotterColder],
 ];
 
 const bindButtons = () => {
@@ -476,6 +542,14 @@ const initModsCallback = () => {
     };
 };
 
+const onMapClick = (evt) => {
+    const lat = evt.latLng.lat();
+    const lng = evt.latLng.lng();
+    GG_CLICK = { lat, lng };
+    const event = new CustomEvent('map_click', { detail: GG_CLICK });
+    /* eslint-disable no-undef */
+    document.dispatchEvent(event, { bubbles: true });
+};
 
 document.addEventListener('DOMContentLoaded', (event) => {
 	injecter(() => {
@@ -515,6 +589,9 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 google.maps.event.addListener(this, 'dragend', () => {
 					IS_DRAGGING = false;
 				});
+                google.maps.event.addListener(this, 'click', (evt) => {
+					onMapClick(evt);
+				});
 
                 if (DEBUG) {
                     this.addListener('contextmenu', (evt) => {
@@ -532,9 +609,23 @@ document.addEventListener('DOMContentLoaded', (event) => {
 /* eslint-disable no-undef */
 GeoGuessrEventFramework.init().then(GEF => {
 
-    GEF.events.addEventListener('round_start', (event) => {
-        console.log('Round details:', event.detail);
+    GEF.events.addEventListener('round_start', (evt) => {
+        window.localStorage.setItem(STATE_KEY, JSON.stringify(GG_STATE));
+        try {
+            const round = evt.detail.rounds[evt.detail.rounds.length - 1];
+            GG_ROUND = round;
+            const mapID = evt.detail.map.id;
+            /* eslint-disable no-return-assign */
+            fetch(`https://www.geoguessr.com/api/maps/${mapID}`).then(data => data.json()).then(data => GG_MAP = data);
+        } catch (err) {
+            console.err(err);
+        }
         initModsCallback();
+    });
+
+    GEF.events.addEventListener('round_end', (evt) => {
+        GG_ROUND = undefined;
+        GG_CLICK = undefined;
     });
 
 	document.addEventListener('keypress', (e) => {
@@ -543,12 +634,17 @@ GeoGuessrEventFramework.init().then(GEF => {
         }
         if (e.key === ',' && GOOGLE_MAP && !isActive(MODS.zoomInOnly)) {
             GOOGLE_MAP.setZoom(GOOGLE_MAP.getZoom() - 0.6);
+
         }
         if (e.key === '.' && GOOGLE_MAP) {
             GOOGLE_MAP.setZoom(GOOGLE_MAP.getZoom() + 0.6);
         }
 	});
 
+});
+
+document.addEventListener('map_click', (evt) => {
+    debugger;
 });
 
 loadState();
