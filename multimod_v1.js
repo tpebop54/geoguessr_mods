@@ -263,30 +263,6 @@ const getGuessMap = () => {
     return div;
 };
 
-const getDistance = (p1, p2) => {
-    const google = window.google || unsafeWindow.google;
-    const ll1 = new google.maps.LatLng(p1.lat, p1.lng);
-    const ll2 = new google.maps.LatLng(p2.lat, p2.lng);
-    const dist = google.maps.geometry.spherical.computeDistanceBetween(ll1, ll2);
-    return dist;
-};
-
-const getScore = () => {
-    if (!GG_CLICK || !GG_ROUND) {
-        return;
-    }
-    const actual = { lat: GG_ROUND.lat, lng: GG_ROUND.lng };
-    const guess = GG_CLICK;
-    const dist = getDistance(actual, guess);
-
-    // Ref: https://www.plonkit.net/beginners-guide#game-mechanics --> score
-    debugger;
-};
-
-
-
-
-
 // -------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -417,6 +393,33 @@ const updateZoomInOnly = (forceState = null) => {
 
 // MOD: Zoom-in only.
 // ===============================================================================================================================
+
+const getDistance = (p1, p2) => {
+    const google = window.google || unsafeWindow.google;
+    const ll1 = new google.maps.LatLng(p1.lat, p1.lng);
+    const ll2 = new google.maps.LatLng(p2.lat, p2.lng);
+    const dist = google.maps.geometry.spherical.computeDistanceBetween(ll1, ll2);
+    return dist;
+};
+
+const getScore = () => {
+    if (!GG_CLICK || !GG_ROUND) {
+        return;
+    }
+    const actual = { lat: GG_ROUND.lat, lng: GG_ROUND.lng };
+    const guess = GG_CLICK;
+    const dist = getDistance(actual, guess);
+
+    // Ref: https://www.plonkit.net/beginners-guide#game-mechanics --> score
+    const maxErrorDist = GG_MAP.maxErrorDistance;
+    const score = Math.round(5000 * Math.pow(Math.E, -10 * dist / maxErrorDist));
+    return score;
+};
+
+document.addEventListener('map_click', (evt) => {
+    const score = getScore();
+    console.log(score);
+});
 
 
 const updateHotterColder = (forceState = null) => {
@@ -641,10 +644,6 @@ GeoGuessrEventFramework.init().then(GEF => {
         }
 	});
 
-});
-
-document.addEventListener('map_click', (evt) => {
-    debugger;
 });
 
 loadState();
