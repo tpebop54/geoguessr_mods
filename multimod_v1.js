@@ -416,9 +416,29 @@ const getScore = () => {
     return score;
 };
 
+let SCORE_POPUP;
+
 document.addEventListener('map_click', (evt) => {
     const score = getScore();
-    console.log(score);
+
+    let fadeTarget = document.getElementById('score_div');
+    if (!fadeTarget) {
+        fadeTarget = document.createElement('div');
+        fadeTarget.id = 'score_div';
+        document.body.appendChild(fadeTarget);
+    }
+
+    fadeTarget.innerHTML = score;
+    fadeTarget.style.opacity = 1
+
+    let fadeEffect;
+    fadeEffect = setInterval(() => {
+        if (fadeTarget.style.opacity > 0) {
+            fadeTarget.style.opacity -= 0.05;
+        } else {
+            clearInterval(fadeEffect);
+        }
+    }, 40);
 });
 
 
@@ -698,6 +718,16 @@ const buttonMenuStyle = `
 
     .gg-settings-option:hover {
         opacity: 1;
+    }
+
+    #score_div {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        font-size: 60px;
+        color: white;
+        text-shadow: 3px 3px 0 #000, 3px 0px 3px #000, 1px 1px 0 #000, 3px 1px 2px #000;
+        transform: translate(-50%, -50%);
     }
 `;
 
