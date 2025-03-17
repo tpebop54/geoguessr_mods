@@ -16,14 +16,11 @@
 // TODO:
 // - Break this off into a base util thing
 // - Figure out how to properly reset map bounds. Might have to reload the whole map or (hopefully not) page
-// - Configuration menus for rotation and zoom
-// - Tooltips
-// - Disclaimer that using certain tools is cheating
+// - Options menu
+// - Cheating disclaimer
 // - Clean up GG_STATE initialization
 // - Add event listeners to configs?
-// - Scoring algorithm: https://www.plonkit.net/beginners-guide#game-mechanics
-//      Likely have to pull map info from https://www.geoguessr.com/api/maps/62a44b22040f04bd36e8a914 -> bounds and maxErrorDistance
-// - Clean up const google = ...
+// - Reset options button
 
 
 /**
@@ -44,8 +41,7 @@ const MODS = {
     satView: {
         show: true, // false to hide this mod from the panel. Mostly used for dev, but you can change it to disable stuff.
         key: 'sat-view', // Used for global state and document elements.
-        labelEnable: 'Enable Satellite View', // Used for menu buttons.
-        labelDisable: 'Disable Satellite View', // Used for menu buttons.
+        name: 'Satellite View', // Used for menus.
         tooltip: 'Change guess map to satellite view. This will also remove all labels from the map.',
         options: {}, // Used when mod requires or allows configurable values.
     },
@@ -54,8 +50,7 @@ const MODS = {
     rotateMap: {
         show: true,
         key: 'rotate-map',
-        labelEnable: 'Enable Map Rotation',
-        labelDisable: 'Disable Map Rotation',
+        name: 'Map Rotation',
         tooltip: 'Makes the guess map rotate while you are trying to click. Rotational speed can be configured.',
         options: {
             'Run every (s)': 0.1,
@@ -67,8 +62,7 @@ const MODS = {
     zoomInOnly: {
         show: true,
         key: 'zoom-in-only',
-        labelEnable: 'Enable Zoom In Only',
-        labelDisable: 'Disable Zoom In Only',
+        name: 'Zoom In Only',
         tooltip: 'Allows you to only zoom in. This prevents scanning unless you are in the right area at the right zoom level.',
         options: {},
     },
@@ -77,8 +71,7 @@ const MODS = {
     hotterColder: {
         show: true,
         key: 'hotter-colder',
-        labelEnable: 'Enable Hotter/Colder',
-        labelDisable: 'Disable Hotter/Colder',
+        name: 'Hotter/Colder',
         tooltip: 'When you make a guess, you will see the distance from the target, and/or it will tell you hotter/colder.',
         options: {},
     },
@@ -188,13 +181,37 @@ let IS_DRAGGING = false;
 // Utility functions.
 // ===============================================================================================================================
 
+const getGoogle = () => {
+    return window.google || unsafeWindow.google;
+}
+
+const getGuessMapContainer = () => {
+    return document.querySelector('div[class^="game_guessMap__"]');;
+};
+
+const getGuessMap = () => {
+    return document.querySelector('div[class^="guess-map_guessMap__"]');
+};
+
+const getCanvas = () => {
+    return document.querySelector(`div[class^="game_canvas__"]`);
+};
+
+const getButtonsDiv = () => {
+    return document.getElementById('gg-settings-buttons');
+};
+
+const getOptionMenu = () => {
+    return document.getElementById('gg-option-menu');
+};
+
 const getButtonID = (mod) => {
     return `gg-opt-${mod.key}`;
 };
 
 const getButtonText = (mod) => {
     const active = GG_STATE[mod.key].active;
-    const text = active ? mod.labelDisable : mod.labelEnable;
+    const text = `${active ? 'Disable ' : 'Enable '} ${mod.name}`;
     return text;
 };
 
@@ -223,7 +240,42 @@ const getOption = (mod, key, defaultValue) => {
     return value;
 };
 
-const toggleMod = (mod, options, forceState = null) => {
+const makeOptionMenu = (mod) => {
+    const onOptionSubmit = () => {
+        debugger;
+    };
+
+    const onOptionReset = () => {
+        debugger;
+    };
+
+    const popup = document.createElement('div');
+    popup.id = 'gg-option-menu';
+
+    const lineItems = [];
+    for (const [key, val] of Object.entries(GG_DEFAULT[mod.key])) {
+        const lineItem = `
+            ${key}
+        `;
+        lineItems.push(lineItem);
+    }
+
+    const popupContent = `
+        <div id = "gg-option-title" class="gg-title">${mod.name} Options</div>
+        ${lineItems.join('')}
+        <button id="option-submit">Submit</button>
+    `;
+
+    const onSubmit = () => {
+        console.log('submitted');
+    }
+
+    popup.innerHTML = popupContent;
+    const buttonsDiv = getButtonsDiv();
+    buttonsDiv.appendChild(popup);
+};
+
+const toggleMod = (mod, forceState = null) => {
     if (!GOOGLE_MAP) {
         const err = `Map not loaded. Cannot toggle ${mod.key}. Try refreshing the page and make sure to let it fully load.`;
         window.alert(err);
@@ -234,33 +286,20 @@ const toggleMod = (mod, options, forceState = null) => {
 
     GG_STATE[mod.key].active = newState;
     getButton(mod).textContent = getButtonText(mod);
-    if (options && typeof options === 'object') {
-        if (typeof GG_STATE[mod.key].options !== 'object') {
-            GG_STATE[mod.key].options = {};
-        }
-        Object.assign(GG_STATE[mod.key].options, options);
+
+    // If there are configurable options for this mod, open a popup and wait for user to enter info.
+    const options = GG_STATE[mod.key].options;
+    if (options && typeof options === 'object' && Object.keys(options).length) {
+        makeOptionMenu(mod);
+        debugger;
+
+        // TODO: await or listener or setInterval for popup
+
+        // Object.assign(GG_STATE[mod.key].options, options);
     }
+
     saveState();
     return newState;
-};
-
-// Selectors for map. These get overwritten on mouseenter/mouseleave and have to be reapplied to the newly sized map.
-const getGuessMapContainer = () => {
-    const div = document.querySelector('div[class^="game_guessMap__"]');
-    if (!div) {
-        console.error('Map container div not found.');
-        return undefined;
-    }
-    return div;
-};
-
-const getGuessMap = () => {
-    const div = document.querySelector('div[class^="guess-map_guessMap__"]');
-    if (!div) {
-        console.error('Map div not found.');
-        return undefined;
-    }
-    return div;
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -274,7 +313,7 @@ const getGuessMap = () => {
 
 const updateSatView = (forceState = null) => {
     const mod = MODS.satView;
-    const active = toggleMod(mod, {}, forceState);8
+    const active = toggleMod(mod, forceState);8
     GOOGLE_MAP.setMapTypeId(active ? 'satellite' : 'roadmap');
 };
 
@@ -297,7 +336,7 @@ let ROTATION_INTERVAL;
 
 const updateRotateMap = (forceState = null) => {
     const mod = MODS.rotateMap;
-    const active = toggleMod(mod, {}, forceState);
+    const active = toggleMod(mod, GG_STATE, forceState);
 
     if (active) {
         let nMilliseconds = Number(getOption(mod, 'Run every (s)')) * 1000;
@@ -353,7 +392,7 @@ const setRestriction = (latLngBounds, zoom) => {
 
 const updateZoomInOnly = (forceState = null) => {
     const mod = MODS.zoomInOnly;
-    const active = toggleMod(mod, {}, forceState);
+    const active = toggleMod(mod, forceState);
     if (PREV_ZOOM === undefined) {
         PREV_ZOOM = GOOGLE_MAP.getZoom();
     }
@@ -368,7 +407,7 @@ const updateZoomInOnly = (forceState = null) => {
                 HAS_ZOOMED_IN = true;
             }
             if (HAS_ZOOMED_IN) {
-                const google = window.google || unsafeWindow.google;
+                const google = getGoogle();
                 google.maps.event.addListenerOnce(GOOGLE_MAP, 'idle', () => { // Zoom animation occurs after zoom is set.
                     const latLngBounds = getLatLngBounds();
                     setRestriction(latLngBounds, GOOGLE_MAP.getZoom());
@@ -378,7 +417,7 @@ const updateZoomInOnly = (forceState = null) => {
         });
     } else {
         if (ZOOM_LISTENER) {
-            const google = window.google || unsafeWindow.google;
+            const google = getGoogle();
             google.maps.event.removeListener(ZOOM_LISTENER);
             ZOOM_LISTENER = undefined;
         }
@@ -398,7 +437,7 @@ const updateZoomInOnly = (forceState = null) => {
 // ===============================================================================================================================
 
 const getDistance = (p1, p2) => {
-    const google = window.google || unsafeWindow.google;
+    const google = getGoogle();
     const ll1 = new google.maps.LatLng(p1.lat, p1.lng);
     const ll2 = new google.maps.LatLng(p2.lat, p2.lng);
     const dist = google.maps.geometry.spherical.computeDistanceBetween(ll1, ll2);
@@ -419,17 +458,16 @@ const getScore = () => {
     return score;
 };
 
-
 const scoreListener = (evt) => {
     const score = getScore();
     if (isNaN(score)) {
         return;
     }
 
-    let fadeTarget = document.getElementById('score_div');
+    let fadeTarget = document.getElementById('gg-score-div');
     if (!fadeTarget) {
         fadeTarget = document.createElement('div');
-        fadeTarget.id = 'score_div';
+        fadeTarget.id = 'gg-score-div';
         document.body.appendChild(fadeTarget);
     }
 
@@ -448,7 +486,7 @@ const scoreListener = (evt) => {
 
 const updateHotterColder = (forceState = null) => {
     const mod = MODS.hotterColder;
-    const active = toggleMod(mod, {}, forceState);
+    const active = toggleMod(mod, forceState);
 
     if (active) {
         document.addEventListener('map_click', scoreListener);
@@ -457,8 +495,9 @@ const updateHotterColder = (forceState = null) => {
     }
 };
 
-
 // -------------------------------------------------------------------------------------------------------------------------------
+
+
 
 
 // Add bindings and start the script.
@@ -487,8 +526,8 @@ const bindButtons = () => {
 };
 
 const addButtons = () => { // Add settings buttons to the active round.
-	const container = document.querySelector(`div[class^="game_canvas__"]`);
-	if (!container || document.getElementById('gg-settings-buttons')) {
+	const canvas = getCanvas();
+	if (!canvas || getButtonsDiv()) {
         return;
     }
 
@@ -502,11 +541,11 @@ const addButtons = () => { // Add settings buttons to the active round.
         if (!mod.show) {
             continue;
         }
-        innerHTML = innerHTML + `\n<div class="${buttonClass}" id="${getButtonID(mod)}">${getButtonText(mod)}</div>`;
+        innerHTML = innerHTML + `\n<div class="${buttonClass}" id="${getButtonID(mod)}" title="${mod.tooltip}">${getButtonText(mod)}</div>`;
     }
 	element.innerHTML = innerHTML;
 
-	container.appendChild(element);
+	canvas.appendChild(element);
 	bindButtons();
 };
 
@@ -523,7 +562,7 @@ const addButtons = () => { // Add settings buttons to the active round.
 const overrideOnLoad = (googleScript, observer, overrider) => {
 	const oldOnload = googleScript.onload;
 	googleScript.onload = (event) => {
-		const google = window.google || unsafeWindow.google;
+		const google = getGoogle();
 		if (google) {
 			observer.disconnect();
 			overrider(google);
@@ -565,7 +604,7 @@ const initMods = () => { // Enable mods that were already enabled via localStora
 
 const initModsCallback = () => {
     if (GOOGLE_MAP) {
-        const google = window.google || unsafeWindow.google;
+        const google = getGoogle();
         google.maps.event.addListenerOnce(GOOGLE_MAP, 'idle', () => { // Actions on initial guess map load.
             initMods();
             console.log('GeoGuessr mods initialized.');
@@ -584,7 +623,7 @@ const onMapClick = (evt) => {
 
 document.addEventListener('DOMContentLoaded', (event) => {
 	injecter(() => {
-		const google = window.google || unsafeWindow.google;
+		const google = getGoogle();
 		if (!google) {
             return;
         }
@@ -635,7 +674,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
 		}
 	});
 });
-
 
 /* eslint-disable no-undef */
 GeoGuessrEventFramework.init().then(GEF => {
@@ -690,6 +728,9 @@ observer.observe(document.querySelector('#__next'), { subtree: true, childList: 
 // Global/Static styling.
 // ===============================================================================================================================
 
+const headerShadow = 'rgb(204, 48, 46) 2px 0px 0px, rgb(204, 48, 46) 1.75517px 0.958851px 0px, rgb(204, 48, 46) 1.0806px 1.68294px 0px, rgb(204, 48, 46) 0.141474px 1.99499px 0px, rgb(204, 48, 46) -0.832294px 1.81859px 0px, rgb(204, 48, 46) -1.60229px 1.19694px 0px, rgb(204, 48, 46) -1.97998px 0.28224px 0px, rgb(204, 48, 46) -1.87291px -0.701566px 0px, rgb(204, 48, 46) -1.30729px -1.5136px 0px, rgb(204, 48, 46) -0.421592px -1.95506px 0px, rgb(204, 48, 46) 0.567324px -1.91785px 0px, rgb(204, 48, 46) 1.41734px -1.41108px 0px, rgb(204, 48, 46) 1.92034px -0.558831px 0px'
+const bodyShadow = '3px 3px 0 #000, 3px 0px 3px #000, 1px 1px 0 #000, 3px 1px 2px #000';
+
 const buttonMenuStyle = `
     .gg-settings {
         position: absolute;
@@ -708,7 +749,7 @@ const buttonMenuStyle = `
     .gg-title {
         font-size: 15px;
         font-weight: bold;
-        text-shadow: rgb(204, 48, 46) 2px 0px 0px, rgb(204, 48, 46) 1.75517px 0.958851px 0px, rgb(204, 48, 46) 1.0806px 1.68294px 0px, rgb(204, 48, 46) 0.141474px 1.99499px 0px, rgb(204, 48, 46) -0.832294px 1.81859px 0px, rgb(204, 48, 46) -1.60229px 1.19694px 0px, rgb(204, 48, 46) -1.97998px 0.28224px 0px, rgb(204, 48, 46) -1.87291px -0.701566px 0px, rgb(204, 48, 46) -1.30729px -1.5136px 0px, rgb(204, 48, 46) -0.421592px -1.95506px 0px, rgb(204, 48, 46) 0.567324px -1.91785px 0px, rgb(204, 48, 46) 1.41734px -1.41108px 0px, rgb(204, 48, 46) 1.92034px -0.558831px 0px;
+        text-shadow: ${headerShadow};
         position: relative;
         z-index: 1;
         padding-top: 15px;
@@ -728,14 +769,55 @@ const buttonMenuStyle = `
         opacity: 1;
     }
 
-    #score_div {
+    #gg-score-div {
         position: absolute;
         top: 50%;
         left: 50%;
         font-size: 60px;
         color: white;
-        text-shadow: 3px 3px 0 #000, 3px 0px 3px #000, 1px 1px 0 #000, 3px 1px 2px #000;
+        text-shadow: ${bodyShadow};
         transform: translate(-50%, -50%);
+    }
+
+    #gg-option-menu {
+        position: absolute;
+        left: 110%;
+        padding: 15px;
+        width: 200px;
+        background: var(--ds-color-purple-100);
+        border-radius: 10px;
+        border: 2px solid black;
+        color: white;
+        font-size: 15px;
+        font-weight: bold;
+        text-shadow: ${bodyShadow};
+        z-index: 1;
+    }
+
+    #gg-option-title {
+        padding-top: 5px;
+        padding-bottom: 10px;
+        text-align: center;
+    }
+
+    .gg-option-line {
+    }
+
+    .gg-option-label {
+    }
+
+    .gg-option-input {
+    }
+
+    .gg-option-button {
+    }
+
+    .gg-option-form-button-container {
+        display: flex;
+        justify-content: space-betwen;
+    }
+
+    .gg-option-form-button {
     }
 `;
 
