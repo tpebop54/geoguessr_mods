@@ -197,8 +197,8 @@ const getCanvas = () => {
     return document.querySelector(`div[class^="game_canvas__"]`);
 };
 
-const getButtonsDiv = () => {
-    return document.getElementById('gg-mod-buttons');
+const getModDiv = () => {
+    return document.getElementById('gg-mod-container');
 };
 
 const getOptionMenu = () => {
@@ -278,42 +278,40 @@ const makeOptionMenu = (mod) => {
     const popupContent = `
         <div id="gg-option-title" class="gg-title">${mod.name} Options</div>
         ${lineItems.join('\n')}
-        <button id="option-submit">Submit</button>
     `;
+    popup.innerHTML = popupContent;
 
-    const resetButton = document.createElement('button');
-    resetButton.classList.add('gg-option-reset-button');
-    resetButton.id = 'gg-option-reset';
-    resetButton.addEventListener('click', () => {
-        console.log('Options reset');
-        debugger
-    });
+    const onReset = () => {
+        debugger;
+    }
 
-    const cancelButton = document.createElement('button');
-    cancelButton.classList.add('gg-option-cancel-button');
-    cancelButton.id = 'gg-option-reset';
-    cancelButton.addEventListener('click', () => {
-        console.log('Options cancelled');
-        debugger
-    });
+    const onCancel = () => {
+        debugger;
+    }
 
-    const submitButton = document.createElement('button');
-    submitButton.classList.add('gg-option-form-button');
-    submitButton.id = 'gg-option-submit';
-    submitButton.addEventListener('click', () => {
-        console.log('Options submitted');
-        debugger
-    });
+    const onSubmit = () => {
+        debugger;
+    }
 
     const formDiv = document.createElement('div');
-    formDiv.appendChild(resetButton);
-    formDiv.appendChild(submitButton);
+    formDiv.id = 'gg-option-form-div';
+    for (const [label, callback] of [
+            ['Reset', onReset],
+            ['Cancel', onCancel],
+            ['Submit', onSubmit],
+        ]) {
+        const button = document.createElement('button');
+        button.id = `gg-option-${label.toLowerCase()}`;
+        button.classList.add('gg-option-label');
+        button.classList.add('gg-option-form-button');
+        button.innerHTML = label;
+        button.addEventListener('click', callback);
+        formDiv.appendChild(button);
+    };
 
-    popup.innerHTML = popupContent;
+    const modDiv = getModDiv();
     popup.appendChild(formDiv);
-
-    const buttonsDiv = getButtonsDiv();
-    buttonsDiv.appendChild(popup);
+    modDiv.appendChild(popup);
 };
 
 const toggleMod = (mod, forceState = null) => {
@@ -568,14 +566,13 @@ const bindButtons = () => {
 
 const addButtons = () => { // Add mod buttons to the active round.
 	const canvas = getCanvas();
-	if (!canvas || getButtonsDiv()) {
+	if (!canvas || getModDiv()) {
         return;
     }
 
-    const buttonClass = 'gg-mod-button';
+    const buttonClass = 'gg-mod';
 	const element = document.createElement('div');
-	element.id = 'gg-mod-buttons';
-    element.className = 'gg-mods extra-pad';
+	element.id = 'gg-mod-container';
 
     let innerHTML = `<div class="gg-title">TPEBOP'S MODS</div>`;
     for (const mod of Object.values(MODS)) {
@@ -773,15 +770,14 @@ const headerShadow = 'rgb(204, 48, 46) 2px 0px 0px, rgb(204, 48, 46) 1.75517px 0
 const bodyShadow = '3px 3px 0 #000, 3px 0px 3px #000, 1px 1px 0 #000, 3px 1px 2px #000';
 
 const buttonMenuStyle = `
-    .gg-mod-buttons {
+
+    #gg-mod-container {
         position: absolute;
         top: 2.5rem;
         left: 1rem;
         z-index: 9;	display: flex;
         flex-direction: column;
         gap: 5px;
-        align-items: flex-start;
-        top: 2.5rem;
     }
 
     .gg-title {
@@ -793,7 +789,7 @@ const buttonMenuStyle = `
         padding-top: 15px;
     }
 
-    .gg-mod-option {
+    .gg-mod {
         background: var(--ds-color-purple-100);
         padding: 6px 10px;
         border-radius: 5px;
@@ -803,7 +799,7 @@ const buttonMenuStyle = `
         transition: opacity 0.2s;
     }
 
-    .gg-mod-option:hover {
+    .gg-mod:hover {
         opacity: 1;
     }
 
@@ -845,42 +841,47 @@ const buttonMenuStyle = `
 
     .gg-option-label {
         white-space: nowrap;
-        padding-right: 10px;
+        padding-right: 20px;
     }
 
     .gg-option-input {
-        width: 100px;
-        height: 30px;
+        width: 70px;
+        height: 25px;
         border-radius: 20px;
-        padding: 0 5px 0 5px;
+        margin: 5px 0;
     }
 
     .gg-option-button {
         border-radius: 20px;
-        padding: 0 5px 0 5px;
+        margin: 5px 0;
+        height: 30px;
     }
 
-    .gg-option-form-button-container {
+    #gg-option-form-div {
         display: flex;
-        justify-content: space-betwen;
+        justify-content: space-between;
+        margin-top: 20px;
     }
-
-    #gg-option
 
     .gg-option-form-button {
         width: 80px;
-        height: 40px;
+        height: 25px;
+        border-radius: 15px;
+        color: white;
+        shadow: ${bodyShadow};
+        padding: 0;
     }
 
-    #gg-option-submit-button {
+    #gg-option-submit {
        background: purple;
     }
 
-    #gg-option-cancel-button {
+    #gg-option-cancel {
        background: red;
+       margin: 0 5px;
     }
 
-    #gg-option-reset-button {
+    #gg-option-reset {
         background: blue;
     }
 
