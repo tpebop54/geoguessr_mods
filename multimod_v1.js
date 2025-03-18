@@ -22,6 +22,7 @@
 // - Reset options button
 // - Can I get rid of map not loaded error?
 // - Move _BINDINGS to some sort of registry function
+// - Dropdown option type
 
 
 /**
@@ -167,6 +168,8 @@ let GG_CLICK; // [lat, lng] of latest map click.
 
 let IS_DRAGGING = false;
 
+const UPDATE_CALLBACKS = {}; // TODO: move this to some sort of registry function.
+
 // -------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -261,7 +264,7 @@ const makeOptionMenu = (mod) => {
         return;
     }
 
-    const popup = document.createElement('div');
+    let popup = document.createElement('div');
     popup.id = 'gg-option-menu';
 
     const title = document.createElement('div');
@@ -271,13 +274,13 @@ const makeOptionMenu = (mod) => {
 
     const defaults = getDefaultMod(mod).options || {};
 
-    const inputs = {}; // input element, keyed by option key.
+    const inputs = []; // Array of [key, type, input element].
     for (const [key, option] of Object.entries(defaults)) {
         const value = getOption(mod, key);
 
         const lineDiv = document.createElement('div'); // Label and input.
         const label = document.createElement('div');
-        label.innerHTML = option.name;
+        label.innerHTML = option.label;
         lineDiv.appendChild(label);
         lineDiv.classList.add('gg-option-line');
         if (option.tooltip) {
@@ -286,31 +289,45 @@ const makeOptionMenu = (mod) => {
 
         const defaultVal = getDefaultOption(mod, key);
         let input; // Separated to allow future upgrades, e.g. bounds.
+        let type;
         if (typeof defaultVal === 'number') {
+            type = Number;
             input = document.createElement('input');
             Object.assign(input, { type: 'number', value, className: 'gg-option-input' });
         } else if (typeof defaultVal === 'string') {
+            type = String;
             input = document.createElement('input');
             Object.assign(input, { type: 'string', value, className: 'gg-option-input' });
         } else {
             throw new Error(`Invalid option specification: ${key} is of type ${typeof defaultVal}`);
         }
         lineDiv.appendChild(input);
-        inputs[key] = input;
+        inputs.push([key, type, input]);
 
         popup.appendChild(lineDiv);
     }
 
+    const closePopup = () => {
+        popup.remove();
+        popup = undefined;
+    }
+
     const onReset = () => {
-        debugger;
+        for (const [key, type, input] of inputs) {
+            input.value = getDefaultOption(mod, key);
+        }
     }
 
     const onCancel = () => {
-        debugger;
+        closePopup();
     }
 
     const onSubmit = () => {
-        debugger;
+        for (const [key, type, input] of inputs) {
+            setOption(mod, type(input.value), false);
+        }
+        saveState();
+        UPDATE_CALLBACKS[mod.key]();
     }
 
     const formDiv = document.createElement('div');
@@ -335,9 +352,9 @@ const makeOptionMenu = (mod) => {
     modDiv.appendChild(popup);
 };
 
-const toggleMod = (mod, forceState = null) => {
+const udpateMod = (mod, forceState = null) => {
     if (!GOOGLE_MAP) {
-        const err = `Map not loaded for script. Cannot toggle ${mod.key}. Try refreshing the page and make sure to let it fully load.`;
+        const err = `Map did not load properly for the script. Try refreshing the page and making sure the map loads fully before you do anything. Reload the page in a new tab if this fails.`;
         window.alert(err);
         throw new Error(err);
     }
@@ -370,7 +387,7 @@ const toggleMod = (mod, forceState = null) => {
 
 const updateSatView = (forceState = null) => {
     const mod = MODS.satView;
-    const active = toggleMod(mod, forceState);8
+    const active = udpateMod(mod, forceState);8
     GOOGLE_MAP.setMapTypeId(active ? 'satellite' : 'roadmap');
 };
 
@@ -393,7 +410,7 @@ let ROTATION_INTERVAL;
 
 const updateRotateMap = (forceState = null) => {
     const mod = MODS.rotateMap;
-    const active = toggleMod(mod, MODS, forceState);
+    const active = udpateMod(mod, forceState);
 
     if (active) {
         let nMilliseconds = Number(getOption(mod, 'every')) * 1000;
@@ -449,7 +466,7 @@ const setRestriction = (latLngBounds, zoom) => {
 
 const updateZoomInOnly = (forceState = null) => {
     const mod = MODS.zoomInOnly;
-    const active = toggleMod(mod, forceState);
+    const active = udpateMod(mod, forceState);
     if (PREV_ZOOM === undefined) {
         PREV_ZOOM = GOOGLE_MAP.getZoom();
     }
@@ -543,7 +560,7 @@ const scoreListener = (evt) => {
 
 const updateHotterColder = (forceState = null) => {
     const mod = MODS.hotterColder;
-    const active = toggleMod(mod, forceState);
+    const active = udpateMod(mod, forceState);
 
     if (active) {
         document.addEventListener('map_click', scoreListener);
@@ -573,12 +590,13 @@ const bindButtons = () => {
         if (!mod.show) {
             continue;
         }
+        UPDATE_CALLBACKS[mod.key] = callback;
         const button = getButton(mod);
         if (!button) {
             console.error(`Mod ${mod.key} not found.`);
             continue;
         }
-        button.addEventListener('click', () => callback()); // Don't pass the click event since toggleMod doesn't need it.
+        button.addEventListener('click', () => callback()); // Don't pass the click event since udpateMod doesn't need it.
     }
 };
 
@@ -890,10 +908,11 @@ const buttonMenuStyle = `
         color: white;
         shadow: ${bodyShadow};
         padding: 0;
+        cursor: pointer;
     }
 
-    #gg-option-submit {
-       background: purple;
+    #gg-option-reset {
+        background: purple;
     }
 
     #gg-option-cancel {
@@ -901,8 +920,8 @@ const buttonMenuStyle = `
        margin: 0 5px;
     }
 
-    #gg-option-reset {
-        background: blue;
+    #gg-option-submit {
+       background: green;
     }
 
     input::-webkit-outer-spin-button,
