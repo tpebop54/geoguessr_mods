@@ -42,7 +42,7 @@ const MODS = {
         show: true, // false to hide this mod from the panel. Mostly used for dev, but you can change it to disable stuff.
         key: 'sat-view', // Used for global state and document elements.
         name: 'Satellite View', // Used for menus.
-        tooltip: 'Change guess map to satellite view. This will also remove all labels from the map.',
+        tooltip: 'Uses satellite view on the guess map, with no labels.',
         options: {}, // Used when mod requires or allows configurable values.
     },
 
@@ -51,7 +51,7 @@ const MODS = {
         show: true,
         key: 'rotate-map',
         name: 'Map Rotation',
-        tooltip: 'Makes the guess map rotate while you are trying to click. Rotational speed can be configured.',
+        tooltip: 'Makes the guess map rotate while you are trying to click.',
         options: {
             'Run every (s)': 0.1,
             'Degrees': 3,
@@ -63,7 +63,7 @@ const MODS = {
         show: true,
         key: 'zoom-in-only',
         name: 'Zoom In Only',
-        tooltip: 'Allows you to only zoom in. This prevents scanning unless you are in the right area at the right zoom level.',
+        tooltip: 'You can only zoom inward. NOTE: currently you have to refresh the page for each round.',
         options: {},
     },
 
@@ -72,7 +72,7 @@ const MODS = {
         show: true,
         key: 'hotter-colder',
         name: 'Hotter/Colder',
-        tooltip: 'When you make a guess, you will see the distance from the target, and/or it will tell you hotter/colder.',
+        tooltip: 'Shows the would-be score of each click. Do not use this for ranked duels!',
         options: {},
     },
 };
@@ -140,7 +140,7 @@ const GG_STATE = { // TODO: clean this up.
     },
 };
 
-const GG_DEFAULT = {} // Used for default options and restoring settings.
+const GG_DEFAULT = {} // Used for default options and restoring options.
 for (const mod of Object.values(MODS)) {
     GG_DEFAULT[mod.key] = JSON.parse(JSON.stringify(mod));
 }
@@ -198,7 +198,7 @@ const getCanvas = () => {
 };
 
 const getButtonsDiv = () => {
-    return document.getElementById('gg-settings-buttons');
+    return document.getElementById('gg-mod-buttons');
 };
 
 const getOptionMenu = () => {
@@ -241,36 +241,77 @@ const getOption = (mod, key, defaultValue) => {
 };
 
 const makeOptionMenu = (mod) => {
-    const onOptionSubmit = () => {
-        debugger;
-    };
-
-    const onOptionReset = () => {
-        debugger;
-    };
-
     const popup = document.createElement('div');
     popup.id = 'gg-option-menu';
 
     const lineItems = [];
-    for (const [key, val] of Object.entries(GG_DEFAULT[mod.key])) {
+    const defaults = GG_DEFAULT[mod.key].options;
+    for (const [key, defaultVal] of Object.entries(defaults)) {
+
+        let value = GG_STATE[mod.key].options[key];
+        if (value == null) {
+            value = defaultVal;
+        }
+
+        let input;
+        if (typeof defaultVal === 'number') {
+            input = `<input class="gg-option-input" type="number" value="${value}"></input>`;
+        } else if (typeof defaultVal === 'string') {
+            input = `<input class="gg-option-input" type="text" value="${value}"></input>`;
+        } else if (defaultVal instanceof Array) {
+            input = ``;
+            console.log('TODO: button array');
+        } else {
+            throw new Error(`Invalid option specification: ${key} is of type ${typeof defaultVal}`);
+        }
+
         const lineItem = `
-            ${key}
+            <div class="gg-option-line">
+                <div class="gg-option-label">${key}</div>
+                ${input}
+            </div>
         `;
+
         lineItems.push(lineItem);
     }
 
     const popupContent = `
-        <div id = "gg-option-title" class="gg-title">${mod.name} Options</div>
-        ${lineItems.join('')}
+        <div id="gg-option-title" class="gg-title">${mod.name} Options</div>
+        ${lineItems.join('\n')}
         <button id="option-submit">Submit</button>
     `;
 
-    const onSubmit = () => {
-        console.log('submitted');
-    }
+    const resetButton = document.createElement('button');
+    resetButton.classList.add('gg-option-reset-button');
+    resetButton.id = 'gg-option-reset';
+    resetButton.addEventListener('click', () => {
+        console.log('Options reset');
+        debugger
+    });
+
+    const cancelButton = document.createElement('button');
+    cancelButton.classList.add('gg-option-cancel-button');
+    cancelButton.id = 'gg-option-reset';
+    cancelButton.addEventListener('click', () => {
+        console.log('Options cancelled');
+        debugger
+    });
+
+    const submitButton = document.createElement('button');
+    submitButton.classList.add('gg-option-form-button');
+    submitButton.id = 'gg-option-submit';
+    submitButton.addEventListener('click', () => {
+        console.log('Options submitted');
+        debugger
+    });
+
+    const formDiv = document.createElement('div');
+    formDiv.appendChild(resetButton);
+    formDiv.appendChild(submitButton);
 
     popup.innerHTML = popupContent;
+    popup.appendChild(formDiv);
+
     const buttonsDiv = getButtonsDiv();
     buttonsDiv.appendChild(popup);
 };
@@ -525,16 +566,16 @@ const bindButtons = () => {
     }
 };
 
-const addButtons = () => { // Add settings buttons to the active round.
+const addButtons = () => { // Add mod buttons to the active round.
 	const canvas = getCanvas();
 	if (!canvas || getButtonsDiv()) {
         return;
     }
 
-    const buttonClass = 'gg-settings-option';
+    const buttonClass = 'gg-mod-button';
 	const element = document.createElement('div');
-	element.id = 'gg-settings-buttons';
-    element.className = 'gg-settings extra-pad';
+	element.id = 'gg-mod-buttons';
+    element.className = 'gg-mods extra-pad';
 
     let innerHTML = `<div class="gg-title">TPEBOP'S MODS</div>`;
     for (const mod of Object.values(MODS)) {
@@ -732,17 +773,14 @@ const headerShadow = 'rgb(204, 48, 46) 2px 0px 0px, rgb(204, 48, 46) 1.75517px 0
 const bodyShadow = '3px 3px 0 #000, 3px 0px 3px #000, 1px 1px 0 #000, 3px 1px 2px #000';
 
 const buttonMenuStyle = `
-    .gg-settings {
+    .gg-mod-buttons {
         position: absolute;
-        top: 1rem;
+        top: 2.5rem;
         left: 1rem;
         z-index: 9;	display: flex;
         flex-direction: column;
         gap: 5px;
         align-items: flex-start;
-    }
-
-    .gg-settings.extra-pad {
         top: 2.5rem;
     }
 
@@ -755,7 +793,7 @@ const buttonMenuStyle = `
         padding-top: 15px;
     }
 
-    .gg-settings-option {
+    .gg-mod-option {
         background: var(--ds-color-purple-100);
         padding: 6px 10px;
         border-radius: 5px;
@@ -765,7 +803,7 @@ const buttonMenuStyle = `
         transition: opacity 0.2s;
     }
 
-    .gg-settings-option:hover {
+    .gg-mod-option:hover {
         opacity: 1;
     }
 
@@ -783,7 +821,6 @@ const buttonMenuStyle = `
         position: absolute;
         left: 110%;
         padding: 15px;
-        width: 200px;
         background: var(--ds-color-purple-100);
         border-radius: 10px;
         border: 2px solid black;
@@ -801,15 +838,26 @@ const buttonMenuStyle = `
     }
 
     .gg-option-line {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
 
     .gg-option-label {
+        white-space: nowrap;
+        padding-right: 10px;
     }
 
     .gg-option-input {
+        width: 100px;
+        height: 30px;
+        border-radius: 20px;
+        padding: 0 5px 0 5px;
     }
 
     .gg-option-button {
+        border-radius: 20px;
+        padding: 0 5px 0 5px;
     }
 
     .gg-option-form-button-container {
@@ -817,7 +865,33 @@ const buttonMenuStyle = `
         justify-content: space-betwen;
     }
 
+    #gg-option
+
     .gg-option-form-button {
+        width: 80px;
+        height: 40px;
+    }
+
+    #gg-option-submit-button {
+       background: purple;
+    }
+
+    #gg-option-cancel-button {
+       background: red;
+    }
+
+    #gg-option-reset-button {
+        background: blue;
+    }
+
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
+    }
+
+    input[type=number] {
+        -moz-appearance:textfield; /* Firefox */
     }
 `;
 
