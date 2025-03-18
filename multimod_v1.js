@@ -219,7 +219,7 @@ const isActive = (mod) => {
 };
 
 const getDefaultMod = (mod) => {
-    for (const defMod of Object.entries(GG_DEFAULT)) {
+    for (const defMod of Object.values(GG_DEFAULT)) {
         if (defMod.key === mod.key) {
             return defMod;
         }
@@ -232,7 +232,7 @@ const getDefaultOption = (mod, key) => {
     if (!defMod) {
         return undefined;
     }
-    const defValue = ((defMod.option || {})[key] || {}).default;
+    const defValue = ((defMod.options || {})[key] || {}).default;
     return defValue;
 };
 
@@ -269,7 +269,7 @@ const makeOptionMenu = (mod) => {
     title.innerHTML = `${mod.name} Options`;
     popup.appendChild(title);
 
-    const defaults = GG_DEFAULT[mod.key].options;
+    const defaults = getDefaultMod(mod).options || {};
 
     const inputs = {}; // input element, keyed by option key.
     for (const [key, option] of Object.entries(defaults)) {
@@ -284,6 +284,7 @@ const makeOptionMenu = (mod) => {
             label.title = option.tooltip;
         }
 
+        const defaultVal = getDefaultOption(mod, key);
         let input; // Separated to allow future upgrades, e.g. bounds.
         if (typeof defaultVal === 'number') {
             input = document.createElement('input');
@@ -343,14 +344,13 @@ const toggleMod = (mod, forceState = null) => {
     const previousState = isActive(mod);
     const newState = forceState != null ? forceState : !previousState;
 
-    MODS[mod.key].active = newState;
+    mod.active = newState;
     getButton(mod).textContent = getButtonText(mod);
 
     // If there are configurable options for this mod, open a popup and wait for user to enter info.
-    const options = MODS[mod.key].options;
+    const options = mod.options;
     if (options && typeof options === 'object' && Object.keys(options).length) {
         makeOptionMenu(mod);
-        debugger;
 
         // TODO: await or listener or setInterval for popup
     }
