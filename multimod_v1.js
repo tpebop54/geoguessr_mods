@@ -16,10 +16,8 @@
 // TODO:
 // - Break this off into a base util thing
 // - Figure out how to properly reset map bounds. Might have to reload the whole map or (hopefully not) page
-// - Options menu
 // - Cheating disclaimer
 // - Add event listeners to configs?
-// - Reset options button
 // - Can I get rid of map not loaded error?
 // - Move _BINDINGS to some sort of registry function
 // - Dropdown option type
@@ -57,12 +55,12 @@ const MODS = {
         options: {
             every: {
                 label: 'Run Every (s)',
-                default: 0.1,
+                default: 0.05,
                 tooltip: 'Rotate the map every X seconds. Lower numbers will reduce choppiness but increase CPU usage.',
             },
             degrees: {
                 label: 'Degrees',
-                default: 3,
+                default: 2,
                 tooltip: 'Rotate by X degrees at the specified time interval. Positive for clockwise, negative for counter-clockwise.',
             },
         },
