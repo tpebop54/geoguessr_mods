@@ -318,24 +318,24 @@ const makeOptionMenu = (mod) => {
         }
     }
 
-    const onCancel = () => {
+    const onClose = () => {
         closePopup();
     }
 
-    const onSubmit = () => {
+    const onApply = () => {
         for (const [key, type, input] of inputs) {
-            setOption(mod, type(input.value), false);
+            setOption(mod, key, type(input.value), false);
         }
         saveState();
-        UPDATE_CALLBACKS[mod.key]();
+        UPDATE_CALLBACKS[mod.key](mod.active);
     }
 
     const formDiv = document.createElement('div');
     formDiv.id = 'gg-option-form-div';
     for (const [label, callback] of [
+            ['Close', onClose],
             ['Reset', onReset],
-            ['Cancel', onCancel],
-            ['Submit', onSubmit],
+            ['Apply', onApply],
         ]) {
         const button = document.createElement('button');
         button.id = `gg-option-${label.toLowerCase()}`;
@@ -911,16 +911,16 @@ const buttonMenuStyle = `
         cursor: pointer;
     }
 
+    #gg-option-close {
+       background: red;
+    }
+
     #gg-option-reset {
         background: purple;
+        margin: 0 5px;
     }
 
-    #gg-option-cancel {
-       background: red;
-       margin: 0 5px;
-    }
-
-    #gg-option-submit {
+    #gg-option-apply {
        background: green;
     }
 
