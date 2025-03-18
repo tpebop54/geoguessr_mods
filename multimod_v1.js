@@ -241,10 +241,18 @@ const getOption = (mod, key, defaultValue) => {
 };
 
 const makeOptionMenu = (mod) => {
+    if (document.getElementByID('gg-option-menu')) {
+        return;
+    }
+
     const popup = document.createElement('div');
     popup.id = 'gg-option-menu';
 
-    const lineItems = [];
+    const title = document.createElement('div');
+    title.id = 'gg-option-title';
+    title.innerHTML = `${mod.name} Options`;
+    popup.appendChild(title);
+
     const defaults = GG_DEFAULT[mod.key].options;
     for (const [key, defaultVal] of Object.entries(defaults)) {
 
@@ -253,33 +261,30 @@ const makeOptionMenu = (mod) => {
             value = defaultVal;
         }
 
-        let input;
+        const lineDiv = document.createElement('div'); // Label and input.
+
+        const label = document.createElement('div');
+        label.innerHTML = key;
+        lineDiv.appendChild(label);
+        lineDiv.classList.add('gg-option-line');
+
+        let input; // Separated to allow future upgrades, e.g. bounds.
         if (typeof defaultVal === 'number') {
-            input = `<input class="gg-option-input" type="number" value="${value}"></input>`;
+            input = document.createElement('input');
+            Object.assign(input, { type: 'number', value, className: 'gg-option-input' });
         } else if (typeof defaultVal === 'string') {
-            input = `<input class="gg-option-input" type="text" value="${value}"></input>`;
+            input = document.createElement('input');
+            Object.assign(input, { type: 'string', value, className: 'gg-option-input' });
         } else if (defaultVal instanceof Array) {
             input = ``;
             console.log('TODO: button array');
         } else {
             throw new Error(`Invalid option specification: ${key} is of type ${typeof defaultVal}`);
         }
+        lineDiv.appendChild(input);
 
-        const lineItem = `
-            <div class="gg-option-line">
-                <div class="gg-option-label">${key}</div>
-                ${input}
-            </div>
-        `;
-
-        lineItems.push(lineItem);
+        popup.appendChild(lineDiv);
     }
-
-    const popupContent = `
-        <div id="gg-option-title" class="gg-title">${mod.name} Options</div>
-        ${lineItems.join('\n')}
-    `;
-    popup.innerHTML = popupContent;
 
     const onReset = () => {
         debugger;
@@ -311,6 +316,7 @@ const makeOptionMenu = (mod) => {
 
     const modDiv = getModDiv();
     popup.appendChild(formDiv);
+
     modDiv.appendChild(popup);
 };
 
@@ -829,8 +835,10 @@ const buttonMenuStyle = `
 
     #gg-option-title {
         padding-top: 5px;
-        padding-bottom: 10px;
+        padding-bottom: 12px;
         text-align: center;
+        text-shadow: ${bodyShadow};
+        font-size: 18px;
     }
 
     .gg-option-line {
