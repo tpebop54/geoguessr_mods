@@ -18,9 +18,10 @@
 // - Figure out how to properly reset map bounds. Might have to reload the whole map or (hopefully not) page
 // - Options menu
 // - Cheating disclaimer
-// - Clean up GG_STATE initialization
 // - Add event listeners to configs?
 // - Reset options button
+// - Can I get rid of map not loaded error?
+// - Move _BINDINGS to some sort of registry function
 
 
 /**
@@ -53,8 +54,16 @@ const MODS = {
         name: 'Map Rotation',
         tooltip: 'Makes the guess map rotate while you are trying to click.',
         options: {
-            'Run every (s)': 0.1,
-            'Degrees': 3,
+            every: {
+                label: 'Run Every (s)',
+                default: 0.1,
+                tooltip: 'Rotate the map every X seconds. Lower numbers will reduce choppiness but increase CPU usage.',
+            },
+            degrees: {
+                label: 'Degrees',
+                default: 3,
+                tooltip: 'Rotate by X degrees at the specified time interval. Positive for clockwise, negative for counter-clockwise.',
+            },
         },
     },
 
@@ -96,6 +105,9 @@ const MODS = {
 
 
 
+// Dev notes:
+// - MODS is used dynamically in the script. Changes to it (e.g. option values) will propagate throughout the script.
+
 
 
 
@@ -119,27 +131,6 @@ const debugMap = (map, evt) => {
 
 let GOOGLE_STREETVIEW, GOOGLE_MAP, GOOGLE_SVC; // Assigned in the google API portion of the script.
 
-const GG_STATE = { // TODO: clean this up.
-    [MODS.satView.key]: {
-        active: false,
-        options: {},
-    },
-    [MODS.rotateMap.key]: {
-        active: false,
-        options: {
-            seconds: Object.assign({}, MODS.rotateMap.options),
-        },
-    },
-    [MODS.zoomInOnly.key]: {
-        active: false,
-        options: {},
-    },
-    [MODS.hotterColder.key]: {
-        active: false,
-        options: {},
-    },
-};
-
 const GG_DEFAULT = {} // Used for default options and restoring options.
 for (const mod of Object.values(MODS)) {
     GG_DEFAULT[mod.key] = JSON.parse(JSON.stringify(mod));
@@ -147,28 +138,32 @@ for (const mod of Object.values(MODS)) {
 
 const STATE_KEY = 'gg_state'; // Key in window.localStorage.
 
+const saveState = () => {
+	window.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
+};
+
+const clearState = () => {
+    window.localStorage.removeItem(STATE_KEY);
+};
+
 const loadState = () => { // Load state from local storage if it exists, else use default.
+    let stateStr;
     try {
-        const stateStr = window.localStorage.getItem(STATE_KEY);
-        if (!stateStr) {
-            return GG_STATE;
-        }
+        stateStr = window.localStorage.getItem(STATE_KEY);
         const storedState = JSON.parse(stateStr);
-        Object.assign(GG_STATE, storedState);
+        Object.assign(MODS, storedState);
     } catch (err) {
-        console.err('Failed to load state');
-        console.err(err);
-        return GG_STATE;
+        if (stateStr) {
+            console.error('Failed to parse state. Resetting.');
+            clearState();
+        }
+        return MODS;
     }
 };
 
 let GG_ROUND; // Current round information. Set on round start, deleted on round end.
 let GG_MAP; // Current map info,
 let GG_CLICK; // [lat, lng] of latest map click.
-
-const saveState = () => { // State must be updated by calling function, e.g. GG_STATE.something = 1
-	window.localStorage.setItem(STATE_KEY, JSON.stringify(GG_STATE));
-};
 
 let IS_DRAGGING = false;
 
@@ -210,7 +205,7 @@ const getButtonID = (mod) => {
 };
 
 const getButtonText = (mod) => {
-    const active = GG_STATE[mod.key].active;
+    const active = mod.active;
     const text = `${active ? 'Disable ' : 'Enable '} ${mod.name}`;
     return text;
 };
@@ -220,28 +215,49 @@ const getButton = (mod) => {
 };
 
 const isActive = (mod) => {
-    return !!GG_STATE[mod.key].active;
+    return !!mod.active;
+};
+
+const getDefaultMod = (mod) => {
+    for (const defMod of Object.entries(GG_DEFAULT)) {
+        if (defMod.key === mod.key) {
+            return defMod;
+        }
+    }
+    return undefined;
 };
 
 const getDefaultOption = (mod, key) => {
-    const value = (GG_DEFAULT[mod.key].options || {})[key]
+    const defMod = getDefaultMod(mod);
+    if (!defMod) {
+        return undefined;
+    }
+    const defValue = ((defMod.option || {})[key] || {}).default;
+    return defValue;
+};
+
+const getOption = (mod, key) => {
+    const options = mod.options || {};
+    const value = (options[key] || {}).value;
+    if (value == null) {
+        return getDefaultOption(mod, key);
+    }
     return value;
 };
 
-const getOption = (mod, key, defaultValue) => {
-    let options = GG_STATE[mod.key].options;
-    if (typeof options !== 'object') {
-        options = GG_STATE[mod.key].options = {};
+const setOption = (mod, key, value, save = true) => {
+    const option = (mod.options || {})[key] || {};
+    if (!option) {
+        return;
     }
-    let value = options[key];
-    if (value === undefined) {
-        value = defaultValue !== undefined ? defaultValue : getDefaultOption(mod, key);
+    option.value = value;
+    if (save) { // Save in caller function if saving multiple options.
+        saveState();
     }
-    return value;
 };
 
 const makeOptionMenu = (mod) => {
-    if (document.getElementByID('gg-option-menu')) {
+    if (document.getElementById('gg-option-menu')) {
         return;
     }
 
@@ -254,19 +270,19 @@ const makeOptionMenu = (mod) => {
     popup.appendChild(title);
 
     const defaults = GG_DEFAULT[mod.key].options;
-    for (const [key, defaultVal] of Object.entries(defaults)) {
 
-        let value = GG_STATE[mod.key].options[key];
-        if (value == null) {
-            value = defaultVal;
-        }
+    const inputs = {}; // input element, keyed by option key.
+    for (const [key, option] of Object.entries(defaults)) {
+        const value = getOption(mod, key);
 
         const lineDiv = document.createElement('div'); // Label and input.
-
         const label = document.createElement('div');
-        label.innerHTML = key;
+        label.innerHTML = option.name;
         lineDiv.appendChild(label);
         lineDiv.classList.add('gg-option-line');
+        if (option.tooltip) {
+            label.title = option.tooltip;
+        }
 
         let input; // Separated to allow future upgrades, e.g. bounds.
         if (typeof defaultVal === 'number') {
@@ -275,13 +291,11 @@ const makeOptionMenu = (mod) => {
         } else if (typeof defaultVal === 'string') {
             input = document.createElement('input');
             Object.assign(input, { type: 'string', value, className: 'gg-option-input' });
-        } else if (defaultVal instanceof Array) {
-            input = ``;
-            console.log('TODO: button array');
         } else {
             throw new Error(`Invalid option specification: ${key} is of type ${typeof defaultVal}`);
         }
         lineDiv.appendChild(input);
+        inputs[key] = input;
 
         popup.appendChild(lineDiv);
     }
@@ -322,25 +336,23 @@ const makeOptionMenu = (mod) => {
 
 const toggleMod = (mod, forceState = null) => {
     if (!GOOGLE_MAP) {
-        const err = `Map not loaded. Cannot toggle ${mod.key}. Try refreshing the page and make sure to let it fully load.`;
+        const err = `Map not loaded for script. Cannot toggle ${mod.key}. Try refreshing the page and make sure to let it fully load.`;
         window.alert(err);
         throw new Error(err);
     }
     const previousState = isActive(mod);
     const newState = forceState != null ? forceState : !previousState;
 
-    GG_STATE[mod.key].active = newState;
+    MODS[mod.key].active = newState;
     getButton(mod).textContent = getButtonText(mod);
 
     // If there are configurable options for this mod, open a popup and wait for user to enter info.
-    const options = GG_STATE[mod.key].options;
+    const options = MODS[mod.key].options;
     if (options && typeof options === 'object' && Object.keys(options).length) {
         makeOptionMenu(mod);
         debugger;
 
         // TODO: await or listener or setInterval for popup
-
-        // Object.assign(GG_STATE[mod.key].options, options);
     }
 
     saveState();
@@ -381,11 +393,11 @@ let ROTATION_INTERVAL;
 
 const updateRotateMap = (forceState = null) => {
     const mod = MODS.rotateMap;
-    const active = toggleMod(mod, GG_STATE, forceState);
+    const active = toggleMod(mod, MODS, forceState);
 
     if (active) {
-        let nMilliseconds = Number(getOption(mod, 'Run every (s)')) * 1000;
-        let nDegrees = Number(getOption(mod, 'Degrees'));
+        let nMilliseconds = Number(getOption(mod, 'every')) * 1000;
+        let nDegrees = Number(getOption(mod, 'degrees'));
         if (isNaN(nMilliseconds) || isNaN(nDegrees)) {
             window.alert('Invalid interval or amount.');
             return;
@@ -723,7 +735,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 GeoGuessrEventFramework.init().then(GEF => {
 
     GEF.events.addEventListener('round_start', (evt) => {
-        window.localStorage.setItem(STATE_KEY, JSON.stringify(GG_STATE));
+        window.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
         try {
             const round = evt.detail.rounds[evt.detail.rounds.length - 1];
             GG_ROUND = round;
@@ -896,11 +908,11 @@ const buttonMenuStyle = `
     input::-webkit-outer-spin-button,
     input::-webkit-inner-spin-button {
         -webkit-appearance: none;
-        margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
+        margin: 0;
     }
 
     input[type=number] {
-        -moz-appearance:textfield; /* Firefox */
+        -moz-appearance:textfield;
     }
 `;
 
