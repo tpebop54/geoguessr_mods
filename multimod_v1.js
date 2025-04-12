@@ -63,6 +63,16 @@ const MODS = {
                 default: 2,
                 tooltip: 'Rotate by X degrees at the specified time interval. Positive for clockwise, negative for counter-clockwise.',
             },
+            startDegrees: {
+                label: 'Start at',
+                default: 0,
+                tooltip: 'Start at a fixed rotation. Note: "Randomize" will override this, and if you want a static map, set the others to 0.',
+            },
+            startRandom: {
+                label: 'Randomize',
+                default: false,
+                tooltip: 'Randomize starting position. Note: this will override the "Start at" setting if enabled.',
+            },
         },
     },
 
@@ -262,7 +272,7 @@ const makeOptionMenu = (mod) => {
         return;
     }
 
-    let popup = document.createElement('div');
+    const popup = document.createElement('div');
     popup.id = 'gg-option-menu';
 
     const title = document.createElement('div');
@@ -286,7 +296,7 @@ const makeOptionMenu = (mod) => {
         }
 
         const defaultVal = getDefaultOption(mod, key);
-        let input; // Separated to allow future upgrades, e.g. bounds.
+        let input;
         let type;
         if (typeof defaultVal === 'number') {
             type = Number;
@@ -296,6 +306,10 @@ const makeOptionMenu = (mod) => {
             type = String;
             input = document.createElement('input');
             Object.assign(input, { type: 'string', value, className: 'gg-option-input' });
+        } else if (typeof defaultVal === 'boolean') {
+            type = Boolean;
+            input = document.createElement('input');
+            Object.assign(input, { type: 'checkbox', value, className: 'gg-option-input' });
         } else {
             throw new Error(`Invalid option specification: ${key} is of type ${typeof defaultVal}`);
         }
@@ -322,7 +336,13 @@ const makeOptionMenu = (mod) => {
 
     const onApply = () => {
         for (const [key, type, input] of inputs) {
-            setOption(mod, key, type(input.value), false);
+            let value;
+            if (type === Boolean) {
+                value = input.value === 'true';
+            } else {
+                value = type(input.value);
+            }
+            setOption(mod, key, value, false);
         }
         saveState();
         UPDATE_CALLBACKS[mod.key](mod.active);
@@ -346,11 +366,10 @@ const makeOptionMenu = (mod) => {
 
     const modDiv = getModDiv();
     popup.appendChild(formDiv);
-
     modDiv.appendChild(popup);
 };
 
-const udpateMod = (mod, forceState = null) => {
+const updateMod = (mod, forceState = null) => {
     if (!GOOGLE_MAP) {
         const err = `Map did not load properly for the script. Try refreshing the page and making sure the map loads fully before you do anything. Reload the page in a new tab if this fails.`;
         window.alert(err);
@@ -359,16 +378,16 @@ const udpateMod = (mod, forceState = null) => {
     const previousState = isActive(mod);
     const newState = forceState != null ? forceState : !previousState;
 
+    // If there are configurable options for this mod, open a popup and wait for user to enter info.
+    if (newState && !forceState) {
+        const options = mod.options;
+        if (options && typeof options === 'object' && Object.keys(options).length) {
+            makeOptionMenu(mod);
+        }
+    }
+
     mod.active = newState;
     getButton(mod).textContent = getButtonText(mod);
-
-    // If there are configurable options for this mod, open a popup and wait for user to enter info.
-    const options = mod.options;
-    if (options && typeof options === 'object' && Object.keys(options).length) {
-        makeOptionMenu(mod);
-
-        // TODO: await or listener or setInterval for popup
-    }
 
     saveState();
     return newState;
@@ -385,7 +404,7 @@ const udpateMod = (mod, forceState = null) => {
 
 const updateSatView = (forceState = null) => {
     const mod = MODS.satView;
-    const active = udpateMod(mod, forceState);8
+    const active = updateMod(mod, forceState);
     GOOGLE_MAP.setMapTypeId(active ? 'satellite' : 'roadmap');
 };
 
@@ -408,11 +427,19 @@ let ROTATION_INTERVAL;
 
 const updateRotateMap = (forceState = null) => {
     const mod = MODS.rotateMap;
-    const active = udpateMod(mod, forceState);
+    const active = updateMod(mod, forceState);
 
     if (active) {
-        let nMilliseconds = Number(getOption(mod, 'every')) * 1000;
-        let nDegrees = Number(getOption(mod, 'degrees'));
+        const startRandom = getOption(mod, 'startRandom');
+        let startDegrees = Number(getOption(mod, 'startDegrees'));
+        if (startRandom) {
+            startDegrees = Math.random * 360;
+        }
+        if (isNaN(startDegrees)) {
+            startDegrees = 0;
+        }
+        const nMilliseconds = Number(getOption(mod, 'every')) * 1000;
+        const nDegrees = Number(getOption(mod, 'degrees'));
         if (isNaN(nMilliseconds) || isNaN(nDegrees)) {
             window.alert('Invalid interval or amount.');
             return;
@@ -420,7 +447,7 @@ const updateRotateMap = (forceState = null) => {
         if (ROTATION_INTERVAL) {
             clearInterval(ROTATION_INTERVAL);
         }
-        doRotation(nDegrees); // Perform synchronously and then start timer.
+        doRotation(startDegrees); // Set initial rotation and then start interval.
         ROTATION_INTERVAL = setInterval(() => {
             doRotation(nDegrees);
         }, nMilliseconds);
@@ -464,7 +491,7 @@ const setRestriction = (latLngBounds, zoom) => {
 
 const updateZoomInOnly = (forceState = null) => {
     const mod = MODS.zoomInOnly;
-    const active = udpateMod(mod, forceState);
+    const active = updateMod(mod, forceState);
     if (PREV_ZOOM === undefined) {
         PREV_ZOOM = GOOGLE_MAP.getZoom();
     }
@@ -558,7 +585,7 @@ const scoreListener = (evt) => {
 
 const updateHotterColder = (forceState = null) => {
     const mod = MODS.hotterColder;
-    const active = udpateMod(mod, forceState);
+    const active = updateMod(mod, forceState);
 
     if (active) {
         document.addEventListener('map_click', scoreListener);
@@ -594,7 +621,7 @@ const bindButtons = () => {
             console.error(`Mod ${mod.key} not found.`);
             continue;
         }
-        button.addEventListener('click', () => callback()); // Don't pass the click event since udpateMod doesn't need it.
+        button.addEventListener('click', () => callback()); // Don't pass the click event since updateMod doesn't need it.
     }
 };
 
