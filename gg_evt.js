@@ -1,4 +1,4 @@
-// Taken and mofidied from https://miraclewhips.dev/geoguessr-event-framework/geoguessr-event-framework.js
+// Taken and modified from https://miraclewhips.dev/geoguessr-event-framework/geoguessr-event-framework.js
 
 
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
