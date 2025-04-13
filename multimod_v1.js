@@ -23,6 +23,8 @@
 // - Dropdown option type
 
 
+
+
 /**
 CREDIT WHERE CREDIT IS DUE
 Heavy credit to https://miraclewhips.dev/ for geoguessr-event-framework, showing me how to overhaul google maps API behavior,
@@ -33,8 +35,10 @@ Heavy credit to https://miraclewhips.dev/ for geoguessr-event-framework, showing
 // Mods available in this script.
 // ===============================================================================================================================
 
-// Keep same configuration for all mods. Must add to _BINDINGS at the bottom of the file for any new mods.
 // If you want to disable a mod, change 'show' to false for it.
+// DEV NOTES:
+// - Keep same configuration for all mods. Must add to _BINDINGS at the bottom of the file for any new mods.
+// - This is a global variable that the script will modify. The saved state will override certain parts of it.
 const MODS = {
 
     // Satellite view on guess map.
@@ -101,28 +105,8 @@ const MODS = {
 
 
 
-
-
-// *******************************************************************************************************************************
-// *******************************************************************************************************************************
-
-// DON'T CHANGE ANYTHING BELOW HERE UNLESS YOU KNOW WHAT YOU'RE DOING ************************************************************
-
-// *******************************************************************************************************************************
-// *******************************************************************************************************************************
-
-
-
-
-// Dev notes:
-// - MODS is used dynamically in the script. Changes to it (e.g. option values) will propagate throughout the script.
-
-
-
-
-// *******************************************************************************************************************************
-
-// Debugging utilities
+// Debugging utilities.
+// ===============================================================================================================================
 // If true, add a right click listener to the guess map that will give you access to JS variables in your browser console.
 const DEBUG = true;
 
@@ -156,18 +140,42 @@ const clearState = () => {
 };
 
 const loadState = () => { // Load state from local storage if it exists, else use default.
-    let stateStr;
+    const stateStr = window.localStorage.getItem(STATE_KEY);
+    let storedState;
     try {
-        stateStr = window.localStorage.getItem(STATE_KEY);
-        const storedState = JSON.parse(stateStr);
-        Object.assign(MODS, storedState);
+        storedState = JSON.parse(stateStr);
     } catch (err) {
-        if (stateStr) {
-            console.error('Failed to parse state. Resetting.');
-            clearState();
-        }
-        return MODS;
+        console.log(err);
     }
+    if (typeof storedState !== 'object') {
+        console.log('Refreshing stored state');
+        clearState();
+        storedState = {};
+    }
+
+    // Create a clean starting state, with the previous state if it existed.
+    // Here, we only care about the active/inactive state, and the values of the options. Everything else comes from the default config.
+    for (const [key, mod] of Object.entries(MODS)) {
+        if (!mod.options) {
+            continue;
+        }
+        const storedMod = storedState[key];
+        if (!storedMod) {
+            continue;
+        }
+        mod.active = !!storedMod.active;
+        if (typeof storedMod.options !== 'object') {
+            storedMod.options = {};
+        }
+        const validKeys = new Set(Object.keys(mod));
+        for (const [key, storedOption] of Object.entries(storedMod.options)) {
+            if (validKeys.has(key) && storedOption.value != null) {
+                mod.options[key].value = storedOption.value;
+            }
+        }
+    }
+
+    return MODS;
 };
 
 let GG_ROUND; // Current round information. Set on round start, deleted on round end.
@@ -257,12 +265,9 @@ const getOption = (mod, key) => {
 };
 
 const setOption = (mod, key, value, save = true) => {
-    const option = (mod.options || {})[key] || {};
-    if (!option) {
-        return;
-    }
-    option.value = value;
-    if (save) { // Save in caller function if saving multiple options.
+    mod.options[key] = mod.options[key] || {}; // Assumes that MODS has been sanitized on load.
+    mod.options[key].value = value;
+    if (save) { // Need to call save in caller function if saving multiple options.
         saveState();
     }
 };
