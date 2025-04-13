@@ -277,7 +277,7 @@ const makeOptionMenu = (mod) => {
         return;
     }
 
-    const popup = document.createElement('div');
+    let popup = document.createElement('div');
     popup.id = 'gg-option-menu';
 
     const title = document.createElement('div');
@@ -343,7 +343,7 @@ const makeOptionMenu = (mod) => {
         for (const [key, type, input] of inputs) {
             let value;
             if (type === Boolean) {
-                value = input.value === 'true';
+                value = !!input.checked;
             } else {
                 value = type(input.value);
             }
@@ -421,11 +421,15 @@ const updateSatView = (forceState = null) => {
 // MOD: Rotating marker map.
 // ===============================================================================================================================
 
+const setHeading = (nDegrees) => {
+    GOOGLE_MAP.setHeading(nDegrees) % 360;
+};
+
 const doRotation = (nDegrees) => {
     if (IS_DRAGGING) {
         return; // Drag event gets cut by setHeading.
     }
-    GOOGLE_MAP.setHeading((GOOGLE_MAP.getHeading() + nDegrees)) % 360;
+    setHeading(GOOGLE_MAP.getHeading() + nDegrees);
 };
 
 let ROTATION_INTERVAL;
@@ -438,24 +442,26 @@ const updateRotateMap = (forceState = null) => {
         const startRandom = getOption(mod, 'startRandom');
         let startDegrees = Number(getOption(mod, 'startDegrees'));
         if (startRandom) {
-            startDegrees = Math.random * 360;
+            startDegrees = Math.random() * 360;
         }
         if (isNaN(startDegrees)) {
             startDegrees = 0;
         }
         const nMilliseconds = Number(getOption(mod, 'every')) * 1000;
         const nDegrees = Number(getOption(mod, 'degrees'));
-        if (isNaN(nMilliseconds) || isNaN(nDegrees)) {
+        if (isNaN(nMilliseconds) || isNaN(nDegrees) || nMilliseconds < 0) {
             window.alert('Invalid interval or amount.');
             return;
         }
         if (ROTATION_INTERVAL) {
             clearInterval(ROTATION_INTERVAL);
         }
-        doRotation(startDegrees); // Set initial rotation and then start interval.
-        ROTATION_INTERVAL = setInterval(() => {
-            doRotation(nDegrees);
-        }, nMilliseconds);
+        setHeading(startDegrees); // Set initial rotation and then start interval.
+        if (nDegrees && nMilliseconds) {
+            ROTATION_INTERVAL = setInterval(() => {
+                doRotation(nDegrees);
+            }, nMilliseconds);
+        }
     } else if (ROTATION_INTERVAL) {
         clearInterval(ROTATION_INTERVAL);
     }
