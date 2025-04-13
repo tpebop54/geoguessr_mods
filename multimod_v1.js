@@ -13,44 +13,33 @@
 // ==/UserScript==
 
 
-// TODO:
-// - Break this off into a base util thing
-// - Figure out how to properly reset map bounds. Might have to reload the whole map or (hopefully not) page
-// - Cheating disclaimer
-// - Add event listeners to configs?
-// - Can I get rid of map not loaded error?
-// - Move _BINDINGS to some sort of registry function
-// - Dropdown option type
-
-
-
 
 /**
 CREDIT WHERE CREDIT IS DUE
-Heavy credit to https://miraclewhips.dev/ for geoguessr-event-framework, showing me how to overhaul google maps API behavior,
-    and for adding the menu with mod toggles.
+Heavy credit to https://miraclewhips.dev/ for geoguessr-event-framework and some essential functions in this script.
 */
+
 
 
 // Mods available in this script.
 // ===============================================================================================================================
 
-// If you want to disable a mod, change 'show' to false for it.
-// DEV NOTES:
-// - Keep same configuration for all mods. Must add to _BINDINGS at the bottom of the file for any new mods.
-// - This is a global variable that the script will modify. The saved state will override certain parts of it.
+/**  DEV NOTES:
+    - If you want to disable a mod, change 'show' to false for it.
+    - Keep same configuration for all mods. Must add to _BINDINGS at the bottom of the file for any new mods.
+    - This is a global variable that the script will modify. The saved state will override certain parts of it.
+*/
+
 const MODS = {
 
-    // Satellite view on guess map.
     satView: {
         show: true, // false to hide this mod from the panel. Mostly used for dev, but you can change it to disable stuff.
         key: 'sat-view', // Used for global state and document elements.
         name: 'Satellite View', // Used for menus.
-        tooltip: 'Uses satellite view on the guess map, with no labels.',
+        tooltip: 'Uses satellite view on the guess map, with no labels.', // Shows when hovering over menu button.
         options: {}, // Used when mod requires or allows configurable values.
     },
 
-    // Guess map rotates while you're trying to click.
     rotateMap: {
         show: true,
         key: 'rotate-map',
@@ -60,7 +49,7 @@ const MODS = {
             every: {
                 label: 'Run Every (s)',
                 default: 0.05,
-                tooltip: 'Rotate the map every X seconds. Lower numbers will reduce choppiness but increase CPU usage.',
+                tooltip: 'Rotate the map every X seconds. Lower numbers will reduce choppiness but may also slow the game down.',
             },
             degrees: {
                 label: 'Degrees',
@@ -80,23 +69,22 @@ const MODS = {
         },
     },
 
-    // You will only be able to zoom in (no panning either).
     zoomInOnly: {
         show: true,
         key: 'zoom-in-only',
         name: 'Zoom In Only',
-        tooltip: 'You can only zoom inward. NOTE: currently you have to refresh the page for each round.',
+        tooltip: 'You can only zoom inward.',
         options: {},
     },
 
-    // Show distance, would-be score, and/or hotter/colder as you click around.
     hotterColder: {
         show: true,
         key: 'hotter-colder',
         name: 'Hotter/Colder',
-        tooltip: 'Shows the would-be score of each click. Do not use this for ranked duels!',
+        tooltip: 'Shows the would-be score of each click.',
         options: {},
     },
+
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -383,7 +371,7 @@ const updateMod = (mod, forceState = null) => {
     const previousState = isActive(mod);
     const newState = forceState != null ? forceState : !previousState;
 
-    // If there are configurable options for this mod, open a popup and wait for user to enter info.
+    // If there are configurable options for this mod, open a popup.
     if (newState && !forceState) {
         const options = mod.options;
         if (options && typeof options === 'object' && Object.keys(options).length) {
@@ -483,10 +471,10 @@ let INITIAL_BOUNDS;
 const getLatLngBounds = () => {
     const bounds = GOOGLE_MAP.getBounds();
     const latLngBounds = {
-        north: bounds.Yh.hi,
-        south: bounds.Yh.lo,
-        west: bounds.Hh.lo,
-        east: bounds.Hh.hi,
+        north: bounds.ei.hi,
+        south: bounds.ei.lo,
+        west: bounds.Gh.lo,
+        east: bounds.Gh.hi,
     };
     return latLngBounds;
 }
@@ -591,7 +579,7 @@ const scoreListener = (evt) => {
         } else {
             clearInterval(fadeEffect);
         }
-    }, 40);
+    }, 30);
 };
 
 const updateHotterColder = (forceState = null) => {
