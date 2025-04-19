@@ -406,7 +406,7 @@ const updateSatView = (forceState = null) => {
 
 
 
-// MOD: Rotating marker map.
+// MOD: Rotating guessmap.
 // ===============================================================================================================================
 
 const setHeading = (nDegrees) => {
