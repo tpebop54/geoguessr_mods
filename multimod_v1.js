@@ -1047,26 +1047,18 @@ const buttonMenuStyle = `
         position: relative;
         color: white;
     }
-    :root {
-        cursor: none;
-        --cursorX: 50vw;
-        --cursorY: 50vh;
-    }
-    :root:before {
+    :root
+    ::before
+    ::after {
         display: block;
         width: 100%;
         height: 100%;
         position: fixed;
         pointer-events: none;
-        background: radial-gradient(
-            circle 10vmax at var(--cursorX) var(--cursorY),
-            rgba(0,0,0,0) 0%,
-            rgba(0,0,0,.5) 80%,
-            rgba(0,0,0,.95) 100%
-        )
+        background: black;
     }
 `;
 
 GM_addStyle(buttonMenuStyle);
 
-// -------------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------------v
