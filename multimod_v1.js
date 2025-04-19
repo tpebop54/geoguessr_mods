@@ -85,6 +85,25 @@ const MODS = {
         options: {},
     },
 
+    flashlight: {
+        show: true,
+        key: 'flashlight',
+        name: 'Flashlight',
+        tooltip: 'Uses cursor as a "flashlight" where you can only see part of the screen',
+        options: {
+            radius: {
+                label: 'Radius',
+                default: 10,
+                tooltip: 'Percent of screen vertical, used to make a circle',
+            },
+            blur: {
+                label: 'Blur level',
+                default: 3,
+                tooltip: 'Amount of blur to apply to edges of flashlight (percent of screen vertical)',
+            }
+        }
+    },
+
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -597,6 +616,68 @@ const updateHotterColder = (forceState = null) => {
 
 
 
+// MOD: Flashlight.
+// ===============================================================================================================================
+
+let FLASHLIGHT_MOUSEMOVE;
+let FLASHLIGHT_TOUCHMOVE;
+
+const updateFlashlight = (forceState = null) => {
+    const mod = MODS.flashlight;
+    const active = updateMod(mod, forceState);
+
+    let flashlightDiv = document.getElementById('gg-flashlight-div'); // Div that covers the canvas.
+    let flashlight = document.getElementById('gg-flashlight'); // The flashlight.
+    const canvas = getCanvas();
+    if (flashlightDiv) {
+        canvas.removeChild(flashlightDiv);
+    }
+    if (flashlight) {
+        canvas.removeChild(flashlight);
+    }
+    if (FLASHLIGHT_MOUSEMOVE) {
+        document.removeEventListener(FLASHLIGHT_MOUSEMOVE);
+    }
+    if (FLASHLIGHT_TOUCHMOVE) {
+        document.removeEventListener(FLASHLIGHT_TOUCHMOVE);
+    }
+
+    if (active) { // Add a div that covers the canvas but leaves everything else on top.
+        flashlightDiv = document.createElement('div');
+        flashlightDiv.id = 'gg-flashlight-div';
+        // canvas.insertBefore(flashlightDiv, canvas.firstChild);
+
+        flashlight = document.createElement('div');
+        flashlight.id = 'gg-flashlight';
+        // canvas.insertBefore(flashlight, canvas.firstChild);
+
+        const updateFlashlight = (evt) => {
+            const x = evt.clientX || evt.touches[0].clientX
+            const y = evt.clientY || evt.touches[0].clientY
+            document.documentElement.style.setProperty('--cursorX', x + 'px')
+            document.documentElement.style.setProperty('--cursorY', y + 'px')
+        }
+        FLASHLIGHT_MOUSEMOVE = document.addEventListener('mousemove', updateFlashlight)
+        FLASHLIGHT_TOUCHMOVE = document.addEventListener('touchmove', updateFlashlight)
+    }
+};
+
+
+function update(e){
+  var x = e.clientX || e.touches[0].clientX
+  var y = e.clientY || e.touches[0].clientY
+
+  document.documentElement.style.setProperty('--cursorX', x + 'px')
+  document.documentElement.style.setProperty('--cursorY', y + 'px')
+}
+
+document.addEventListener('mousemove',update)
+document.addEventListener('touchmove',update)
+
+
+// -------------------------------------------------------------------------------------------------------------------------------
+
+
 
 // Add bindings and start the script.
 // ===============================================================================================================================
@@ -607,6 +688,7 @@ const _BINDINGS = [
     [MODS.rotateMap, updateRotateMap],
     [MODS.zoomInOnly, updateZoomInOnly],
     [MODS.hotterColder, updateHotterColder],
+    [MODS.flashlight, updateFlashlight],
 ];
 
 const bindButtons = () => {
@@ -956,6 +1038,32 @@ const buttonMenuStyle = `
 
     input[type=number] {
         -moz-appearance:textfield;
+    }
+    #gg-flashlight-div {
+        width: 100%;
+        height: 100%;
+        background: black;
+        overflow: hidden;
+        position: relative;
+        color: white;
+    }
+    :root {
+        cursor: none;
+        --cursorX: 50vw;
+        --cursorY: 50vh;
+    }
+    :root:before {
+        display: block;
+        width: 100%;
+        height: 100%;
+        position: fixed;
+        pointer-events: none;
+        background: radial-gradient(
+            circle 10vmax at var(--cursorX) var(--cursorY),
+            rgba(0,0,0,0) 0%,
+            rgba(0,0,0,.5) 80%,
+            rgba(0,0,0,.95) 100%
+        )
     }
 `;
 
