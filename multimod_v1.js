@@ -86,7 +86,7 @@ const MODS = {
     },
 
     flashlight: {
-        show: true,
+        show: true, // Can't get this one working :(
         key: 'flashlight',
         name: 'Flashlight',
         tooltip: 'Uses cursor as a "flashlight" where you can only see part of the screen',
@@ -620,60 +620,50 @@ const updateHotterColder = (forceState = null) => {
 // ===============================================================================================================================
 
 let FLASHLIGHT_MOUSEMOVE;
-let FLASHLIGHT_TOUCHMOVE;
 
+// ref: https://stackoverflow.com/questions/77333080/flashlight-effect-with-custom-cursor-img
 const updateFlashlight = (forceState = null) => {
     const mod = MODS.flashlight;
     const active = updateMod(mod, forceState);
 
-    let flashlightDiv = document.getElementById('gg-flashlight-div'); // Div that covers the canvas.
-    let flashlight = document.getElementById('gg-flashlight'); // The flashlight.
-    const canvas = getCanvas();
+    // Opaque div will cover entire screen. Behavior doesn't work well with covering canvas only.
+    const root = document.body.parentElement;
+    let flashlightDiv = document.getElementById('gg-flashlight-div'); // Opaque div.
+    let flashlight = document.getElementById('gg-flashlight'); // Flashlight.
     if (flashlightDiv) {
-        canvas.removeChild(flashlightDiv);
+        flashlightDiv.parentElement.removeChild(flashlightDiv);
     }
     if (flashlight) {
-        canvas.removeChild(flashlight);
+        flashlight.parentElement.removeChild(flashlight);
     }
     if (FLASHLIGHT_MOUSEMOVE) {
         document.removeEventListener(FLASHLIGHT_MOUSEMOVE);
     }
-    if (FLASHLIGHT_TOUCHMOVE) {
-        document.removeEventListener(FLASHLIGHT_TOUCHMOVE);
-    }
 
-    if (active) { // Add a div that covers the canvas but leaves everything else on top.
+    if (active) {
         flashlightDiv = document.createElement('div');
         flashlightDiv.id = 'gg-flashlight-div';
-        // canvas.insertBefore(flashlightDiv, canvas.firstChild);
+        root.insertBefore(flashlightDiv, root.firstChild);
 
-        flashlight = document.createElement('div');
+        flashlight = document.createElement('h1');
         flashlight.id = 'gg-flashlight';
-        // canvas.insertBefore(flashlight, canvas.firstChild);
+        flashlightDiv.appendChild(flashlight);
 
-        const updateFlashlight = (evt) => {
-            const x = evt.clientX || evt.touches[0].clientX
-            const y = evt.clientY || evt.touches[0].clientY
-            document.documentElement.style.setProperty('--cursorX', x + 'px')
-            document.documentElement.style.setProperty('--cursorY', y + 'px')
-        }
-        FLASHLIGHT_MOUSEMOVE = document.addEventListener('mousemove', updateFlashlight)
-        FLASHLIGHT_TOUCHMOVE = document.addEventListener('touchmove', updateFlashlight)
+        FLASHLIGHT_MOUSEMOVE = flashlightDiv.addEventListener('mousemove', (evt) => {
+            const rect = flashlightDiv.getBoundingClientRect();
+            const x = evt.clientX - rect.left;
+            const y = evt.clientY - rect.top;
+            flashlightDiv.style.setProperty('--flashlight-x-pos', `${x - rect.width / 2}px`);
+            flashlightDiv.style.setProperty('--flashlight-y-pos', `${y - rect.height / 2}px`);
+        });
+
+        flashlightDiv.addEventListener('mouseleave', () => {
+            const inset = flashlightDiv.style.getPropertyValue('--flashlight-inset');
+            flashlightDiv.style.setProperty('--flashlight-x-pos', 'inset');
+            flashlightDiv.style.setProperty('--flashlight-y-pos', 'inset');
+        });
     }
 };
-
-
-function update(e){
-  var x = e.clientX || e.touches[0].clientX
-  var y = e.clientY || e.touches[0].clientY
-
-  document.documentElement.style.setProperty('--cursorX', x + 'px')
-  document.documentElement.style.setProperty('--cursorY', y + 'px')
-}
-
-document.addEventListener('mousemove',update)
-document.addEventListener('touchmove',update)
-
 
 // -------------------------------------------------------------------------------------------------------------------------------
 
@@ -1040,22 +1030,39 @@ const buttonMenuStyle = `
         -moz-appearance:textfield;
     }
     #gg-flashlight-div {
-        width: 100%;
-        height: 100%;
-        background: black;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: none;
+        width: 200%;
+        height: 200%;
+        padding: 5rem;
+
         overflow: hidden;
-        position: relative;
-        color: white;
+        position: absolute;
+        z-index: 99999;
+
+        --flashlight-y-pos: -50%;
+        --flashlight-x-pos: -50%;
+        --flashlight-inset: -300px;
     }
-    :root
-    ::before
-    ::after {
-        display: block;
-        width: 100%;
-        height: 100%;
-        position: fixed;
-        pointer-events: none;
-        background: black;
+    #gg-flashlight-div::before {
+        content: '';
+        position: absolute;
+        inset: var(--flashlight-inset);
+        background-image: radial-gradient(circle, transparent 0%, rgba(47,52,2,0.4) 60px, black 70px, black 100%);
+        background-position: var(--flashlight-x-pos) var(--flashlight-y-pos);
+        background-repeat: no-repeat;
+    }
+
+    #gg-flashlight-div::after {
+        content: "";
+        font-size: 30px;
+        position: absolute;
+        transform: translate(var(--flashlight-x-pos), var(--flashlight-y-pos));
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 `;
 
