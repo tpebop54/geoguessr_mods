@@ -25,6 +25,7 @@ Heavy credit to https://miraclewhips.dev/ for geoguessr-event-framework and some
 // - block screen until mods are loaded (e.g. flashlight mode is essentially blink mode first).
 // - onApply when the mod is disabled but the settings are open should enable it.
 // - figure out why sometimes the map doesn't load properly.
+// - disable mod should close popup.
 
 
 
@@ -107,6 +108,25 @@ const MODS = {
                 label: 'Blur',
                 default: 50,
                 tooltip: 'Blur (in pixels) to add to the flashlight. Extends out from the radius.',
+            }
+        }
+    },
+
+    seizure: {
+        show: true,
+        key: 'seizure',
+        name: 'Seizure',
+        tooltip: 'Makes large map jitter around. Seizure warning!!',
+        options: {
+            frequency: {
+                label: 'Frequency (Hz)',
+                default: 30,
+                tooltip: 'How many times per second to make the image move around.',
+            },
+            distance: {
+                label: 'Max Distance',
+                default: 50,
+                tooltip: 'Maximum distance to jitter each movement (from original location, in pixels).',
             }
         }
     },
@@ -228,6 +248,14 @@ const getGuessMap = () => {
 
 const getCanvas = () => {
     return document.querySelector(`div[class^="game_canvas__"]`);
+};
+
+const getBigMap = () => {
+    const canvas = getCanvas();
+    if (!canvas) {
+        return undefined;
+    }
+    return canvas.querySelector('.widget-scene-canvas');
 };
 
 const getModDiv = () => {
@@ -683,6 +711,43 @@ const updateFlashlight = (forceState = null) => {
 
 
 
+// MOD: Seizure.
+// ===============================================================================================================================
+
+let SEIZURE_INTERVAL;
+
+const updateSeizure = (forceState = null) => {
+    const mod = MODS.seizure;
+    const active = updateMod(mod, forceState);
+
+    const bigMap = getBigMap();
+
+    if (!active) {
+        if (SEIZURE_INTERVAL) {
+            clearInterval(SEIZURE_INTERVAL);
+        }
+        bigMap.style.setProperty('left', '0px');
+        bigMap.style.setProperty('top', '0px');
+        return;
+    }
+
+    const frequency = getOption(mod, 'frequency');
+    const nMilliseconds = 1000 / frequency;
+    const nPixels = getOption(mod, 'distance');
+
+    SEIZURE_INTERVAL = setInterval(() => {
+        const offsetX = Math.ceil((Math.random() * nPixels));
+        const offsetY = Math.ceil((Math.random() * nPixels));
+        bigMap.style.setProperty('left', `${offsetX}px`);
+        bigMap.style.setProperty('top', `${offsetY}px`);
+    }, nMilliseconds);
+};
+
+// -------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
 // Add bindings and start the script.
 // ===============================================================================================================================
 
@@ -693,6 +758,7 @@ const _BINDINGS = [
     [MODS.zoomInOnly, updateZoomInOnly],
     [MODS.hotterColder, updateHotterColder],
     [MODS.flashlight, updateFlashlight],
+    [MODS.seizure, updateSeizure],
 ];
 
 const bindButtons = () => {
