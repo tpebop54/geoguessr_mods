@@ -20,6 +20,13 @@ Heavy credit to https://miraclewhips.dev/ for geoguessr-event-framework and some
 */
 
 
+// TODO:
+// - full reset shortcut for when things go awry.
+// - block screen until mods are loaded (e.g. flashlight mode is essentially blink mode first).
+// - onApply when the mod is disabled but the settings are open should enable it.
+// - figure out why sometimes the map doesn't load properly.
+
+
 
 // Mods available in this script.
 // ===============================================================================================================================
@@ -86,20 +93,20 @@ const MODS = {
     },
 
     flashlight: {
-        show: true, // Can't get this one working :(
+        show: true,
         key: 'flashlight',
         name: 'Flashlight',
         tooltip: 'Uses cursor as a "flashlight" where you can only see part of the screen',
         options: {
             radius: {
                 label: 'Radius',
-                default: 10,
-                tooltip: 'Percent of screen vertical, used to make a circle',
+                default: 100,
+                tooltip: 'Radius of flashlight, in pixels.',
             },
             blur: {
-                label: 'Blur level',
-                default: 3,
-                tooltip: 'Amount of blur to apply to edges of flashlight (percent of screen vertical)',
+                label: 'Blur',
+                default: 50,
+                tooltip: 'Blur (in pixels) to add to the flashlight. Extends out from the radius.',
             }
         }
     },
@@ -631,6 +638,7 @@ const updateFlashlight = (forceState = null) => {
     const active = updateMod(mod, forceState);
 
     // Opaque div will cover entire screen. Behavior doesn't work well with covering canvas only.
+    const body = document.body;
     let flashlightDiv = document.getElementById('gg-flashlight-div'); // Opaque div.
     let flashlight = document.getElementById('gg-flashlight'); // Flashlight.
     if (flashlightDiv) {
@@ -640,10 +648,12 @@ const updateFlashlight = (forceState = null) => {
         flashlight.parentElement.removeChild(flashlight);
     }
     if (FLASHLIGHT_MOUSEMOVE) {
-        document.body.removeEventListener(FLASHLIGHT_MOUSEMOVE);
+        body.removeEventListener(FLASHLIGHT_MOUSEMOVE);
     }
 
     if (active) {
+        body.style.overflow = 'hidden'; // Seems like the GeoGuessr code is overwriting the custom body CSS, so set it manually.
+
         flashlightDiv = document.createElement('div');
         flashlightDiv.id = 'gg-flashlight-div';
 
@@ -651,7 +661,12 @@ const updateFlashlight = (forceState = null) => {
         flashlight.id = 'gg-flashlight';
         flashlightDiv.appendChild(flashlight);
 
-        const body = document.body;
+        const innerRadius = Number(getOption(mod, 'radius'));
+        const blur = Number(getOption(mod, 'blur'));
+        const outerRadius = innerRadius + blur;
+        flashlightDiv.style.setProperty('--flashlight-radius', `${innerRadius}px`);
+        flashlightDiv.style.setProperty('--flashlight-blur', `${outerRadius}px`);
+
         FLASHLIGHT_MOUSEMOVE = body.addEventListener('mousemove', (evt) => {
             const rect = flashlightDiv.getBoundingClientRect();
             const x = evt.clientX - rect.left;
@@ -900,7 +915,11 @@ observer.observe(document.querySelector('#__next'), { subtree: true, childList: 
 const headerShadow = 'rgb(204, 48, 46) 2px 0px 0px, rgb(204, 48, 46) 1.75517px 0.958851px 0px, rgb(204, 48, 46) 1.0806px 1.68294px 0px, rgb(204, 48, 46) 0.141474px 1.99499px 0px, rgb(204, 48, 46) -0.832294px 1.81859px 0px, rgb(204, 48, 46) -1.60229px 1.19694px 0px, rgb(204, 48, 46) -1.97998px 0.28224px 0px, rgb(204, 48, 46) -1.87291px -0.701566px 0px, rgb(204, 48, 46) -1.30729px -1.5136px 0px, rgb(204, 48, 46) -0.421592px -1.95506px 0px, rgb(204, 48, 46) 0.567324px -1.91785px 0px, rgb(204, 48, 46) 1.41734px -1.41108px 0px, rgb(204, 48, 46) 1.92034px -0.558831px 0px'
 const bodyShadow = '3px 3px 0 #000, 3px 0px 3px #000, 1px 1px 0 #000, 3px 1px 2px #000';
 
-const buttonMenuStyle = `
+// Dynamic styling.
+const flashlightRadius = getOption(MODS.flashlight, 'radius');
+const flashlightBlur = getOption(MODS.flashlight, 'blur');
+
+const style = `
 
     body: {
         overflow: hidden;
@@ -1049,13 +1068,15 @@ const buttonMenuStyle = `
         --flashlight-y-pos: -50%;
         --flashlight-x-pos: -50%;
         --flashlight-inset: -300px;
+        --flashlight-radius: ${flashlightRadius}px;
+        --flashlight-blur: ${flashlightRadius + flashlightBlur}px;
     }
 
     #gg-flashlight-div::before {
         content: "";
         position: absolute;
         inset: var(--flashlight-inset);
-        background-image: radial-gradient(circle, transparent 0%, rgba(47,52,2,0.4) 60px, black 70px, black 100%);
+        background-image: radial-gradient(circle, transparent 0%, rgba(47,52,2,0.4) var(--flashlight-radius), black var(--flashlight-blur), black 100%);
         background-position: var(--flashlight-x-pos) var(--flashlight-y-pos);
         background-repeat: no-repeat;
         pointer-events: none;
@@ -1072,6 +1093,6 @@ const buttonMenuStyle = `
     }
 `;
 
-GM_addStyle(buttonMenuStyle);
+GM_addStyle(style);
 
 // -------------------------------------------------------------------------------------------------------------------------------
