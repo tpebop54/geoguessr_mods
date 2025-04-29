@@ -190,6 +190,7 @@ let GG_MAP; // Current map info,
 let GG_CLICK; // [lat, lng] of latest map click.
 
 let IS_DRAGGING = false;
+let GAME_OVERLAY; // Div that is permanently on top of the game, to mess around with stuff. Pointer events will be disabled when
 
 const UPDATE_CALLBACKS = {}; // TODO: move this to some sort of registry function.
 
@@ -205,6 +206,10 @@ const UPDATE_CALLBACKS = {}; // TODO: move this to some sort of registry functio
 const getGoogle = () => {
     return window.google || unsafeWindow.google;
 }
+
+const getGameContent = () => {
+    return document.querySelector('div[class^="game_content__"]');;
+};
 
 const getGuessMapContainer = () => {
     return document.querySelector('div[class^="game_guessMap__"]');;
@@ -549,7 +554,6 @@ const updateZoomInOnly = (forceState = null) => {
 
 
 
-
 // MOD: Hotter/Colder.
 // ===============================================================================================================================
 
@@ -627,7 +631,6 @@ const updateFlashlight = (forceState = null) => {
     const active = updateMod(mod, forceState);
 
     // Opaque div will cover entire screen. Behavior doesn't work well with covering canvas only.
-    const root = document.body.parentElement;
     let flashlightDiv = document.getElementById('gg-flashlight-div'); // Opaque div.
     let flashlight = document.getElementById('gg-flashlight'); // Flashlight.
     if (flashlightDiv) {
@@ -637,35 +640,31 @@ const updateFlashlight = (forceState = null) => {
         flashlight.parentElement.removeChild(flashlight);
     }
     if (FLASHLIGHT_MOUSEMOVE) {
-        document.removeEventListener(FLASHLIGHT_MOUSEMOVE);
+        document.body.removeEventListener(FLASHLIGHT_MOUSEMOVE);
     }
 
     if (active) {
         flashlightDiv = document.createElement('div');
         flashlightDiv.id = 'gg-flashlight-div';
-        root.insertBefore(flashlightDiv, root.firstChild);
 
         flashlight = document.createElement('h1');
         flashlight.id = 'gg-flashlight';
         flashlightDiv.appendChild(flashlight);
 
-        FLASHLIGHT_MOUSEMOVE = flashlightDiv.addEventListener('mousemove', (evt) => {
+        const body = document.body;
+        FLASHLIGHT_MOUSEMOVE = body.addEventListener('mousemove', (evt) => {
             const rect = flashlightDiv.getBoundingClientRect();
             const x = evt.clientX - rect.left;
             const y = evt.clientY - rect.top;
             flashlightDiv.style.setProperty('--flashlight-x-pos', `${x - rect.width / 2}px`);
             flashlightDiv.style.setProperty('--flashlight-y-pos', `${y - rect.height / 2}px`);
         });
-
-        flashlightDiv.addEventListener('mouseleave', () => {
-            const inset = flashlightDiv.style.getPropertyValue('--flashlight-inset');
-            flashlightDiv.style.setProperty('--flashlight-x-pos', 'inset');
-            flashlightDiv.style.setProperty('--flashlight-y-pos', 'inset');
-        });
+        body.insertBefore(flashlightDiv, body.firstChild);
     }
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
+
 
 
 
@@ -903,6 +902,10 @@ const bodyShadow = '3px 3px 0 #000, 3px 0px 3px #000, 1px 1px 0 #000, 3px 1px 2p
 
 const buttonMenuStyle = `
 
+    body: {
+        overflow: hidden;
+    }
+
     #gg-mod-container {
         position: absolute;
         top: 2.5rem;
@@ -1029,14 +1032,15 @@ const buttonMenuStyle = `
     input[type=number] {
         -moz-appearance:textfield;
     }
+
     #gg-flashlight-div {
         display: flex;
         align-items: center;
         justify-content: center;
-        cursor: none;
         width: 200%;
         height: 200%;
         padding: 5rem;
+        pointer-events: none;
 
         overflow: hidden;
         position: absolute;
@@ -1046,23 +1050,25 @@ const buttonMenuStyle = `
         --flashlight-x-pos: -50%;
         --flashlight-inset: -300px;
     }
+
     #gg-flashlight-div::before {
-        content: '';
+        content: "";
         position: absolute;
         inset: var(--flashlight-inset);
         background-image: radial-gradient(circle, transparent 0%, rgba(47,52,2,0.4) 60px, black 70px, black 100%);
         background-position: var(--flashlight-x-pos) var(--flashlight-y-pos);
         background-repeat: no-repeat;
+        pointer-events: none;
     }
 
     #gg-flashlight-div::after {
         content: "";
-        font-size: 30px;
         position: absolute;
         transform: translate(var(--flashlight-x-pos), var(--flashlight-y-pos));
         display: flex;
         align-items: center;
         justify-content: center;
+        pointer-events: none;
     }
 `;
 
