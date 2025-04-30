@@ -51,6 +51,7 @@ const MODS = {
         key: 'sat-view', // Used for global state and document elements.
         name: 'Satellite View', // Used for menus.
         tooltip: 'Uses satellite view on the guess map, with no labels.', // Shows when hovering over menu button.
+        isScoring: false, // Says whether or not this is a scoring mod (only one scoring mod can be used at a time). Can leave as undefined.
         options: {}, // Used when mod requires or allows configurable values.
     },
 
@@ -91,11 +92,12 @@ const MODS = {
         options: {},
     },
 
-    hotterColder: {
+    showScore: {
         show: true,
-        key: 'hotter-colder',
-        name: 'Hotter/Colder',
+        key: 'show-score',
+        name: 'Show Score',
         tooltip: 'Shows the would-be score of each click.',
+        scoreMode: true,
         options: {},
     },
 
@@ -142,6 +144,7 @@ const MODS = {
         key: 'bop-it',
         name: 'Bop It',
         tooltip: `Bop It mode where it tells you the intercardinal direction you need to go from your click. You'll figure it out...`,
+        isScoring: true,
         options: {
             threshold: {
                 label: 'Bop It Threshold (Points)',
@@ -237,7 +240,14 @@ let GG_MAP; // Current map info,
 let GG_CLICK; // [lat, lng] of latest map click.
 
 let IS_DRAGGING = false;
-let GAME_OVERLAY; // Div that is permanently on top of the game, to mess around with stuff. Pointer events will be disabled when
+
+/**
+  SCORE_FUNC is a function used to display the overlay that shows how well you clicked (score, direction, whatever).
+  This can only be used by one mod at a time, so in mods that use it we have to use disableOtherScoreModes to disable the other ones.
+  It uses GG_ROUND and GG_CLICK to determine how well you clicked. SCORE_FUNC can be globally set for the active mod.
+  By default, it will give the 0-5000 score, but some mods override it.
+*/
+let SCORE_FUNC;
 
 const UPDATE_CALLBACKS = {}; // TODO: move this to some sort of registry function.
 
@@ -465,6 +475,14 @@ const updateMod = (mod, forceState = null) => {
     return newState;
 };
 
+const mapClickListener = (func, enable = true) => {
+    if (enable) {
+        document.addEventListener('map_click', func);
+    } else {
+        document.removeEventListener('map_click', func, false);
+    }
+};
+
 const disableMods = (mods) => {
     if (!Array.isArray(mods)) {
         mods = [mods];
@@ -478,32 +496,21 @@ const disableMods = (mods) => {
     }
 };
 
-const scoreListener = (evt) => {
-    const score = getScore();
-    if (isNaN(score)) {
-        return;
-    }
-
-    let fadeTarget = document.getElementById('gg-score-div');
-    if (!fadeTarget) {
-        fadeTarget = document.createElement('div');
-        fadeTarget.id = 'gg-score-div';
-        document.body.appendChild(fadeTarget);
-    }
-
-    fadeTarget.innerHTML = score;
-    fadeTarget.style.opacity = 1
-
-    let fadeEffect;
-    fadeEffect = setInterval(() => {
-        if (fadeTarget.style.opacity > 0) {
-            fadeTarget.style.opacity -= 0.05;
-        } else {
-            clearInterval(fadeEffect);
-        }
-    }, 30);
+const isScoringMod = (mod) => {
+    return !!mod.isScoring;
 };
 
+const disableOtherScoreMods = (mod) => { // This function needs to be called prior to defining SCORE_FUNC when a scoring mod is enabled.
+    SCORE_FUNC = undefined;
+    for (const other of Object.values(MODS)) {
+        if (mod === other) {
+            continue;
+        }
+        if (isScoringMod(other)) {
+            disableMods(other);
+        }
+    }
+};
 
 // -------------------------------------------------------------------------------------------------------------------------------
 
@@ -552,7 +559,7 @@ const getScore = () => {
 };
 
 /**
-  N, S, SW, SSW, etc... Angle is in degrees, true heading (degrees clockwise from true north).
+  N, S, SW, SSW, etc... Angle is in degrees, true heading (degrees clockwise from true North).
   Level 0 is for NESW, Level 1 includes NE, SE, etc., level 2 includes NNW, ESE, etc.
 */
 const getCardinalDirection = (angle, level = 0) => {
@@ -570,17 +577,22 @@ const getCardinalDirection = (angle, level = 0) => {
             break;
         default:
             directions = ['N', 'E', 'S', 'W'];
-            index = Math.round(degrees / 90) % 8;
-            cardinalDirection = directions[index < 0 ? index + 8 : index];
+            index = Math.round(degrees / 90) % 4;
+            cardinalDirection = directions[index < 0 ? index + 4 : index];
             break;
     }
     return cardinalDirection;
 };
 
+/**
+  Map click listener. For scoring mods, SCORE_FUNC needs to be defined and then cleared when the mod is deactivated.
+*/
 const scoreListener = (evt) => {
-    const score = getScore();
-    if (isNaN(score)) {
-        return;
+    let scoreString;
+    if (SCORE_FUNC) { // Seee note about SCORE_FUNC in the globals.
+        scoreString = SCORE_FUNC(evt);
+    } else {
+        scoreString = String(getScore());
     }
 
     let fadeTarget = document.getElementById('gg-score-div');
@@ -747,50 +759,19 @@ const updateZoomInOnly = (forceState = null) => {
 
 
 
-// MOD: Hotter/Colder.
+// MOD: Show Score
 // ===============================================================================================================================
 
-const scoreListener = (evt) => {
-    const score = getScore();
-    if (isNaN(score)) {
-        return;
-    }
-
-    let fadeTarget = document.getElementById('gg-score-div');
-    if (!fadeTarget) {
-        fadeTarget = document.createElement('div');
-        fadeTarget.id = 'gg-score-div';
-        document.body.appendChild(fadeTarget);
-    }
-
-    fadeTarget.innerHTML = score;
-    fadeTarget.style.opacity = 1
-
-    let fadeEffect;
-    fadeEffect = setInterval(() => {
-        if (fadeTarget.style.opacity > 0) {
-            fadeTarget.style.opacity -= 0.05;
-        } else {
-            clearInterval(fadeEffect);
-        }
-    }, 30);
-};
-
-const updateHotterColder = (forceState = null) => {
-    // Disable other mods that use the center score div.
-    for other in [
-        MODS.bopIt,
-    ] {
-        updateMod(other, false);,
-    }
-
-    const mod = MODS.hotterColder;
+const updateShowScore = (forceState = null) => {
+    const mod = MODS.showScore;
     const active = updateMod(mod, forceState);
 
     if (active) {
-        document.addEventListener('map_click', scoreListener);
+        disableOtherScoreMods(mod);
+        mapClickListener(scoreListener, true);
     } else {
-        document.removeEventListener('map_click', scoreListener, false);
+        disableOtherScoreMods();
+        mapClickListener(scoreListener, false);
     }
 };
 
@@ -897,7 +878,7 @@ const updateSeizure = (forceState = null) => {
 // ===============================================================================================================================
 
 const updateBopIt = (forceState = null) => {
-    const mod = MODS.hotterColder;
+    const mod = MODS.bopIt;
     const active = updateMod(mod, forceState);
 
     if (active) {
@@ -905,10 +886,6 @@ const updateBopIt = (forceState = null) => {
     } else {
         document.removeEventListener('map_click', scoreListener, false);
     }
-};
-
-const updateHotterColder = (forceState = null) => {
-
 };
 
 
@@ -925,7 +902,7 @@ const _BINDINGS = [
     [MODS.satView, updateSatView],
     [MODS.rotateMap, updateRotateMap],
     [MODS.zoomInOnly, updateZoomInOnly],
-    [MODS.hotterColder, updateHotterColder],
+    [MODS.showScore, updateShowScore],
     [MODS.flashlight, updateFlashlight],
     [MODS.seizure, updateSeizure],
     [MODS.bopIt, updateBopIt],
