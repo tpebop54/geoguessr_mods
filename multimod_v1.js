@@ -31,6 +31,7 @@ USER NOTES
 // - onApply when the mod is disabled but the settings are open should enable it.
 // - figure out why sometimes the map doesn't load properly.
 // - disable mod should close popup.
+// - make one mod able to disable another.
 
 
 
@@ -464,6 +465,46 @@ const updateMod = (mod, forceState = null) => {
     return newState;
 };
 
+const disableMods = (mods) => {
+    if (!Array.isArray(mods)) {
+        mods = [mods];
+    }
+    for (const mod of mods) {
+        try {
+            updateMod(mod, false);
+        } catch (err) {
+            console.log(err);
+        }
+    }
+};
+
+const scoreListener = (evt) => {
+    const score = getScore();
+    if (isNaN(score)) {
+        return;
+    }
+
+    let fadeTarget = document.getElementById('gg-score-div');
+    if (!fadeTarget) {
+        fadeTarget = document.createElement('div');
+        fadeTarget.id = 'gg-score-div';
+        document.body.appendChild(fadeTarget);
+    }
+
+    fadeTarget.innerHTML = score;
+    fadeTarget.style.opacity = 1
+
+    let fadeEffect;
+    fadeEffect = setInterval(() => {
+        if (fadeTarget.style.opacity > 0) {
+            fadeTarget.style.opacity -= 0.05;
+        } else {
+            clearInterval(fadeEffect);
+        }
+    }, 30);
+};
+
+
 // -------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -511,7 +552,7 @@ const getScore = () => {
 };
 
 /**
-  N, S, SW, etc... Angle is in degrees, true heading (degrees clockwise from true north).
+  N, S, SW, SSW, etc... Angle is in degrees, true heading (degrees clockwise from true north).
   Level 0 is for NESW, Level 1 includes NE, SE, etc., level 2 includes NNW, ESE, etc.
 */
 const getCardinalDirection = (angle, level = 0) => {
@@ -534,6 +575,32 @@ const getCardinalDirection = (angle, level = 0) => {
             break;
     }
     return cardinalDirection;
+};
+
+const scoreListener = (evt) => {
+    const score = getScore();
+    if (isNaN(score)) {
+        return;
+    }
+
+    let fadeTarget = document.getElementById('gg-score-div');
+    if (!fadeTarget) {
+        fadeTarget = document.createElement('div');
+        fadeTarget.id = 'gg-score-div';
+        document.body.appendChild(fadeTarget);
+    }
+
+    fadeTarget.innerHTML = score;
+    fadeTarget.style.opacity = 1
+
+    let fadeEffect;
+    fadeEffect = setInterval(() => {
+        if (fadeTarget.style.opacity > 0) {
+            fadeTarget.style.opacity -= 0.05;
+        } else {
+            clearInterval(fadeEffect);
+        }
+    }, 30);
 };
 
 
@@ -710,6 +777,13 @@ const scoreListener = (evt) => {
 };
 
 const updateHotterColder = (forceState = null) => {
+    // Disable other mods that use the center score div.
+    for other in [
+        MODS.bopIt,
+    ] {
+        updateMod(other, false);,
+    }
+
     const mod = MODS.hotterColder;
     const active = updateMod(mod, forceState);
 
@@ -823,37 +897,6 @@ const updateSeizure = (forceState = null) => {
 // ===============================================================================================================================
 
 const updateBopIt = (forceState = null) => {
-    const mod = MODS.bopIt
-    const active = updateMod(mod, forceState);
-};
-
-const scoreListener = (evt) => {
-    const score = getScore();
-    if (isNaN(score)) {
-        return;
-    }
-
-    let fadeTarget = document.getElementById('gg-score-div');
-    if (!fadeTarget) {
-        fadeTarget = document.createElement('div');
-        fadeTarget.id = 'gg-score-div';
-        document.body.appendChild(fadeTarget);
-    }
-
-    fadeTarget.innerHTML = score;
-    fadeTarget.style.opacity = 1
-
-    let fadeEffect;
-    fadeEffect = setInterval(() => {
-        if (fadeTarget.style.opacity > 0) {
-            fadeTarget.style.opacity -= 0.05;
-        } else {
-            clearInterval(fadeEffect);
-        }
-    }, 30);
-};
-
-const updateHotterColder = (forceState = null) => {
     const mod = MODS.hotterColder;
     const active = updateMod(mod, forceState);
 
@@ -862,6 +905,10 @@ const updateHotterColder = (forceState = null) => {
     } else {
         document.removeEventListener('map_click', scoreListener, false);
     }
+};
+
+const updateHotterColder = (forceState = null) => {
+
 };
 
 
