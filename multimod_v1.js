@@ -136,6 +136,20 @@ const MODS = {
         }
     },
 
+    bopIt: {
+        show: true,
+        key: 'bop-it',
+        name: 'Bop It',
+        tooltip: `Bop It mode where it tells you the intercardinal direction you need to go from your click. You'll figure it out...`,
+        options: {
+            threshold: {
+                label: 'Bop It Threshold (Points)',
+                default: 4900,
+                tooltip: 'Bop It when your click will earn this many points. (0 to 5000).',
+            },
+        }
+    },
+
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -232,7 +246,7 @@ const UPDATE_CALLBACKS = {}; // TODO: move this to some sort of registry functio
 
 
 
-// Utility functions.
+// DOM and state utility functions.
 // ===============================================================================================================================
 
 const getGoogle = () => {
@@ -455,6 +469,77 @@ const updateMod = (mod, forceState = null) => {
 
 
 
+// Mod utility functions.
+// ===============================================================================================================================
+
+const toRad = (deg) => {
+    return deg * Math.PI / 180;
+};
+
+const toDeg = (rad) => {
+    return rad * 180 / Math.PI;
+};
+
+const getDistance = (p1, p2) => {
+    const google = getGoogle();
+    const ll1 = new google.maps.LatLng(p1.lat, p1.lng);
+    const ll2 = new google.maps.LatLng(p2.lat, p2.lng);
+    const dist = google.maps.geometry.spherical.computeDistanceBetween(ll1, ll2); // meters.
+    return dist;
+};
+
+const getHeading = (p1, p2) => {
+    const google = getGoogle();
+    const ll1 = new google.maps.LatLng(p1.lat, p1.lng);
+    const ll2 = new google.maps.LatLng(p2.lat, p2.lng);
+    const heading = google.maps.geometry.spherical.computeHeading(ll1, ll2); // degrees clockwise from true north.
+    return heading;
+};
+
+const getScore = () => {
+    if (!GG_CLICK || !GG_ROUND) {
+        return;
+    }
+    const actual = { lat: GG_ROUND.lat, lng: GG_ROUND.lng };
+    const guess = GG_CLICK;
+    const dist = getDistance(actual, guess);
+
+    // Ref: https://www.plonkit.net/beginners-guide#game-mechanics --> score
+    const maxErrorDist = GG_MAP.maxErrorDistance;
+    const score = Math.round(5000 * Math.pow(Math.E, -10 * dist / maxErrorDist));
+    return score;
+};
+
+/**
+  N, S, SW, etc... Angle is in degrees, true heading (degrees clockwise from true north).
+  Level 0 is for NESW, Level 1 includes NE, SE, etc., level 2 includes NNW, ESE, etc.
+*/
+const getCardinalDirection = (angle, level = 0) => {
+    let directions, index, cardinalDirection;
+    switch (level) {
+        case 2:
+            directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+            index = Math.round(degrees / 22.5) % 16;
+            cardinalDirection = directions[index < 0 ? index + 16 : index];
+            break;
+        case 1:
+            directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+            index = Math.round(degrees / 45) % 8;
+            cardinalDirection = directions[index < 0 ? index + 8 : index];
+            break;
+        default:
+            directions = ['N', 'E', 'S', 'W'];
+            index = Math.round(degrees / 90) % 8;
+            cardinalDirection = directions[index < 0 ? index + 8 : index];
+            break;
+    }
+    return cardinalDirection;
+};
+
+
+// -------------------------------------------------------------------------------------------------------------------------------
+
+
 
 // MOD: Satellite view.
 // ===============================================================================================================================
@@ -598,28 +683,6 @@ const updateZoomInOnly = (forceState = null) => {
 // MOD: Hotter/Colder.
 // ===============================================================================================================================
 
-const getDistance = (p1, p2) => {
-    const google = getGoogle();
-    const ll1 = new google.maps.LatLng(p1.lat, p1.lng);
-    const ll2 = new google.maps.LatLng(p2.lat, p2.lng);
-    const dist = google.maps.geometry.spherical.computeDistanceBetween(ll1, ll2);
-    return dist;
-};
-
-const getScore = () => {
-    if (!GG_CLICK || !GG_ROUND) {
-        return;
-    }
-    const actual = { lat: GG_ROUND.lat, lng: GG_ROUND.lng };
-    const guess = GG_CLICK;
-    const dist = getDistance(actual, guess);
-
-    // Ref: https://www.plonkit.net/beginners-guide#game-mechanics --> score
-    const maxErrorDist = GG_MAP.maxErrorDistance;
-    const score = Math.round(5000 * Math.pow(Math.E, -10 * dist / maxErrorDist));
-    return score;
-};
-
 const scoreListener = (evt) => {
     const score = getScore();
     if (isNaN(score)) {
@@ -756,6 +819,57 @@ const updateSeizure = (forceState = null) => {
 
 
 
+// MOD: Bop It
+// ===============================================================================================================================
+
+const updateBopIt = (forceState = null) => {
+    const mod = MODS.bopIt
+    const active = updateMod(mod, forceState);
+};
+
+const scoreListener = (evt) => {
+    const score = getScore();
+    if (isNaN(score)) {
+        return;
+    }
+
+    let fadeTarget = document.getElementById('gg-score-div');
+    if (!fadeTarget) {
+        fadeTarget = document.createElement('div');
+        fadeTarget.id = 'gg-score-div';
+        document.body.appendChild(fadeTarget);
+    }
+
+    fadeTarget.innerHTML = score;
+    fadeTarget.style.opacity = 1
+
+    let fadeEffect;
+    fadeEffect = setInterval(() => {
+        if (fadeTarget.style.opacity > 0) {
+            fadeTarget.style.opacity -= 0.05;
+        } else {
+            clearInterval(fadeEffect);
+        }
+    }, 30);
+};
+
+const updateHotterColder = (forceState = null) => {
+    const mod = MODS.hotterColder;
+    const active = updateMod(mod, forceState);
+
+    if (active) {
+        document.addEventListener('map_click', scoreListener);
+    } else {
+        document.removeEventListener('map_click', scoreListener, false);
+    }
+};
+
+
+// -------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
 // Add bindings and start the script.
 // ===============================================================================================================================
 
@@ -767,6 +881,7 @@ const _BINDINGS = [
     [MODS.hotterColder, updateHotterColder],
     [MODS.flashlight, updateFlashlight],
     [MODS.seizure, updateSeizure],
+    [MODS.bopIt, updateBopIt],
 ];
 
 const bindButtons = () => {
