@@ -537,10 +537,11 @@ const getDistance = (p1, p2) => {
 };
 
 const getHeading = (p1, p2) => {
+    // Degrees clockwise from true North. [-180, 180) https://developers.google.com/maps/documentation/javascript/reference/geometry
     const google = getGoogle();
     const ll1 = new google.maps.LatLng(p1.lat, p1.lng);
     const ll2 = new google.maps.LatLng(p2.lat, p2.lng);
-    const heading = google.maps.geometry.spherical.computeHeading(ll1, ll2); // degrees clockwise from true north.
+    const heading = google.maps.geometry.spherical.computeHeading(ll1, ll2);
     return heading;
 };
 
@@ -562,7 +563,11 @@ const getScore = () => {
   N, S, SW, SSW, etc... Angle is in degrees, true heading (degrees clockwise from true North).
   Level 0 is for NESW, Level 1 includes NE, SE, etc., level 2 includes NNW, ESE, etc.
 */
-const getCardinalDirection = (angle, level = 0) => {
+const getCardinalDirection = (degrees, level = 0) => {
+    degrees = degrees % 360;
+    if (degrees < 0) {
+        degrees += 360;
+    }
     let directions, index, cardinalDirection;
     switch (level) {
         case 2:
@@ -767,6 +772,7 @@ const updateShowScore = (forceState = null) => {
 
     if (active) {
         disableOtherScoreMods(mod);
+        SCORE_FUNC = getScore;
         mapClickListener(scoreListener, true);
     } else {
         disableOtherScoreMods();
@@ -880,13 +886,68 @@ const updateBopIt = (forceState = null) => {
     const mod = MODS.bopIt;
     const active = updateMod(mod, forceState);
 
+    const getBopIt = () => {
+        const heading = getHeading(GG_CLICK, GG_ROUND);
+        const direction = getCardinalDirection(heading, 1);
+        const score = getScore();
+        const bopThreshold = Number(getOption(mod, 'threshold'));
+
+        const controls = {
+            twist: 'Twist It!', // Top left (NW).
+            flick: 'Flick It!', // Top right (NE).
+            spin: 'Spin It!', // Bottom right (SE).
+            pull: 'Pull It!', // Bottom left (SW).
+            bop: 'Bop It!', // User has clicked within the configured score zone.
+        };
+
+        let label;
+
+        if (score >= bopThreshold) {
+            label = controls.bop;
+        } else {
+            switch (direction) {
+                case 'N':
+                    label = direction < 22.5 ? controls.flick : controls.twist;
+                    break;
+                case 'NE':
+                    label = controls.flick;
+                    break;
+                case 'E':
+                    label = direction < 90 ? controls.flick : controls.spin;
+                    break;
+                case 'SE':
+                    label = controls.spin;
+                    break;
+                case 'S':
+                    label = direction < 180 ? controls.spin : controls.pull;
+                    break;
+                case 'SW':
+                    label = controls.pull;
+                    break;
+                case 'W':
+                    label = direction < 270 ? controls.pull : controls.twist;
+                    break;
+                case 'NW':
+                    label = controls.twist;
+                    break;
+                default:
+                    console.error(`Failed to get direction for heading ${heading} direction ${direction}`);
+                    label = 'Error';
+                    break;
+            }
+        }
+        return label;
+    };
+
     if (active) {
-        document.addEventListener('map_click', scoreListener);
+        disableOtherScoreMods(mod);
+        SCORE_FUNC = getBopIt;
+        mapClickListener(scoreListener, true);
     } else {
-        document.removeEventListener('map_click', scoreListener, false);
+        disableOtherScoreMods();
+        mapClickListener(scoreListener, false);
     }
 };
-
 
 // -------------------------------------------------------------------------------------------------------------------------------
 
