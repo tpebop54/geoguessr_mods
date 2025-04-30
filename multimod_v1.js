@@ -204,7 +204,7 @@ const loadState = () => { // Load state from local storage if it exists, else us
     } catch (err) {
         console.log(err);
     }
-    if (typeof storedState !== 'object') {
+    if (!storedState || typeof storedState !== 'object') {
         console.log('Refreshing stored state');
         clearState();
         storedState = {};
@@ -602,7 +602,7 @@ const scoreListener = (evt) => {
         document.body.appendChild(fadeTarget);
     }
 
-    fadeTarget.innerHTML = score;
+    fadeTarget.innerHTML = scoreString;
     fadeTarget.style.opacity = 1
 
     let fadeEffect;
@@ -612,7 +612,7 @@ const scoreListener = (evt) => {
         } else {
             clearInterval(fadeEffect);
         }
-    }, 30);
+    }, 50);
 };
 
 
@@ -624,7 +624,6 @@ const scoreListener = (evt) => {
 // ===============================================================================================================================
 
 const updateSatView = (forceState = null) => {
-    debugger;
     const mod = MODS.satView;
     const active = updateMod(mod, forceState);
     GOOGLE_MAP.setMapTypeId(active ? 'satellite' : 'roadmap');
