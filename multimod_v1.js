@@ -13,11 +13,16 @@
 // ==/UserScript==
 
 
-
 /**
 CREDIT WHERE CREDIT IS DUE
-Heavy credit to https://miraclewhips.dev/ for geoguessr-event-framework and some essential functions in this script.
+- Heavy credit to https://miraclewhips.dev/ for geoguessr-event-framework and some essential functions in this script.
 */
+
+
+/**
+USER NOTES
+- When loading, you may have to refresh the page once or twice.
+/*
 
 
 // TODO:
@@ -120,12 +125,12 @@ const MODS = {
         options: {
             frequency: {
                 label: 'Frequency (Hz)',
-                default: 30,
+                default: 20,
                 tooltip: 'How many times per second to make the image move around.',
             },
             distance: {
                 label: 'Max Distance',
-                default: 50,
+                default: 30,
                 tooltip: 'Maximum distance to jitter each movement (from original location, in pixels).',
             }
         }
@@ -455,6 +460,7 @@ const updateMod = (mod, forceState = null) => {
 // ===============================================================================================================================
 
 const updateSatView = (forceState = null) => {
+    debugger;
     const mod = MODS.satView;
     const active = updateMod(mod, forceState);
     GOOGLE_MAP.setMapTypeId(active ? 'satellite' : 'roadmap');
@@ -738,8 +744,10 @@ const updateSeizure = (forceState = null) => {
     SEIZURE_INTERVAL = setInterval(() => {
         const offsetX = Math.ceil((Math.random() * nPixels));
         const offsetY = Math.ceil((Math.random() * nPixels));
-        bigMap.style.setProperty('left', `${offsetX}px`);
-        bigMap.style.setProperty('top', `${offsetY}px`);
+        const hDir = Math.random();
+        const vDir = Math.random();
+        bigMap.style.setProperty('left', `${hDir < 0.5 ? '-' : ''}${offsetX}px`);
+        bigMap.style.setProperty('top', `${vDir < 0.5 ? '-' : ''}${offsetY}px`);
     }, nMilliseconds);
 };
 
