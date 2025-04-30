@@ -33,6 +33,13 @@ USER NOTES
 // - disable mod should close popup.
 // - make one mod able to disable another.
 
+// MOD IDEAS
+// - image starts blurry and gets less blurry.
+// - image starts tiny and grows.
+// - custom google maps json import (or store here). e.g. show only the roads and remove everything else.
+// - automatically show the flag of the country (requires API key to geoapify or similar).
+// - show if the place is within view or not.
+
 
 
 // Mods available in this script.
