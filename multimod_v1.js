@@ -26,12 +26,19 @@ USER NOTES
 
 
 // TODO:
+// - *** score div makes that part of the map unclickable
 // - full reset shortcut for when things go awry.
 // - block screen until mods are loaded (e.g. flashlight mode is essentially blink mode first).
 // - onApply when the mod is disabled but the settings are open should enable it.
 // - figure out why sometimes the map doesn't load properly.
 // - disable mod should close popup.
-// - make one mod able to disable another.
+
+// MOD IDEAS
+// - image starts blurry and gets less blurry.
+// - image starts tiny and grows.
+// - custom google maps json import (or store here). e.g. show only the roads and remove everything else.
+// - automatically show the flag of the country (requires API key to geoapify or similar). https://developers.google.com/maps/documentation/geocoding/requests-reverse-geocoding
+// - show if the place is within view or not.
 
 
 
@@ -51,8 +58,8 @@ const MODS = {
         key: 'sat-view', // Used for global state and document elements.
         name: 'Satellite View', // Used for menus.
         tooltip: 'Uses satellite view on the guess map, with no labels.', // Shows when hovering over menu button.
-        isScoring: false, // Says whether or not this is a scoring mod (only one scoring mod can be used at a time). Can leave as undefined.
-        options: {}, // Used when mod requires or allows configurable values.
+        isScoring: false, // Says whether or not this is a scoring mod (only one scoring mod can be used at a time). Can be null.
+        options: {}, // Used when mod requires or allows configurable values. Can be null.
     },
 
     rotateMap: {
@@ -154,6 +161,15 @@ const MODS = {
         }
     },
 
+    inFrame: {
+        show: true,
+        key: 'in-frame',
+        name: 'Show In-Frame',
+        tooltip: 'Shows if the location is in or out of your current guess map view.',
+        scoreMode: true,
+        options: {},
+    },
+
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -235,9 +251,9 @@ const loadState = () => { // Load state from local storage if it exists, else us
     return MODS;
 };
 
-let GG_ROUND; // Current round information. Set on round start, deleted on round end.
-let GG_MAP; // Current map info,
-let GG_CLICK; // [lat, lng] of latest map click.
+let GG_ROUND; // Current round information. This gets set on round start, and deleted on round end.
+let GG_MAP; // Current map info.
+let GG_CLICK; // { lat, lng } of latest map click.
 
 let IS_DRAGGING = false;
 
@@ -256,7 +272,6 @@ const UPDATE_CALLBACKS = {}; // TODO: move this to some sort of registry functio
 
 
 
-
 // DOM and state utility functions.
 // ===============================================================================================================================
 
@@ -265,15 +280,15 @@ const getGoogle = () => {
 }
 
 const getGameContent = () => {
-    return document.querySelector('div[class^="game_content__"]');;
+    return document.querySelector('div[class^="game_content__"]');
 };
 
-const getGuessMapContainer = () => {
-    return document.querySelector('div[class^="game_guessMap__"]');;
+const getSmallMapContainer = () => {
+    return document.querySelector('div[class^="guess-map_canvasContainer__"]');
 };
 
-const getGuessMap = () => {
-    return document.querySelector('div[class^="guess-map_guessMap__"]');
+const getSmallMap = () => {
+    return document.querySelector('div[class^="guess-map_canvas__"]');
 };
 
 const getCanvas = () => {
@@ -399,22 +414,22 @@ const makeOptionMenu = (mod) => {
         inputs.push([key, type, input]);
 
         popup.appendChild(lineDiv);
-    }
+    };
 
     const closePopup = () => {
         popup.remove();
         popup = undefined;
-    }
+    };
 
     const onReset = () => {
         for (const [key, type, input] of inputs) {
             input.value = getDefaultOption(mod, key);
         }
-    }
+    };
 
     const onClose = () => {
         closePopup();
-    }
+    };
 
     const onApply = () => {
         for (const [key, type, input] of inputs) {
@@ -428,7 +443,7 @@ const makeOptionMenu = (mod) => {
         }
         saveState();
         UPDATE_CALLBACKS[mod.key](mod.active);
-    }
+    };
 
     const formDiv = document.createElement('div');
     formDiv.id = 'gg-option-form-div';
@@ -520,12 +535,30 @@ const disableOtherScoreMods = (mod) => { // This function needs to be called pri
 // Mod utility functions.
 // ===============================================================================================================================
 
-const toRad = (deg) => {
-    return deg * Math.PI / 180;
+const getCurrentLoc = () => {
+    if (!GG_ROUND) {
+        return undefined;
+    }
+    const loc = { lat: GG_ROUND.lat, lng: GG_ROUND.lng };
+    return loc;
 };
 
-const toDeg = (rad) => {
-    return rad * 180 / Math.PI;
+const getMapBounds = () => {
+    const bounds = GOOGLE_MAP.getBounds();
+    const latLngBounds = {
+        north: bounds.ei.hi,
+        south: bounds.ei.lo,
+        west: bounds.Gh.lo,
+        east: bounds.Gh.hi,
+    };
+    return latLngBounds;
+};
+
+const getMapCenter = () => {
+    const center = GOOGLE_MAP.getCenter();
+    const lat = center.lat();
+    const lng = center.lng();
+    return { lat, lng };
 };
 
 const getDistance = (p1, p2) => {
@@ -549,7 +582,7 @@ const getScore = () => {
     if (!GG_CLICK || !GG_ROUND) {
         return;
     }
-    const actual = { lat: GG_ROUND.lat, lng: GG_ROUND.lng };
+    const actual = getCurrentLoc();
     const guess = GG_CLICK;
     const dist = getDistance(actual, guess);
 
@@ -557,6 +590,29 @@ const getScore = () => {
     const maxErrorDist = GG_MAP.maxErrorDistance;
     const score = Math.round(5000 * Math.pow(Math.E, -10 * dist / maxErrorDist));
     return score;
+};
+
+/** Show if loc is within the given lat/long bounds. bounds from getMapBounds, loc from any { lat, lng } source. */
+const isInBounds = (loc, bounds) => {
+    let { north, east, south, west } = bounds;
+    let { lat, lng } = loc;
+
+    // The map can cross the prime meridian, but it cannot cross the poles.
+    // Longitude bounds can span more than the entire world. These come through as [-180, 180].
+    // If necessary shift the longitudes to check if loc is between them.
+    if (Math.sign(west) !== Math.sign(east)) {
+        west += 180;
+        east += 180;
+        lng += 180;
+    }
+
+    if (lat <= south || lat >= north) {
+        return false;
+    }
+    if (lng <= west || lng >= east) {
+        return false;
+    }
+    return true;
 };
 
 /**
@@ -594,7 +650,7 @@ const getCardinalDirection = (degrees, level = 0) => {
 */
 const scoreListener = (evt) => {
     let scoreString;
-    if (SCORE_FUNC) { // Seee note about SCORE_FUNC in the globals.
+    if (SCORE_FUNC) { // See note about SCORE_FUNC in the globals.
         scoreString = SCORE_FUNC(evt);
     } else {
         scoreString = String(getScore());
@@ -701,17 +757,6 @@ let HAS_ZOOMED_IN = false;
 let PREV_ZOOM;
 let INITIAL_BOUNDS;
 
-const getLatLngBounds = () => {
-    const bounds = GOOGLE_MAP.getBounds();
-    const latLngBounds = {
-        north: bounds.ei.hi,
-        south: bounds.ei.lo,
-        west: bounds.Gh.lo,
-        east: bounds.Gh.hi,
-    };
-    return latLngBounds;
-}
-
 const setRestriction = (latLngBounds, zoom) => {
     const restriction = {
         latLngBounds,
@@ -728,7 +773,7 @@ const updateZoomInOnly = (forceState = null) => {
         PREV_ZOOM = GOOGLE_MAP.getZoom();
     }
     if (!INITIAL_BOUNDS) {
-        INITIAL_BOUNDS = getLatLngBounds();
+        INITIAL_BOUNDS = getMapBounds();
     }
 
     if (active) {
@@ -740,7 +785,7 @@ const updateZoomInOnly = (forceState = null) => {
             if (HAS_ZOOMED_IN) {
                 const google = getGoogle();
                 google.maps.event.addListenerOnce(GOOGLE_MAP, 'idle', () => { // Zoom animation occurs after zoom is set.
-                    const latLngBounds = getLatLngBounds();
+                    const latLngBounds = getMapBounds();
                     setRestriction(latLngBounds, GOOGLE_MAP.getZoom());
                 });
             }
@@ -763,7 +808,7 @@ const updateZoomInOnly = (forceState = null) => {
 
 
 
-// MOD: Show Score
+// MOD: Show Score.
 // ===============================================================================================================================
 
 const updateShowScore = (forceState = null) => {
@@ -879,7 +924,7 @@ const updateSeizure = (forceState = null) => {
 
 
 
-// MOD: Bop It
+// MOD: Bop It.
 // ===============================================================================================================================
 
 const updateBopIt = (forceState = null) => {
@@ -954,6 +999,53 @@ const updateBopIt = (forceState = null) => {
 
 
 
+// MOD: In frame or not.
+// ===============================================================================================================================
+
+/**
+Runs in a loop to tell if the target is in view.
+This is a pretty expensive function, but it's easier than triggering it based on dragstart, zoomend, etc. Deal with it.
+*/
+let IN_FRAME_INTERVAL;
+
+const updateInFrame = (forceState = null) => {
+    const mod = MODS.inFrame;
+    const active = updateMod(mod, forceState);
+
+    const loc = getCurrentLoc();
+    const smallMapContainer = getSmallMapContainer();
+
+    if (IN_FRAME_INTERVAL) {
+        clearInterval(IN_FRAME_INTERVAL);
+    }
+
+    if (active) {
+        const showInFrame = () => {
+            const currentBounds = getMapBounds();
+            const inFrame = isInBounds(loc, currentBounds);
+            const color = inFrame ? 'green' : 'red';
+
+            const smallMapStyle = {
+                'box-shadow': `0 0 10px 10px ${color}`,
+                'border-radius': '10px',
+            };
+            Object.assign(smallMapContainer.style, smallMapStyle);
+        };
+        IN_FRAME_INTERVAL = setInterval(showInFrame, 100);
+    } else {
+        const smallMapStyle = {
+            'box-shadow': '',
+            'border-radius': '',
+        };
+        Object.assign(smallMapContainer.style, smallMapStyle);
+    }
+};
+
+// -------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
 // Add bindings and start the script.
 // ===============================================================================================================================
 
@@ -966,6 +1058,7 @@ const _BINDINGS = [
     [MODS.flashlight, updateFlashlight],
     [MODS.seizure, updateSeizure],
     [MODS.bopIt, updateBopIt],
+    [MODS.inFrame, updateInFrame],
 ];
 
 const bindButtons = () => {
@@ -990,8 +1083,8 @@ const addButtons = () => { // Add mod buttons to the active round.
     }
 
     const buttonClass = 'gg-mod';
-	const element = document.createElement('div');
-	element.id = 'gg-mod-container';
+    const element = document.createElement('div');
+    element.id = 'gg-mod-container';
 
     let innerHTML = `<div class="gg-title">TPEBOP'S MODS</div>`;
     for (const mod of Object.values(MODS)) {
@@ -1132,7 +1225,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
 	});
 });
 
-/* eslint-disable no-undef */
 GeoGuessrEventFramework.init().then(GEF => {
 
     GEF.events.addEventListener('round_start', (evt) => {
