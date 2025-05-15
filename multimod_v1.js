@@ -611,6 +611,23 @@ const getMapCenter = () => {
     return { lat, lng };
 };
 
+const setMapCenter = (lat = null, lng = null, zoom = null) => { // All optional arguments. Use current if null.
+    const current = getMapCenter();
+    const currentLat = current.lat;
+    const currentLng = current.lng;
+    const currentZoom = GOOGLE_MAP.getZoom();
+    if (lat == null) {
+        lat = currentLat;
+    }
+    if (lng == null) {
+        lng = currentLng;
+    }
+    if (zoom == null) {
+        zoom = currentZoom;
+    }
+    GOOGLE_MAP.setCenter(lat, lng, zoom);
+};
+
 const getDistance = (p1, p2) => {
     const google = getGoogle();
     const ll1 = new google.maps.LatLng(p1.lat, p1.lng);
@@ -1108,6 +1125,7 @@ const guessRandom = () => {
     const lat = (Math.random() - 0.5) * 180;
     const lng = (Math.random() - 0.5) * 180;
     clickAt(lat, lng);
+    return { lat, lng };
 };
 
 const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
@@ -1127,7 +1145,7 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
 
     const button = document.createElement('button');
     button.id = 'gg-lottery-button';
-    button.textContent = 'My Lucky Day!';
+    button.textContent = 'Try my luck';
     button.addEventListener('click', guessRandom);
 
     container.appendChild(counterDiv);
@@ -1139,9 +1157,10 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         if (LOTTERY_COUNT === 0) {
             return;
         }
-        guessRandom();
-        LOTTERY_COUNT =- 1;
+        const { lat, lng } = guessRandom();
+        LOTTERY_COUNT -= 1;
         counter.innerText = LOTTERY_COUNT;
+        setMapCenter(lat, lng); // Keep current zoom level.
     };
     button.addEventListener('click', onClick);
 };
@@ -1590,7 +1609,7 @@ const style = `
         display: flex;
         flex-direction: column;
         align-items: center;
-        background-color: rgba(0, 255, 0, 60);
+        background-color: rgba(0, 255, 0, 0.8);
         padding: 0.5em;
         border-radius: 10px;
     }
