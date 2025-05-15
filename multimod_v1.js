@@ -1098,15 +1098,66 @@ const updateInFrame = (forceState = null) => {
 // MOD: Lottery.
 // ===============================================================================================================================
 
+let LOTTERY_DISPLAY; // Display elements for lottery mod. (counter and button).
+let LOTTERY_COUNT; // How many remaining guesses you have.
+
+// TODO: add map click blocker.
+// TODO: set longitude to center on marker so it can't go off screen.
+
+const guessRandom = () => {
+    const lat = (Math.random() - 0.5) * 180;
+    const lng = (Math.random() - 0.5) * 180;
+    clickAt(lat, lng);
+};
+
+const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
+    const container = document.createElement('div'); // Contains the full lottery display.
+    container.id = 'gg-lottery';
+
+    // Set up display for the lottery counter and button.
+    const counterLabel = document.createElement('div'); // Text label.
+    counterLabel.textContent = 'Remaining guesses:';
+    const counter = document.createElement('div'); // How many guesses you have left, will update each click.
+    counter.id = 'gg-lottery-counter';
+    counter.innerText = LOTTERY_COUNT;
+    const counterDiv = document.createElement('div'); // Contains the above two items side by side.
+    counterDiv.id = 'gg-lottery-counter-div';
+    counterDiv.appendChild(counterLabel);
+    counterDiv.appendChild(counter);
+
+    const button = document.createElement('button');
+    button.id = 'gg-lottery-button';
+    button.textContent = 'My Lucky Day!';
+    button.addEventListener('click', guessRandom);
+
+    container.appendChild(counterDiv);
+    container.appendChild(button);
+    document.body.appendChild(container);
+
+    // Bind stuff.
+    const onClick = () => {
+        if (LOTTERY_COUNT === 0) {
+            return;
+        }
+        guessRandom();
+        LOTTERY_COUNT =- 1;
+        counter.innerText = LOTTERY_COUNT;
+    };
+    button.addEventListener('click', onClick);
+};
+
 const updateLottery = (forceState = null) => {
     const mod = MODS.lottery;
     const active = updateMod(mod, forceState);
 
-    let lat = (Math.random() - 0.5) * 180;
-    let lng = (Math.random() - 0.5) * 180;
+    if (LOTTERY_DISPLAY) {
+        LOTTERY_DISPLAY.parentElement.removeChild(LOTTERY_DISPLAY);
+        LOTTERY_DISPLAY = undefined;
+    }
+    LOTTERY_COUNT = getOption(mod, 'nGuesses');
 
     if (active) {
-        clickAt(lat, lng);
+        makeLotteryDisplay();
     }
 };
 
@@ -1526,6 +1577,42 @@ const style = `
         align-items: center;
         justify-content: center;
         pointer-events: none;
+    }
+
+    #gg-lottery {
+        position: absolute;
+        top: 13%;
+        left: 50%;
+        font-size: 30px;
+        color: white;
+        text-shadow: ${bodyShadow};
+        transform: translate(-50%, -50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background-color: rgba(0, 255, 0, 60);
+        padding: 0.5em;
+        border-radius: 10px;
+    }
+
+    #gg-lottery-counter-div {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    #gg-lottery-counter {
+        padding-left: 0.5em;
+    }
+
+    #gg-lottery-button {
+        font-size: 25px;
+        margin-top: 0.5em;
+        border-radius: 10px;
+        padding: 5px 20px;
+        color: white;
+        background: black;
+        opacity: 75%;
+        cursor: pointer;
     }
 `;
 
