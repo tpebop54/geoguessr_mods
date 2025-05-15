@@ -26,7 +26,6 @@ USER NOTES
 
 
 // TODO:
-// - *** score div makes that part of the map unclickable
 // - full reset shortcut for when things go awry.
 // - block screen until mods are loaded (e.g. flashlight mode is essentially blink mode first).
 // - onApply when the mod is disabled but the settings are open should enable it.
@@ -170,6 +169,20 @@ const MODS = {
         options: {},
     },
 
+    lottery: {
+        show: true,
+        key: 'lottery',
+        name: 'Lottery',
+        tooltip: 'Get a random guess and you have to decide if you want it or not.',
+        options: {
+            nGuesses: {
+                label: 'Max. guesses',
+                default: 10,
+                tooltip: 'Maximum number of random guesses you get before you have to take the guess.',
+            },
+        },
+    },
+
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -254,6 +267,7 @@ const loadState = () => { // Load state from local storage if it exists, else us
 let GG_ROUND; // Current round information. This gets set on round start, and deleted on round end.
 let GG_MAP; // Current map info.
 let GG_CLICK; // { lat, lng } of latest map click.
+let GG_CUSTOM_MARKER; // Custom marker. This is not the user click marker. Can only use one at a time. Need to clear/move when used.
 
 let IS_DRAGGING = false;
 
@@ -323,6 +337,42 @@ const getButtonText = (mod) => {
 
 const getButton = (mod) => {
     return document.querySelector(`#${getButtonID(mod)}`);
+};
+
+const clickAt = (lat, lng) => { // Trigger actual click on guessMap at { lat, lng }.
+    if (!GOOGLE_MAP) {
+        console.log('Map not loaded yet for click event.');
+        return;
+    }
+    const google = getGoogle();
+    const click = {
+        latLng: new google.maps.LatLng(lat, lng),
+    };
+    google.maps.event.trigger(GOOGLE_MAP, 'click', click);
+};
+
+const clearMarker = () => {
+    if (!GG_CUSTOM_MARKER) {
+        return;
+    }
+    GG_CUSTOM_MARKER.position = undefined;
+    GG_CUSTOM_MARKER = undefined;
+};
+
+const addMarkerAt = (lat, lng, title = null) => {
+    if (!GOOGLE_MAP) {
+        return;
+    }
+    if (isNaN(lat) || isNaN(lng)) {
+        return;
+    }
+    clearMarker();
+    const google = getGoogle();
+    GG_CUSTOM_MARKER = new google.maps.Marker({
+        position: { lat, lng },
+        map: GOOGLE_MAP,
+        title: title == null ? '' : title,
+  });
 };
 
 const isActive = (mod) => {
@@ -1045,6 +1095,25 @@ const updateInFrame = (forceState = null) => {
 
 
 
+// MOD: Lottery.
+// ===============================================================================================================================
+
+const updateLottery = (forceState = null) => {
+    const mod = MODS.lottery;
+    const active = updateMod(mod, forceState);
+
+    let lat = (Math.random() - 0.5) * 180;
+    let lng = (Math.random() - 0.5) * 180;
+
+    if (active) {
+        clickAt(lat, lng);
+    }
+};
+
+// -------------------------------------------------------------------------------------------------------------------------------
+
+
+
 
 // Add bindings and start the script.
 // ===============================================================================================================================
@@ -1059,6 +1128,7 @@ const _BINDINGS = [
     [MODS.seizure, updateSeizure],
     [MODS.bopIt, updateBopIt],
     [MODS.inFrame, updateInFrame],
+    [MODS.lottery, updateLottery],
 ];
 
 const bindButtons = () => {
@@ -1330,6 +1400,7 @@ const style = `
         color: white;
         text-shadow: ${bodyShadow};
         transform: translate(-50%, -50%);
+        pointer-events: none;
     }
 
     #gg-option-menu {
