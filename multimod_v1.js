@@ -763,17 +763,9 @@ const addMarkerAt = (lat, lng, title = null) => {
   });
 };
 
-const blockGuessMap = (block = true) => {
+const setGuessMapEvents = (enabled = true) => {
     const container = getSmallMapContainer();
-    if (GG_GUESSMAP_BLOCKER) {
-        GG_GUESSMAP_BLOCKER.parentElement.removeChild(GG_GUESSMAP_BLOCKER);
-    }
-    if (block) {
-        GG_GUESSMAP_BLOCKER = document.createElement('div');
-        GG_GUESSMAP_BLOCKER.id = 'gg-guessmap-blocker';
-        const parent = container.parentElement;
-        parent.insertBefore(GG_GUESSMAP_BLOCKER, parent.firstChild); // Will make the guess map totally unusable.
-    }
+    container.style.pointerEvents = enabled ? 'auto' : 'none';
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -1204,9 +1196,9 @@ const updateLottery = (forceState = null) => {
     const smallMap = getSmallMap();
     if (active) {
         makeLotteryDisplay();
-        blockGuessMap(true);
+        setGuessMapEvents(false);
     } else {
-        blockGuessMap(false);
+        setGuessMapEvents(true);
     }
 };
 
