@@ -26,13 +26,13 @@ USER NOTES
 
 
 // TODO:
+// - *** mods mess up the menu pages. dial it down to single and multiplayer. Need to make overlay div disappear reliably and with a backup.
+// - Can I block the sound effect for the anti-cheat stuff? Makes it more obvious what's going on .
 // - full reset shortcut for when things go awry.
-// - block screen until mods are loaded (e.g. flashlight mode is essentially blink mode first).
 // - onApply when the mod is disabled but the settings are open should enable it.
 // - figure out why sometimes the map doesn't load properly.
 // - disable mod should close popup.
-// - marker doesn't show on first click. Maybe just click twice?
-// - Click twice on load, then remove the marker. Should be pretty unobvious.
+// - make blackout div top dawg
 
 // MOD IDEAS
 // - image starts blurry and gets less blurry.
@@ -280,6 +280,7 @@ let GG_ROUND; // Current round information. This gets set on round start, and de
 let GG_MAP; // Current map info.
 let GG_CLICK; // { lat, lng } of latest map click.
 let GG_CUSTOM_MARKER; // Custom marker. This is not the user click marker. Can only use one at a time. Need to clear/move when used.
+let GG_GUESSMAP_BLOCKER; // Div that blocks events to the map. This can also be done with pointer-events, but it's cleaner than having to restore them.
 
 let IS_DRAGGING = false;
 
@@ -291,7 +292,7 @@ let IS_DRAGGING = false;
 */
 let SCORE_FUNC;
 
-const UPDATE_CALLBACKS = {}; // TODO: move this to some sort of registry function.
+const UPDATE_CALLBACKS = {};
 
 // -------------------------------------------------------------------------------------------------------------------------------
 
@@ -598,10 +599,10 @@ const setMapCenter = (lat = null, lng = null, zoom = null) => { // All optional 
     if (lng == null) {
         lng = currentLng;
     }
-    if (zoom == null) {
-        zoom = currentZoom;
+    GOOGLE_MAP.setCenter({ lat, lng });
+    if (zoom != null && zoom !==currentZoom) {
+        GOOGLE_MAP.setZoom(zoom);
     }
-    GOOGLE_MAP.setCenter(lat, lng, zoom);
 };
 
 const getDistance = (p1, p2) => {
@@ -760,6 +761,19 @@ const addMarkerAt = (lat, lng, title = null) => {
         map: GOOGLE_MAP,
         title: title == null ? '' : title,
   });
+};
+
+const blockGuessMap = (block = true) => {
+    const container = getSmallMapContainer();
+    if (GG_GUESSMAP_BLOCKER) {
+        GG_GUESSMAP_BLOCKER.parentElement.removeChild(GG_GUESSMAP_BLOCKER);
+    }
+    if (block) {
+        GG_GUESSMAP_BLOCKER = document.createElement('div');
+        GG_GUESSMAP_BLOCKER.id = 'gg-guessmap-blocker';
+        const parent = container.parentElement;
+        parent.insertBefore(GG_GUESSMAP_BLOCKER, parent.firstChild); // Will make the guess map totally unusable.
+    }
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -1139,7 +1153,6 @@ let LOTTERY_COUNT; // How many remaining guesses you have.
 // TODO: add map click blocker.
 // TODO: set longitude to center on marker so it can't go off screen.
 // TODO: add options for making it within a certain lat/lng range.
-// TODO: first click registers but doesn't place the marker. click twice?
 
 const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     const container = document.createElement('div'); // Contains the full lottery display.
@@ -1147,7 +1160,7 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
 
     // Set up display for the lottery counter and button.
     const counterLabel = document.createElement('div'); // Text label.
-    counterLabel.textContent = 'Remaining guesses:';
+    counterLabel.textContent = 'Tokens remaining:';
     const counter = document.createElement('div'); // How many guesses you have left, will update each click.
     counter.id = 'gg-lottery-counter';
     counter.innerText = LOTTERY_COUNT;
@@ -1158,26 +1171,21 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
 
     const button = document.createElement('button');
     button.id = 'gg-lottery-button';
-    button.textContent = 'Try my luck';
-    button.addEventListener('click', guessRandom);
+    button.textContent = 'Insert token';
 
     container.appendChild(counterDiv);
     container.appendChild(button);
     document.body.appendChild(container);
-
-    const guessRandom = () => { // TODO: make this take mins and maxes from options.
-        const { lat, lng } = getRandomLoc();
-        clickAt(lat, lng);
-    };
 
     // Bind stuff.
     const onClick = () => {
         if (LOTTERY_COUNT === 0) {
             return;
         }
-        const { lat, lng } = guessRandom();
+        const { lat, lng } = getRandomLoc();
         LOTTERY_COUNT -= 1;
         counter.innerText = LOTTERY_COUNT;
+        clickAt(lat, lng);
         setMapCenter(lat, lng); // Keep current zoom level. TODO: this is not working
     };
     button.addEventListener('click', onClick);
@@ -1193,8 +1201,12 @@ const updateLottery = (forceState = null) => {
     }
     LOTTERY_COUNT = getOption(mod, 'nGuesses');
 
+    const smallMap = getSmallMap();
     if (active) {
         makeLotteryDisplay();
+        blockGuessMap(true);
+    } else {
+        blockGuessMap(false);
     }
 };
 
@@ -1316,7 +1328,6 @@ const splitQuote = (quote) => {
 };
 
 let _CHEAT_OVERLAY; // Div to block view.
-let _CHEAT_DETECTION_INTERVAL; // Interval function looking for map load, will self-cancel if map fails to load.
 
 const clearCheatOverlay = () => {
     if (_CHEAT_OVERLAY) {
@@ -1777,7 +1788,7 @@ const style = `
         display: flex;
         flex-direction: column;
         align-items: center;
-        background-color: rgba(0, 255, 0, 0.8);
+        background-color: rgba(0, 100, 0, 0.8);
         padding: 0.5em;
         border-radius: 10px;
     }
@@ -1800,6 +1811,14 @@ const style = `
         background: black;
         opacity: 75%;
         cursor: pointer;
+    }
+
+    #gg-guessmap-blocker {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        pointer-events: none;
+        z-index: 9999;
     }
 `;
 
