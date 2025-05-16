@@ -1285,11 +1285,21 @@ const _QUOTES = [
     `It is in falling short of your own goals that you will surpass those who exceed theirs. — Tokugawa Ieyasu`,
     `In the end… We only regret the chances we didn’t take. — Lewis Carroll`,
     `There are no regrets in life, just lessons. — Jennifer Aniston`,
-    `There’s no feeling more intense than starting over. Starting over is harder than starting up. - Bennett Foddy`,
-    `Imaginary mountains build themselves from our efforts to climb them, and it's our repeated attempts to reach the summit that turns those mountains into something real. - Bennett Foddy`,
-    `A quick fix for the fickle, some tricks for the clicks of the feckless - Bennett Foddy`,
-    `I only want the bitterness. - Bennett Foddy`,
-
+    `There’s no feeling more intense than starting over. Starting over is harder than starting up. — Bennett Foddy`,
+    `Imaginary mountains build themselves from our efforts to climb them, and it's our repeated attempts to reach the summit that turns those mountains into something real. — Bennett Foddy`,
+    `A quick fix for the fickle, some tricks for the clicks of the feckless — Bennett Foddy`,
+    `I only want the bitterness. — Bennett Foddy`,
+    `If you love life do not waste time, for time is what life is made up of — Bruce Lee`,
+    `Don't let the fear of the time it will take to accomplish something stand in the way of doing it. The time will pass anyway; we might just as well put that passing time to the best possible use. — Earl Nightingale`,
+    `Spend so much time on the improvement of yourself that you have no time to criticize others — Christian Larson`,
+    `The magic you are looking for is in the work you are avoiding — Unknown`,
+    `The grass is greenest where you water it — Unknown`,
+    `People fear what they don't understand and hate what they can't conquer — Andrew Smith`,
+    `You miss 100 % of the shots you don’t take. — Michael Scott`,
+    `Be who you needed when you were younger. — Unknown`,
+    `If you don't know what you want, you end up with a lot you don't. — Tyler Durden`,
+    `There is no hopeless situation, only hopeless people. — Atatürk`,
+    `A ship in port is safe, but that’s not why ships are built — Unknown`,
 ];
 
 const getRandomQuote = () => {
@@ -1343,10 +1353,10 @@ This will completely mess up the replay file. We have 1 second to do this.
 Always end with a click at { lat: 0, lng: 0 }. This will be extremely obvious in replays.
 This function is sloppy, but it doesn't really matter as long as we screw up the replay.
 */
-const clickGarbage = () => {
+const clickGarbage = (nMilliseconds = 900) => {
     const nClicks = 20; // Approximately...
     const start = Date.now(); // Unix epoch ms.
-    const end = start + 900; // Stop clicking after this time (epoch ms).
+    const end = start + nMilliseconds; // Stop clicking after this time (epoch ms).
     for (let _ = 0; _ <= nClicks; _++) {
         if (Date.now() > end) {
             break;
@@ -1464,6 +1474,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
                     initMods();
                     console.log('GeoGuessr mods initialized.');
                     setTimeout(clearCheatOverlay, 1000);
+                    clickGarbage(900);
 				});
 
                 google.maps.event.addListener(this, 'dragstart', () => {
