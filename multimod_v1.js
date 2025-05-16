@@ -26,19 +26,19 @@ USER NOTES
 
 
 // TODO:
-// - *** score div makes that part of the map unclickable
 // - full reset shortcut for when things go awry.
 // - block screen until mods are loaded (e.g. flashlight mode is essentially blink mode first).
 // - onApply when the mod is disabled but the settings are open should enable it.
 // - figure out why sometimes the map doesn't load properly.
 // - disable mod should close popup.
+// - marker doesn't show on first click. Maybe just click twice?
+// - Click twice on load, then remove the marker. Should be pretty unobvious.
 
 // MOD IDEAS
 // - image starts blurry and gets less blurry.
 // - image starts tiny and grows.
 // - custom google maps json import (or store here). e.g. show only the roads and remove everything else.
 // - automatically show the flag of the country (requires API key to geoapify or similar). https://developers.google.com/maps/documentation/geocoding/requests-reverse-geocoding
-// - show if the place is within view or not.
 
 
 
@@ -48,7 +48,7 @@ USER NOTES
 /**  DEV NOTES:
     - If you want to disable a mod, change 'show' to false for it.
     - Keep same configuration for all mods. Must add to _BINDINGS at the bottom of the file for any new mods.
-    - This is a global variable that the script will modify. The saved state will override certain parts of it.
+    - MODS is a global variable that the script will modify. The saved state will override certain parts of it on each page load.
 */
 
 const MODS = {
@@ -170,6 +170,31 @@ const MODS = {
         options: {},
     },
 
+    lottery: {
+        show: true,
+        key: 'lottery',
+        name: 'Lottery',
+        tooltip: 'Get a random guess and you have to decide if you want it or not.',
+        options: {
+            nGuesses: {
+                label: 'Max. guesses',
+                default: 10,
+                tooltip: 'Maximum number of random guesses you get before you have to take the guess.',
+            },
+            nDegLat: {
+                label: 'Latitude margin (deg)',
+                default: 180,
+                tooltip: 'Guess up to this many degrees latitude away from the target',
+            },
+            nDegLng: {
+                label: 'Longitude margin (deg)',
+                default: 180,
+                tooltip: 'Guess up to this many degrees longitude away from the target',
+            },
+
+        },
+    },
+
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -254,6 +279,7 @@ const loadState = () => { // Load state from local storage if it exists, else us
 let GG_ROUND; // Current round information. This gets set on round start, and deleted on round end.
 let GG_MAP; // Current map info.
 let GG_CLICK; // { lat, lng } of latest map click.
+let GG_CUSTOM_MARKER; // Custom marker. This is not the user click marker. Can only use one at a time. Need to clear/move when used.
 
 let IS_DRAGGING = false;
 
@@ -561,6 +587,23 @@ const getMapCenter = () => {
     return { lat, lng };
 };
 
+const setMapCenter = (lat = null, lng = null, zoom = null) => { // All optional arguments. Use current if null.
+    const current = getMapCenter();
+    const currentLat = current.lat;
+    const currentLng = current.lng;
+    const currentZoom = GOOGLE_MAP.getZoom();
+    if (lat == null) {
+        lat = currentLat;
+    }
+    if (lng == null) {
+        lng = currentLng;
+    }
+    if (zoom == null) {
+        zoom = currentZoom;
+    }
+    GOOGLE_MAP.setCenter(lat, lng, zoom);
+};
+
 const getDistance = (p1, p2) => {
     const google = getGoogle();
     const ll1 = new google.maps.LatLng(p1.lat, p1.lng);
@@ -676,6 +719,48 @@ const scoreListener = (evt) => {
     }, 50);
 };
 
+// TODO: take mins and maxes
+const getRandomLoc = (minLat = null, maxLat = null, minLng = null, maxLng = null) => {
+    const lat = (Math.random() - 0.5) * 180;
+    const lng = (Math.random() - 0.5) * 180;
+    return { lat, lng };
+};
+
+const clickAt = (lat, lng) => { // Trigger actual click on guessMap at { lat, lng }.
+    if (!GOOGLE_MAP) {
+        console.log('Map not loaded yet for click event.');
+        return;
+    }
+    const google = getGoogle();
+    const click = {
+        latLng: new google.maps.LatLng(lat, lng),
+    };
+    google.maps.event.trigger(GOOGLE_MAP, 'click', click);
+};
+
+const clearMarker = () => {
+    if (!GG_CUSTOM_MARKER) {
+        return;
+    }
+    GG_CUSTOM_MARKER.position = undefined;
+    GG_CUSTOM_MARKER = undefined;
+};
+
+const addMarkerAt = (lat, lng, title = null) => {
+    if (!GOOGLE_MAP) {
+        return;
+    }
+    if (isNaN(lat) || isNaN(lng)) {
+        return;
+    }
+    clearMarker();
+    const google = getGoogle();
+    GG_CUSTOM_MARKER = new google.maps.Marker({
+        position: { lat, lng },
+        map: GOOGLE_MAP,
+        title: title == null ? '' : title,
+  });
+};
 
 // -------------------------------------------------------------------------------------------------------------------------------
 
@@ -1045,6 +1130,78 @@ const updateInFrame = (forceState = null) => {
 
 
 
+// MOD: Lottery.
+// ===============================================================================================================================
+
+let LOTTERY_DISPLAY; // Display elements for lottery mod. (counter and button).
+let LOTTERY_COUNT; // How many remaining guesses you have.
+
+// TODO: add map click blocker.
+// TODO: set longitude to center on marker so it can't go off screen.
+// TODO: add options for making it within a certain lat/lng range.
+// TODO: first click registers but doesn't place the marker. click twice?
+
+const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
+    const container = document.createElement('div'); // Contains the full lottery display.
+    container.id = 'gg-lottery';
+
+    // Set up display for the lottery counter and button.
+    const counterLabel = document.createElement('div'); // Text label.
+    counterLabel.textContent = 'Remaining guesses:';
+    const counter = document.createElement('div'); // How many guesses you have left, will update each click.
+    counter.id = 'gg-lottery-counter';
+    counter.innerText = LOTTERY_COUNT;
+    const counterDiv = document.createElement('div'); // Contains the above two items side by side.
+    counterDiv.id = 'gg-lottery-counter-div';
+    counterDiv.appendChild(counterLabel);
+    counterDiv.appendChild(counter);
+
+    const button = document.createElement('button');
+    button.id = 'gg-lottery-button';
+    button.textContent = 'Try my luck';
+    button.addEventListener('click', guessRandom);
+
+    container.appendChild(counterDiv);
+    container.appendChild(button);
+    document.body.appendChild(container);
+
+    const guessRandom = () => { // TODO: make this take mins and maxes from options.
+        const { lat, lng } = getRandomLoc();
+        clickAt(lat, lng);
+    };
+
+    // Bind stuff.
+    const onClick = () => {
+        if (LOTTERY_COUNT === 0) {
+            return;
+        }
+        const { lat, lng } = guessRandom();
+        LOTTERY_COUNT -= 1;
+        counter.innerText = LOTTERY_COUNT;
+        setMapCenter(lat, lng); // Keep current zoom level. TODO: this is not working
+    };
+    button.addEventListener('click', onClick);
+};
+
+const updateLottery = (forceState = null) => {
+    const mod = MODS.lottery;
+    const active = updateMod(mod, forceState);
+
+    if (LOTTERY_DISPLAY) {
+        LOTTERY_DISPLAY.parentElement.removeChild(LOTTERY_DISPLAY);
+        LOTTERY_DISPLAY = undefined;
+    }
+    LOTTERY_COUNT = getOption(mod, 'nGuesses');
+
+    if (active) {
+        makeLotteryDisplay();
+    }
+};
+
+// -------------------------------------------------------------------------------------------------------------------------------
+
+
+
 
 // Add bindings and start the script.
 // ===============================================================================================================================
@@ -1059,6 +1216,7 @@ const _BINDINGS = [
     [MODS.seizure, updateSeizure],
     [MODS.bopIt, updateBopIt],
     [MODS.inFrame, updateInFrame],
+    [MODS.lottery, updateLottery],
 ];
 
 const bindButtons = () => {
@@ -1098,6 +1256,152 @@ const addButtons = () => { // Add mod buttons to the active round.
 	canvas.appendChild(element);
 	bindButtons();
 };
+
+// -------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+// Cheat blockers.
+// ===============================================================================================================================
+
+// The goal of this is fuck up the replay file and distract the user by blacking out the screen for the first second or two and clicking around.
+// Should make it obvious if someone is using this mod pack.
+// Advanced coders could figure it out if they want, but with compiled code and intentional obfuscation here, it will be difficult.
+// Credit to Bennett Foddy for assembling many of these quotes and for a few himself, from my favorite game (Getting Over It with Bennett Foddy).
+
+const _QUOTES = [
+
+    `This thing that we call failure is not the falling down, but the staying down. — Mary Pickford`,
+    `The soul would have no rainbow had the eyes no tears. — John Vance Cheney`,
+    `The pain I feel now is the happiness I had before. That's the deal. — C.S. Lewis`,
+    `I feel within me a peace above all earthly dignities, a still and quiet consciences. — William Shakespeare`,
+    `You cannot believe now that you'll ever feel better. But this is not true. You are sure to be happy again. Knowing this, truly believing it, will make you less miserable now. — Abraham Lincoln`,
+    `Do not stand at my grave and cry, I am not there, I did not die. — Mary Frye`,
+    `To live is to suffer. To survive is to find meaning in the suffering. — Friedrich Nietzsche`,
+    `Of all sad words of tongue or pen, the saddest are these, 'It might have been'. — John Greenleaf Whittier`,
+    `If you try to please audiences, uncritically accepting their tastes, it can only mean that you have no respect for them. — Andrei Tarkovsky`,
+    `Don't hate the player; hate the game. — Ice-T`,
+    `It is in falling short of your own goals that you will surpass those who exceed theirs. — Tokugawa Ieyasu`,
+    `In the end… We only regret the chances we didn’t take. — Lewis Carroll`,
+    `There are no regrets in life, just lessons. — Jennifer Aniston`,
+    `There’s no feeling more intense than starting over. Starting over is harder than starting up. — Bennett Foddy`,
+    `Imaginary mountains build themselves from our efforts to climb them, and it's our repeated attempts to reach the summit that turns those mountains into something real. — Bennett Foddy`,
+    `A quick fix for the fickle, some tricks for the clicks of the feckless — Bennett Foddy`,
+    `I only want the bitterness. — Bennett Foddy`,
+    `If you love life do not waste time, for time is what life is made up of — Bruce Lee`,
+    `Don't let the fear of the time it will take to accomplish something stand in the way of doing it. The time will pass anyway; we might just as well put that passing time to the best possible use. — Earl Nightingale`,
+    `Spend so much time on the improvement of yourself that you have no time to criticize others — Christian Larson`,
+    `The magic you are looking for is in the work you are avoiding — Unknown`,
+    `The grass is greenest where you water it — Unknown`,
+    `People fear what they don't understand and hate what they can't conquer — Andrew Smith`,
+    `You miss 100 % of the shots you don’t take. — Michael Scott`,
+    `Be who you needed when you were younger. — Unknown`,
+    `If you don't know what you want, you end up with a lot you don't. — Tyler Durden`,
+    `There is no hopeless situation, only hopeless people. — Atatürk`,
+    `A ship in port is safe, but that’s not why ships are built — Unknown`,
+
+];
+
+const getRandomQuote = () => {
+    const ix = Math.floor(Math.random() * _QUOTES.length);
+    const quote = _QUOTES[ix];
+    return quote;
+};
+
+/** Split the quote and the author into a String[]. Must include the dash character to split it. */
+const splitQuote = (quote) => {
+    const parts = quote.split('—').map(part => part.trim());
+    return parts;
+};
+
+let _CHEAT_OVERLAY; // Div to block view.
+let _CHEAT_DETECTION_INTERVAL; // Interval function looking for map load, will self-cancel if map fails to load.
+
+const clearCheatOverlay = () => {
+    if (_CHEAT_OVERLAY) {
+        _CHEAT_OVERLAY.parentElement.removeChild(_CHEAT_OVERLAY);
+        _CHEAT_OVERLAY = undefined;
+    }
+};
+
+window.addEventListener('load', () => {
+    clearCheatOverlay();
+    const cheatOverlay = document.createElement('div'); // Opaque black div that covers everything while the page loads.
+    Object.assign(cheatOverlay.style, { // Intentionally not in CSS to make it harder for people to figure out.
+        height: '100vh',
+        width: '100vw',
+        background: 'black',
+        'z-index': '99999999',
+    });
+    const quoteDiv = document.createElement('div');
+    const quote = getRandomQuote();
+    let parts;
+    try {
+        parts = splitQuote(quote);
+    } catch (err) {
+        console.error(err);
+        parts = [quote];
+    }
+    Object.assign(quoteDiv.style, { // Style for div that contains quote and author. Again, done via JS to obfuscate the code.
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        'font-size': '60px',
+        color: 'white',
+        transform: 'translate(-50%, -50%)',
+        'pointer-events': 'none',
+        display: 'flex',
+        'flex-direction': 'column',
+        'text-align': 'center',
+        'align-items': 'center',
+    });
+    const quoteStyle = { // Styling for just the quote.
+        'font-size': '40px',
+    };
+    const authorStyle = { // Styling for just the author.
+        'font-size': '20px',
+    };
+    for (const [ix, part] of Object.entries(parts)) {
+        const div = document.createElement('div');
+        if (Number(ix) === parts.length - 1) {
+            div.innerText = '— ' + part;
+            Object.assign(div.style, authorStyle);
+        } else {
+            div.innerText = part;
+            Object.assign(div.style, quoteStyle);
+        }
+        quoteDiv.appendChild(div);
+    }
+
+    // On page load, black out everything. Then, we listen for the google map load event, add a time buffer, and remove it after that.
+    // We have to have the map loaded to do the anti-cheat clicks. This is done down below in the map load event bubble.
+    cheatOverlay.appendChild(quoteDiv);
+    _CHEAT_OVERLAY = document.body.insertBefore(cheatOverlay, document.body.firstChild);
+});
+
+/**
+Click around the map *after* it is loaded and idle, and the screen is blacked out.
+This will be a callback in the google maps section of this script.
+This will completely mess up the replay file. We have 1 second to do this.
+Always end with a click at { lat: 0, lng: 0 }. This will be extremely obvious in replays, both for streaming and the actual replay files.
+This function is sloppy, but it doesn't really matter as long as we screw up the replay.
+*/
+const clickGarbage = (nMilliseconds = 900) => {
+    const nClicks = 20; // Approximately...
+    const start = Date.now(); // Unix epoch ms.
+    const end = start + nMilliseconds; // Stop clicking after this time (epoch ms).
+    for (let _ = 0; _ <= nClicks; _++) {
+        if (Date.now() > end) {
+            break;
+        }
+        const { lat, lng } = getRandomLoc();
+        clickAt(lat, lng);
+    }
+    clickAt(0, 0); // Race condition, but whatever.
+};
+
+
 
 // -------------------------------------------------------------------------------------------------------------------------------
 
@@ -1171,6 +1475,8 @@ const onMapClick = (evt) => {
     document.dispatchEvent(event, { bubbles: true });
 };
 
+// -------------------------------------------------------------------------------------------------------------------------------
+
 document.addEventListener('DOMContentLoaded', (event) => {
 	injecter(() => {
 		const google = getGoogle();
@@ -1201,6 +1507,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
 				google.maps.event.addListenerOnce(this, 'idle', () => { // Actions on initial guess map load.
                     initMods();
                     console.log('GeoGuessr mods initialized.');
+                    setTimeout(clearCheatOverlay, 1000);
+                    clickGarbage(900);
 				});
 
                 google.maps.event.addListener(this, 'dragstart', () => {
@@ -1330,6 +1638,7 @@ const style = `
         color: white;
         text-shadow: ${bodyShadow};
         transform: translate(-50%, -50%);
+        pointer-events: none;
     }
 
     #gg-option-menu {
@@ -1455,6 +1764,42 @@ const style = `
         align-items: center;
         justify-content: center;
         pointer-events: none;
+    }
+
+    #gg-lottery {
+        position: absolute;
+        top: 13%;
+        left: 50%;
+        font-size: 30px;
+        color: white;
+        text-shadow: ${bodyShadow};
+        transform: translate(-50%, -50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background-color: rgba(0, 255, 0, 0.8);
+        padding: 0.5em;
+        border-radius: 10px;
+    }
+
+    #gg-lottery-counter-div {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    #gg-lottery-counter {
+        padding-left: 0.5em;
+    }
+
+    #gg-lottery-button {
+        font-size: 25px;
+        margin-top: 0.5em;
+        border-radius: 10px;
+        padding: 5px 20px;
+        color: white;
+        background: black;
+        opacity: 75%;
+        cursor: pointer;
     }
 `;
 
