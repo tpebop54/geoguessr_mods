@@ -1276,7 +1276,7 @@ const _QUOTES = [
 
     // Inspirational.
     `It is in falling short of your own goals that you will surpass those who exceed theirs. — Tokugawa Ieyasu`,
-    `If you love life do not waste time, for time is what life is made up of — Bruce Lee`,
+    `If you love life, do not waste time- for time is what life is made up of — Bruce Lee`,
     `Don't let the fear of the time it will take to accomplish something stand in the way of doing it. The time will pass anyway... — Earl Nightingale`,
     `Spend so much time on the improvement of yourself that you have no time to criticize others — Christian Larson`,
     `This too shall pass. — Unknown`,
