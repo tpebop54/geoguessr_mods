@@ -1300,12 +1300,19 @@ const _QUOTES = [
     `If you don't know what you want, you end up with a lot you don't. — Tyler Durden`,
     `There is no hopeless situation, only hopeless people. — Atatürk`,
     `A ship in port is safe, but that’s not why ships are built — Unknown`,
+
 ];
 
 const getRandomQuote = () => {
     const ix = Math.floor(Math.random() * _QUOTES.length);
     const quote = _QUOTES[ix];
     return quote;
+};
+
+/** Split the quote and the author into a String[]. Must include the dash character to split it. */
+const splitQuote = (quote) => {
+    const parts = quote.split('—').map(part => part.trim());
+    return parts;
 };
 
 let _CHEAT_OVERLAY; // Div to block view.
@@ -1329,8 +1336,14 @@ window.addEventListener('load', () => {
     });
     const quoteDiv = document.createElement('div');
     const quote = getRandomQuote();
-    quoteDiv.innerText = quote;
-    Object.assign(quoteDiv.style, { // Same thing, make it hard for people trying to dissect this code.
+    let parts;
+    try {
+        parts = splitQuote(quote);
+    } catch (err) {
+        console.error(err);
+        parts = [quote];
+    }
+    Object.assign(quoteDiv.style, { // Style for div that contains quote and author. Again, done via JS to obfuscate the code.
         position: 'absolute',
         top: '50%',
         left: '50%',
@@ -1338,7 +1351,28 @@ window.addEventListener('load', () => {
         color: 'white',
         transform: 'translate(-50%, -50%)',
         'pointer-events': 'none',
+        display: 'flex',
+        'flex-direction': 'column',
+        'text-align': 'center',
+        'align-items': 'center',
     });
+    const quoteStyle = { // Styling for just the quote.
+        'font-size': '40px',
+    };
+    const authorStyle = { // Styling for just the author.
+        'font-size': '20px',
+    };
+    for (const [ix, part] of Object.entries(parts)) {
+        const div = document.createElement('div');
+        if (Number(ix) === parts.length - 1) {
+            div.innerText = '— ' + part;
+            Object.assign(div.style, authorStyle);
+        } else {
+            div.innerText = part;
+            Object.assign(div.style, quoteStyle);
+        }
+        quoteDiv.appendChild(div);
+    }
 
     // On page load, black out everything. Then, we listen for the google map load event, add a time buffer, and remove it after that.
     // We have to have the map loaded to do the anti-cheat clicks. This is done down below in the map load event bubble.
@@ -1347,10 +1381,10 @@ window.addEventListener('load', () => {
 });
 
 /**
-Click around the map *after* it is loaded and the screen is blacked out.
+Click around the map *after* it is loaded and idle, and the screen is blacked out.
 This will be a callback in the google maps section of this script.
 This will completely mess up the replay file. We have 1 second to do this.
-Always end with a click at { lat: 0, lng: 0 }. This will be extremely obvious in replays.
+Always end with a click at { lat: 0, lng: 0 }. This will be extremely obvious in replays, both for streaming and the actual replay files.
 This function is sloppy, but it doesn't really matter as long as we screw up the replay.
 */
 const clickGarbage = (nMilliseconds = 900) => {
