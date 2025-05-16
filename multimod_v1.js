@@ -37,7 +37,6 @@ USER NOTES
 // - image starts tiny and grows.
 // - custom google maps json import (or store here). e.g. show only the roads and remove everything else.
 // - automatically show the flag of the country (requires API key to geoapify or similar). https://developers.google.com/maps/documentation/geocoding/requests-reverse-geocoding
-// - show if the place is within view or not.
 
 
 
@@ -47,7 +46,7 @@ USER NOTES
 /**  DEV NOTES:
     - If you want to disable a mod, change 'show' to false for it.
     - Keep same configuration for all mods. Must add to _BINDINGS at the bottom of the file for any new mods.
-    - This is a global variable that the script will modify. The saved state will override certain parts of it.
+    - MODS is a global variable that the script will modify. The saved state will override certain parts of it on each page load.
 */
 
 const MODS = {
@@ -180,6 +179,17 @@ const MODS = {
                 default: 10,
                 tooltip: 'Maximum number of random guesses you get before you have to take the guess.',
             },
+            nDegLat: {
+                label: 'Latitude margin (deg)',
+                default: 180,
+                tooltip: 'Guess up to this many degrees latitude away from the target',
+            },
+            nDegLng: {
+                label: 'Longitude margin (deg)',
+                default: 180,
+                tooltip: 'Guess up to this many degrees longitude away from the target',
+            },
+
         },
     },
 
@@ -1120,6 +1130,7 @@ let LOTTERY_COUNT; // How many remaining guesses you have.
 
 // TODO: add map click blocker.
 // TODO: set longitude to center on marker so it can't go off screen.
+// TODO; add options for making it within a certain lat/lng range.
 
 const guessRandom = () => {
     const lat = (Math.random() - 0.5) * 180;
@@ -1244,6 +1255,85 @@ const addButtons = () => { // Add mod buttons to the active round.
 
 
 
+// Cheat blockers.
+// ===============================================================================================================================
+
+// The goal of this is fuck up the replay file and distract the user by blacking out the screen for the first second or two and clicking around.
+// Should make it obvious if someone is using this mod pack.
+// Advanced coders could figure it out if they want, but with compiled code and intentional obfuscation here, it will be difficult.
+// Credit to Bennett Foddy for assembling many of these quotes and for a few himself (Getting Over It with Bennett Foddy).
+
+const _QUOTES = [
+
+    `This thing that we call failure is not the falling down, but the staying down. — Mary Pickford`,
+    `The soul would have no rainbow had the eyes no tears. — John Vance Cheney`,
+    `The pain I feel now is the happiness I had before. That's the deal. — C.S. Lewis`,
+    `I feel within me a peace above all earthly dignities, a still and quiet consciences. — William Shakespeare`,
+    `You cannot believe now that you'll ever feel better. But this is not true. You are sure to be happy again. Knowing this, truly believing it, will make you less miserable now. — Abraham Lincoln`,
+    `Do not stand at my grave and cry, I am not there, I did not die. — Mary Frye`,
+    `To live is to suffer. To survive is to find meaning in the suffering. — Friedrich Nietzsche`,
+    `Of all sad words of tongue or pen, the saddest are these, 'It might have been'. — John Greenleaf Whittier`,
+    `If you try to please audiences, uncritically accepting their tastes, it can only mean that you have no respect for them. — Andrei Tarkovsky`,
+    `Don't hate the player; hate the game. — Ice-T`,
+    `It is in falling short of your own goals that you will surpass those who exceed theirs. — Tokugawa Ieyasu`,
+    `In the end… We only regret the chances we didn’t take. — Lewis Carroll`,
+    `There are no regrets in life, just lessons. — Jennifer Aniston`,
+    `There’s no feeling more intense than starting over. Starting over is harder than starting up. - Bennett Foddy`,
+    `Imaginary mountains build themselves from our efforts to climb them, and it's our repeated attempts to reach the summit that turns those mountains into something real. - Bennett Foddy`,
+    `A quick fix for the fickle, some tricks for the clicks of the feckless - Bennett Foddy`,
+    `I only want the bitterness. - Bennett Foddy`,
+
+];
+
+const getRandomQuote = () => {
+    const ix = Math.floor(Math.random() * _QUOTES.length);
+    const quote = _QUOTES[ix];
+    return quote;
+};
+
+let _CHEAT_OVERLAY; // Div to block view.
+let _CHEAT_DETECTION_INTERVAL; // Interval function looking for map load, will self-cancel if map fails to load.
+
+const clearCheatOverlay = () => {
+    if (_CHEAT_OVERLAY) {
+        _CHEAT_OVERLAY.parentElement.removeChild(_CHEAT_OVERLAY);
+        _CHEAT_OVERLAY = undefined;
+    }
+};
+
+window.addEventListener('load', () => {
+    clearCheatOverlay();
+    const cheatOverlay = document.createElement('div'); // Opaque black div that covers everything while the page loads.
+    Object.assign(cheatOverlay.style, { // Intentionally not in CSS to make it harder for people to figure out.
+        height: '100vh',
+        width: '100vw',
+        background: 'black',
+        'z-index': '99999999',
+    });
+    const quoteDiv = document.createElement('div');
+    const quote = getRandomQuote();
+    quoteDiv.innerText = quote;
+    Object.assign(quoteDiv.style, { // Same thing, make it hard for people trying to dissect this code.
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        'font-size': '60px',
+        color: 'white',
+        transform: 'translate(-50%, -50%)',
+        'pointer-events': 'none',
+    });
+
+    // On page load, black out everything. Then, we listen for the google map load event, add a time buffer, and remove it after that.
+    // We have to have the map loaded to do the anti-cheat clicks. This is done down below in the map load event bubble.
+    cheatOverlay.appendChild(quoteDiv);
+    _CHEAT_OVERLAY = document.body.insertBefore(cheatOverlay, document.body.firstChild);
+})
+
+// -------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
 // Intercept google maps API files so we can add custom map behavior. Configure GeoGuessr framework.
 // ===============================================================================================================================
 
@@ -1311,6 +1401,8 @@ const onMapClick = (evt) => {
     document.dispatchEvent(event, { bubbles: true });
 };
 
+// -------------------------------------------------------------------------------------------------------------------------------
+
 document.addEventListener('DOMContentLoaded', (event) => {
 	injecter(() => {
 		const google = getGoogle();
@@ -1341,6 +1433,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 				google.maps.event.addListenerOnce(this, 'idle', () => { // Actions on initial guess map load.
                     initMods();
                     console.log('GeoGuessr mods initialized.');
+                    setTimeout(clearCheatOverlay, 1000);
 				});
 
                 google.maps.event.addListener(this, 'dragstart', () => {
