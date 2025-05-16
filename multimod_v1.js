@@ -31,6 +31,8 @@ USER NOTES
 // - onApply when the mod is disabled but the settings are open should enable it.
 // - figure out why sometimes the map doesn't load properly.
 // - disable mod should close popup.
+// - marker doesn't show on first click. Maybe just click twice?
+// - Click twice on load, then remove the marker. Should be pretty unobvious.
 
 // MOD IDEAS
 // - image starts blurry and gets less blurry.
@@ -347,42 +349,6 @@ const getButtonText = (mod) => {
 
 const getButton = (mod) => {
     return document.querySelector(`#${getButtonID(mod)}`);
-};
-
-const clickAt = (lat, lng) => { // Trigger actual click on guessMap at { lat, lng }.
-    if (!GOOGLE_MAP) {
-        console.log('Map not loaded yet for click event.');
-        return;
-    }
-    const google = getGoogle();
-    const click = {
-        latLng: new google.maps.LatLng(lat, lng),
-    };
-    google.maps.event.trigger(GOOGLE_MAP, 'click', click);
-};
-
-const clearMarker = () => {
-    if (!GG_CUSTOM_MARKER) {
-        return;
-    }
-    GG_CUSTOM_MARKER.position = undefined;
-    GG_CUSTOM_MARKER = undefined;
-};
-
-const addMarkerAt = (lat, lng, title = null) => {
-    if (!GOOGLE_MAP) {
-        return;
-    }
-    if (isNaN(lat) || isNaN(lng)) {
-        return;
-    }
-    clearMarker();
-    const google = getGoogle();
-    GG_CUSTOM_MARKER = new google.maps.Marker({
-        position: { lat, lng },
-        map: GOOGLE_MAP,
-        title: title == null ? '' : title,
-  });
 };
 
 const isActive = (mod) => {
@@ -753,6 +719,48 @@ const scoreListener = (evt) => {
     }, 50);
 };
 
+// TODO: take mins and maxes
+const getRandomLoc = (minLat = null, maxLat = null, minLng = null, maxLng = null) => {
+    const lat = (Math.random() - 0.5) * 180;
+    const lng = (Math.random() - 0.5) * 180;
+    return { lat, lng };
+};
+
+const clickAt = (lat, lng) => { // Trigger actual click on guessMap at { lat, lng }.
+    if (!GOOGLE_MAP) {
+        console.log('Map not loaded yet for click event.');
+        return;
+    }
+    const google = getGoogle();
+    const click = {
+        latLng: new google.maps.LatLng(lat, lng),
+    };
+    google.maps.event.trigger(GOOGLE_MAP, 'click', click);
+};
+
+const clearMarker = () => {
+    if (!GG_CUSTOM_MARKER) {
+        return;
+    }
+    GG_CUSTOM_MARKER.position = undefined;
+    GG_CUSTOM_MARKER = undefined;
+};
+
+const addMarkerAt = (lat, lng, title = null) => {
+    if (!GOOGLE_MAP) {
+        return;
+    }
+    if (isNaN(lat) || isNaN(lng)) {
+        return;
+    }
+    clearMarker();
+    const google = getGoogle();
+    GG_CUSTOM_MARKER = new google.maps.Marker({
+        position: { lat, lng },
+        map: GOOGLE_MAP,
+        title: title == null ? '' : title,
+  });
+};
 
 // -------------------------------------------------------------------------------------------------------------------------------
 
@@ -1130,14 +1138,8 @@ let LOTTERY_COUNT; // How many remaining guesses you have.
 
 // TODO: add map click blocker.
 // TODO: set longitude to center on marker so it can't go off screen.
-// TODO; add options for making it within a certain lat/lng range.
-
-const guessRandom = () => {
-    const lat = (Math.random() - 0.5) * 180;
-    const lng = (Math.random() - 0.5) * 180;
-    clickAt(lat, lng);
-    return { lat, lng };
-};
+// TODO: add options for making it within a certain lat/lng range.
+// TODO: first click registers but doesn't place the marker. click twice?
 
 const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     const container = document.createElement('div'); // Contains the full lottery display.
@@ -1163,6 +1165,11 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     container.appendChild(button);
     document.body.appendChild(container);
 
+    const guessRandom = () => { // TODO: make this take mins and maxes from options.
+        const { lat, lng } = getRandomLoc();
+        clickAt(lat, lng);
+    };
+
     // Bind stuff.
     const onClick = () => {
         if (LOTTERY_COUNT === 0) {
@@ -1171,7 +1178,7 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         const { lat, lng } = guessRandom();
         LOTTERY_COUNT -= 1;
         counter.innerText = LOTTERY_COUNT;
-        setMapCenter(lat, lng); // Keep current zoom level.
+        setMapCenter(lat, lng); // Keep current zoom level. TODO: this is not working
     };
     button.addEventListener('click', onClick);
 };
@@ -1261,7 +1268,7 @@ const addButtons = () => { // Add mod buttons to the active round.
 // The goal of this is fuck up the replay file and distract the user by blacking out the screen for the first second or two and clicking around.
 // Should make it obvious if someone is using this mod pack.
 // Advanced coders could figure it out if they want, but with compiled code and intentional obfuscation here, it will be difficult.
-// Credit to Bennett Foddy for assembling many of these quotes and for a few himself (Getting Over It with Bennett Foddy).
+// Credit to Bennett Foddy for assembling many of these quotes and for a few himself, from my favorite game (Getting Over It with Bennett Foddy).
 
 const _QUOTES = [
 
@@ -1327,7 +1334,30 @@ window.addEventListener('load', () => {
     // We have to have the map loaded to do the anti-cheat clicks. This is done down below in the map load event bubble.
     cheatOverlay.appendChild(quoteDiv);
     _CHEAT_OVERLAY = document.body.insertBefore(cheatOverlay, document.body.firstChild);
-})
+});
+
+/**
+Click around the map *after* it is loaded and the screen is blacked out.
+This will be a callback in the google maps section of this script.
+This will completely mess up the replay file. We have 1 second to do this.
+Always end with a click at { lat: 0, lng: 0 }. This will be extremely obvious in replays.
+This function is sloppy, but it doesn't really matter as long as we screw up the replay.
+*/
+const clickGarbage = () => {
+    const nClicks = 20; // Approximately...
+    const start = Date.now(); // Unix epoch ms.
+    const end = start + 900; // Stop clicking after this time (epoch ms).
+    for (let _ = 0; _ <= nClicks; _++) {
+        if (Date.now() > end) {
+            break;
+        }
+        const { lat, lng } = getRandomLoc();
+        clickAt(lat, lng);
+    }
+    clickAt(0, 0); // Race condition, but whatever.
+};
+
+
 
 // -------------------------------------------------------------------------------------------------------------------------------
 
