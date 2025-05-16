@@ -22,17 +22,14 @@ CREDIT WHERE CREDIT IS DUE
 /**
 USER NOTES
 - When loading, you may have to refresh the page once or twice.
+- You can disable the quotes if you want via the SHOW_QUOTES variable. Blackout screen is non-negotiable.
 /*
 
 
 // TODO:
-// - *** mods mess up the menu pages. dial it down to single and multiplayer. Need to make overlay div disappear reliably and with a backup.
-// - Can I block the sound effect for the anti-cheat stuff? Makes it more obvious what's going on.
 // - full reset shortcut for when things go awry.
 // - figure out why sometimes the map doesn't load properly.
 // - disable mod should close popup.
-// - make blackout div top dawg, e.g. the token menu shows up first and on top.
-// - global for showing quotes or not. Unsure if streamers will want those.
 
 // MOD IDEAS
 // - image starts blurry and gets less blurry.
@@ -282,7 +279,8 @@ let GG_CLICK; // { lat, lng } of latest map click.
 let GG_CUSTOM_MARKER; // Custom marker. This is not the user click marker. Can only use one at a time. Need to clear/move when used.
 let GG_GUESSMAP_BLOCKER; // Div that blocks events to the map. This can also be done with pointer-events, but it's cleaner than having to restore them.
 
-let IS_DRAGGING = false;
+let IS_DRAGGING = false; // true when user is actively dragging the guessMap. Some of the events conflict with others.
+let SHOW_QUOTES = true; // On page load, show a random quote if this is true. The blackout screen cannot be turned off without changing code.
 
 /**
   SCORE_FUNC is a function used to display the overlay that shows how well you clicked (score, direction, whatever).
@@ -396,13 +394,13 @@ const makeOptionMenu = (mod) => {
         return;
     }
 
-    let popup = document.createElement('div');
-    popup.id = 'gg-option-menu';
+    let menu = document.createElement('div');
+    menu.id = 'gg-option-menu';
 
     const title = document.createElement('div');
     title.id = 'gg-option-title';
     title.innerHTML = `${mod.name} Options`;
-    popup.appendChild(title);
+    menu.appendChild(title);
 
     const defaults = getDefaultMod(mod).options || {};
 
@@ -440,12 +438,7 @@ const makeOptionMenu = (mod) => {
         lineDiv.appendChild(input);
         inputs.push([key, type, input]);
 
-        popup.appendChild(lineDiv);
-    };
-
-    const closePopup = () => {
-        popup.remove();
-        popup = undefined;
+        menu.appendChild(lineDiv);
     };
 
     const onReset = () => {
@@ -455,7 +448,7 @@ const makeOptionMenu = (mod) => {
     };
 
     const onClose = () => {
-        closePopup();
+        closeOptionMenu();
     };
 
     const onApply = () => {
@@ -489,8 +482,8 @@ const makeOptionMenu = (mod) => {
     };
 
     const modDiv = getModDiv();
-    popup.appendChild(formDiv);
-    modDiv.appendChild(popup);
+    menu.appendChild(formDiv);
+    modDiv.appendChild(menu);
 };
 
 const updateMod = (mod, forceState = null) => {
@@ -551,6 +544,13 @@ const disableOtherScoreMods = (mod) => { // This function needs to be called pri
         if (isScoringMod(other)) {
             disableMods(other);
         }
+    }
+};
+
+const closeOptionMenu = () => {
+    const menu = document.querySelector('#gg-option-menu');
+    if (menu) {
+        menu.parentElement.removeChild(menu);
     }
 };
 
@@ -1222,6 +1222,10 @@ const _BINDINGS = [
     [MODS.lottery, updateLottery],
 ];
 
+const closePopup = (evt) => { // Always close the popup menu when disabling a mod.
+
+};
+
 const bindButtons = () => {
     for (const [mod, callback] of _BINDINGS) {
         if (!mod.show) {
@@ -1233,7 +1237,11 @@ const bindButtons = () => {
             console.error(`Mod ${mod.key} not found.`);
             continue;
         }
-        button.addEventListener('click', () => callback()); // Don't pass the click event since updateMod doesn't need it.
+        // If option menu is open, close it. If enabling a mod, open the option menu.
+        button.addEventListener('click', () => {
+            closeOptionMenu(); // Synchronous.
+            setTimeout(callback, 0); // Async, must happen after closing menu.
+        });
     }
 };
 
@@ -1354,7 +1362,7 @@ window.addEventListener('load', () => {
         'z-index': '99999999',
     });
     const quoteDiv = document.createElement('div');
-    const quote = getRandomQuote();
+    const quote = SHOW_QUOTES ? getRandomQuote() : 'Loading...';
     let parts;
     try {
         parts = splitQuote(quote);
@@ -1801,6 +1809,7 @@ const style = `
         background-color: rgba(0, 100, 0, 0.8);
         padding: 0.5em;
         border-radius: 10px;
+        z-index: 9999;
     }
 
     #gg-lottery-counter-div {
@@ -1828,7 +1837,7 @@ const style = `
         height: 100%;
         position: absolute;
         pointer-events: none;
-        z-index: 9999;
+        z-index: 99999999;
     }
 `;
 
