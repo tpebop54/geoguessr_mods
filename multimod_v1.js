@@ -27,12 +27,11 @@ USER NOTES
 
 // TODO:
 // - *** mods mess up the menu pages. dial it down to single and multiplayer. Need to make overlay div disappear reliably and with a backup.
-// - Can I block the sound effect for the anti-cheat stuff? Makes it more obvious what's going on .
+// - Can I block the sound effect for the anti-cheat stuff? Makes it more obvious what's going on.
 // - full reset shortcut for when things go awry.
-// - onApply when the mod is disabled but the settings are open should enable it.
 // - figure out why sometimes the map doesn't load properly.
 // - disable mod should close popup.
-// - make blackout div top dawg
+// - make blackout div top dawg, e.g. the token menu shows up first and on top.
 
 // MOD IDEAS
 // - image starts blurry and gets less blurry.
@@ -1142,9 +1141,8 @@ const updateInFrame = (forceState = null) => {
 let LOTTERY_DISPLAY; // Display elements for lottery mod. (counter and button).
 let LOTTERY_COUNT; // How many remaining guesses you have.
 
-// TODO: add map click blocker.
-// TODO: set longitude to center on marker so it can't go off screen.
 // TODO: add options for making it within a certain lat/lng range.
+// TODO: remove token div when the mod is disabled.
 
 const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     const container = document.createElement('div'); // Contains the full lottery display.
@@ -1269,13 +1267,31 @@ const addButtons = () => { // Add mod buttons to the active round.
 // Cheat blockers.
 // ===============================================================================================================================
 
-// The goal of this is fuck up the replay file and distract the user by blacking out the screen for the first second or two and clicking around.
-// Should make it obvious if someone is using this mod pack.
+// The goal of this is to fuck up the replay file and distract the user by blacking out the screen for the first second or two and clicking around.
+// Should make it obvious in the replay and stream if someone is using this mod pack.
 // Advanced coders could figure it out if they want, but with compiled code and intentional obfuscation here, it will be difficult.
 // Credit to Bennett Foddy for assembling many of these quotes and for a few himself, from my favorite game (Getting Over It with Bennett Foddy).
 
 const _QUOTES = [
 
+    // Inspirational.
+    `It is in falling short of your own goals that you will surpass those who exceed theirs. — Tokugawa Ieyasu`,
+    `If you love life do not waste time, for time is what life is made up of — Bruce Lee`,
+    `Don't let the fear of the time it will take to accomplish something stand in the way of doing it. The time will pass anyway... — Earl Nightingale`,
+    `Spend so much time on the improvement of yourself that you have no time to criticize others — Christian Larson`,
+    `This too shall pass. — Unknown`,
+    `No one can make you feel inferior without your consent — Eleanor Roosevelt`,
+    `Never interrupt your enemy when he is making a mistake. — Napoleon Bonaparte`,
+    `The magic you are looking for is in the work you are avoiding — Unknown`,
+    `The grass is greenest where you water it — Unknown`,
+    `People fear what they don't understand and hate what they can't conquer — Andrew Smith`,
+    `Be who you needed when you were younger. — Unknown`,
+    `A ship in port is safe, but that’s not why ships are built — Unknown`,
+    `There is no hopeless situation, only hopeless people. — Atatürk`,
+    `And those who were seen dancing were thought to be insane by those who could not hear the music. — Friedrich Nietzsche`,
+    `There are no regrets in life, just lessons. — Jennifer Aniston`,
+
+    // Heavy stuff.
     `This thing that we call failure is not the falling down, but the staying down. — Mary Pickford`,
     `The soul would have no rainbow had the eyes no tears. — John Vance Cheney`,
     `The pain I feel now is the happiness I had before. That's the deal. — C.S. Lewis`,
@@ -1285,25 +1301,18 @@ const _QUOTES = [
     `To live is to suffer. To survive is to find meaning in the suffering. — Friedrich Nietzsche`,
     `Of all sad words of tongue or pen, the saddest are these, 'It might have been'. — John Greenleaf Whittier`,
     `If you try to please audiences, uncritically accepting their tastes, it can only mean that you have no respect for them. — Andrei Tarkovsky`,
-    `Don't hate the player; hate the game. — Ice-T`,
-    `It is in falling short of your own goals that you will surpass those who exceed theirs. — Tokugawa Ieyasu`,
     `In the end… We only regret the chances we didn’t take. — Lewis Carroll`,
-    `There are no regrets in life, just lessons. — Jennifer Aniston`,
     `There’s no feeling more intense than starting over. Starting over is harder than starting up. — Bennett Foddy`,
     `Imaginary mountains build themselves from our efforts to climb them, and it's our repeated attempts to reach the summit that turns those mountains into something real. — Bennett Foddy`,
-    `A quick fix for the fickle, some tricks for the clicks of the feckless — Bennett Foddy`,
-    `I only want the bitterness. — Bennett Foddy`,
-    `If you love life do not waste time, for time is what life is made up of — Bruce Lee`,
-    `Don't let the fear of the time it will take to accomplish something stand in the way of doing it. The time will pass anyway; we might just as well put that passing time to the best possible use. — Earl Nightingale`,
-    `Spend so much time on the improvement of yourself that you have no time to criticize others — Christian Larson`,
-    `The magic you are looking for is in the work you are avoiding — Unknown`,
-    `The grass is greenest where you water it — Unknown`,
-    `People fear what they don't understand and hate what they can't conquer — Andrew Smith`,
-    `You miss 100 % of the shots you don’t take. — Michael Scott`,
-    `Be who you needed when you were younger. — Unknown`,
+
+    // Funny, light-hearted, or from movies/TV/celebrities.
+    `Don't hate the player. Hate the game. — Ice-T`,
+    `I came here to chew bubblegum and kick [butt], and I'm all out of bubblegum — Roddy Piper`,
+    `That rug really tied the room together. — Jeffrey Lebowski`,
+    `You miss 100% of the shots you don’t take. — Michael Scott`,
+    `Those who mind don't matter, those who matter don't mind. — Dr. Seuss`,
     `If you don't know what you want, you end up with a lot you don't. — Tyler Durden`,
-    `There is no hopeless situation, only hopeless people. — Atatürk`,
-    `A ship in port is safe, but that’s not why ships are built — Unknown`,
+    `Do. Or do not. There is no try. — Yoda`,
 
 ];
 
