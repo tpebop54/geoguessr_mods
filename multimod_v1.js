@@ -1203,7 +1203,16 @@ const updateInFrame = (forceState = null) => {
 let LOTTERY_DISPLAY; // Display elements for lottery mod. (counter and button).
 let LOTTERY_COUNT; // How many remaining guesses you have.
 
+const removeLotteryDisplay = () => {
+    if (LOTTERY_DISPLAY) {
+        LOTTERY_DISPLAY.parentElement.removeChild(LOTTERY_DISPLAY);
+        LOTTERY_DISPLAY = undefined;
+    }
+};
+
 const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
+    removeLotteryDisplay();
+
     const container = document.createElement('div'); // Contains the full lottery display.
     container.id = 'gg-lottery';
 
@@ -1225,6 +1234,8 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     container.appendChild(counterDiv);
     container.appendChild(button);
     document.body.appendChild(container);
+
+    LOTTERY_DISPLAY = container;
 
     // Bind stuff.
     const onClick = () => {
@@ -1263,10 +1274,7 @@ const updateLottery = (forceState = null) => {
     const mod = MODS.lottery;
     const active = updateMod(mod, forceState);
 
-    if (LOTTERY_DISPLAY) {
-        LOTTERY_DISPLAY.parentElement.removeChild(LOTTERY_DISPLAY);
-        LOTTERY_DISPLAY = undefined;
-    }
+    removeLotteryDisplay();
     LOTTERY_COUNT = getOption(mod, 'nGuesses');
 
     const smallMap = getSmallMap();
