@@ -1383,7 +1383,7 @@ const _QUOTES = [
     `You must be the change you wish to see in the world. – Mahatma Gandhi`,
     `Don’t count the days, make the days count. – Muhammad Ali`,
     `I have not failed. I've just found 10,000 ways that won't work. – Thomas Edison`,
-    `Don’t watch the clock; do what it does. Keep going. – Sam Levenson`,
+    `Don’t watch the clock. Do what it does. Keep going. – Sam Levenson`,
     `The best way to predict the future is to create it. – Peter Drucker`,
     `Do not go where the path may lead, go instead where there is no path and leave a trail. – Ralph Waldo Emerson`,
 
@@ -1400,8 +1400,8 @@ const _QUOTES = [
     `In the end… We only regret the chances we didn’t take. — Lewis Carroll`,
     `There’s no feeling more intense than starting over. Starting over is harder than starting up. — Bennett Foddy`,
     `Imaginary mountains build themselves from our efforts to climb them, and it's our repeated attempts to reach the summit that turns those mountains into something real. — Bennett Foddy`,
-    `Be yourself; everyone else is already taken. – Oscar Wilde`,
-    `Whether you think you can or you think you can’t, you’re right. – Henry Ford`,
+    `Be yourself. Everyone else is already taken. – Oscar Wilde`,
+    `Whether you think you can or you think you can’t, you’re right. — Henry Ford`,
 
     // Funny, light-hearted, or from movies/TV/celebrities.
     `Don't hate the player. Hate the game. — Ice-T`,
@@ -1421,7 +1421,7 @@ const _QUOTES = [
     `What is this, a center for ants? ... The center has to be at least three times bigger than this. — Derek Zoolander`,
     `Did we just become best friends? YUP!! — Dale Doback, Brennan Huff`,
 
-    // Jokes and fun facts.
+    // Jokes.
     `When birds fly in V-formation, one side is usually longer. Know why? That side has more birds on it.`,
     `I broke my leg in two places. My doctor told me to stop going to those places.`,
     `Why do birds fly south in the winter? Because it's too far to walk.`,
@@ -1429,6 +1429,13 @@ const _QUOTES = [
     `Do your shoes have holes in them? No? Then how did you get your feet in them?`,
     `A magician was walking down the street. Then he turned into a grocery store.`,
     `Why do scuba divers fall backward off the boat? If they fell forward, they'd still be in the boat.`,
+
+    // Fun facts.
+    `Sloths can hold their breath longer than dolphins`,
+    `Koalas have fingerprints so similar to humans that they can confuse crime scene investigators.`,
+    `The pistol shrimp snaps its claw so fast it creates a bubble hotter than the surface of the sun.`,
+    `Dogs' nose prints are as unique as human fingerprints.`,
+    `Sharks existed before trees`,
 
 ];
 
