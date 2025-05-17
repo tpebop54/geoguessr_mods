@@ -22,16 +22,13 @@ CREDIT WHERE CREDIT IS DUE
 /**
 USER NOTES
 - When loading, you may have to refresh the page once or twice.
+- You can disable the quotes if you want via the SHOW_QUOTES variable. Blackout screen is non-negotiable.
 /*
 
 
 // TODO:
-// - *** mods mess up the menu pages. dial it down to single and multiplayer. Need to make overlay div disappear reliably and with a backup.
-// - Can I block the sound effect for the anti-cheat stuff? Makes it more obvious what's going on.
 // - full reset shortcut for when things go awry.
 // - figure out why sometimes the map doesn't load properly.
-// - disable mod should close popup.
-// - make blackout div top dawg, e.g. the token menu shows up first and on top.
 
 // MOD IDEAS
 // - image starts blurry and gets less blurry.
@@ -182,7 +179,7 @@ const MODS = {
             },
             nDegLat: {
                 label: 'Latitude margin (deg)',
-                default: 180,
+                default: 90,
                 tooltip: 'Guess up to this many degrees latitude away from the target',
             },
             nDegLng: {
@@ -205,6 +202,7 @@ const MODS = {
 // Debugging utilities.
 // ===============================================================================================================================
 // If true, add a right click listener to the guess map that will give you access to JS variables in your browser console.
+// This also adds a right click listener to the "TPEBOP'S MODS" header because some mods block pointer events on the guess map.
 const DEBUG = true;
 
 const debugMap = (map, evt) => {
@@ -279,9 +277,10 @@ let GG_ROUND; // Current round information. This gets set on round start, and de
 let GG_MAP; // Current map info.
 let GG_CLICK; // { lat, lng } of latest map click.
 let GG_CUSTOM_MARKER; // Custom marker. This is not the user click marker. Can only use one at a time. Need to clear/move when used.
-let GG_GUESSMAP_BLOCKER; // Div that blocks events to the map. This can also be done with pointer-events, but it's cleaner than having to restore them.
+let GG_GUESSMAP_BLOCKER; // Div that blocks events to the map. Note, this will block the right click debug, but you can still use the shortcut.
 
-let IS_DRAGGING = false;
+let IS_DRAGGING = false; // true when user is actively dragging the guessMap. Some of the events conflict with others.
+let SHOW_QUOTES = true; // On page load, show a random quote if this is true. The blackout screen cannot be turned off without changing code.
 
 /**
   SCORE_FUNC is a function used to display the overlay that shows how well you clicked (score, direction, whatever).
@@ -395,13 +394,13 @@ const makeOptionMenu = (mod) => {
         return;
     }
 
-    let popup = document.createElement('div');
-    popup.id = 'gg-option-menu';
+    let menu = document.createElement('div');
+    menu.id = 'gg-option-menu';
 
     const title = document.createElement('div');
     title.id = 'gg-option-title';
     title.innerHTML = `${mod.name} Options`;
-    popup.appendChild(title);
+    menu.appendChild(title);
 
     const defaults = getDefaultMod(mod).options || {};
 
@@ -439,12 +438,7 @@ const makeOptionMenu = (mod) => {
         lineDiv.appendChild(input);
         inputs.push([key, type, input]);
 
-        popup.appendChild(lineDiv);
-    };
-
-    const closePopup = () => {
-        popup.remove();
-        popup = undefined;
+        menu.appendChild(lineDiv);
     };
 
     const onReset = () => {
@@ -454,7 +448,7 @@ const makeOptionMenu = (mod) => {
     };
 
     const onClose = () => {
-        closePopup();
+        closeOptionMenu();
     };
 
     const onApply = () => {
@@ -488,8 +482,8 @@ const makeOptionMenu = (mod) => {
     };
 
     const modDiv = getModDiv();
-    popup.appendChild(formDiv);
-    modDiv.appendChild(popup);
+    menu.appendChild(formDiv);
+    modDiv.appendChild(menu);
 };
 
 const updateMod = (mod, forceState = null) => {
@@ -553,6 +547,13 @@ const disableOtherScoreMods = (mod) => { // This function needs to be called pri
     }
 };
 
+const closeOptionMenu = () => {
+    const menu = document.querySelector('#gg-option-menu');
+    if (menu) {
+        menu.parentElement.removeChild(menu);
+    }
+};
+
 // -------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -561,7 +562,7 @@ const disableOtherScoreMods = (mod) => { // This function needs to be called pri
 // Mod utility functions.
 // ===============================================================================================================================
 
-const getCurrentLoc = () => {
+const getActualLoc = () => {
     if (!GG_ROUND) {
         return undefined;
     }
@@ -625,7 +626,7 @@ const getScore = () => {
     if (!GG_CLICK || !GG_ROUND) {
         return;
     }
-    const actual = getCurrentLoc();
+    const actual = getActualLoc();
     const guess = GG_CLICK;
     const dist = getDistance(actual, guess);
 
@@ -719,10 +720,74 @@ const scoreListener = (evt) => {
     }, 50);
 };
 
-// TODO: take mins and maxes
+const getRandomLat = (lat1, lat2) => {
+    if (lat1 == null || lat2 == null) {
+        return Math.random() * 180 - 90;
+    }
+    if (lat1 === lat2) {
+        return lat1;
+    }
+    lat1 = Math.max(-90, Math.min(90, lat1));
+    lat2 = Math.max(-90, Math.min(90, lat2));
+    if (lat1 > lat2) {
+        [lat1, lat2] = [lat2, lat1];
+    }
+    const lat = Math.random() * (lat2 - lat1) + lat1;
+    return lat
+};
+
+/**
+  Get random longitude. This one is complicated because it can cross the prime meridian.
+  Thank you ChatGPT... I am so screwed as a software engineer.
+*/
+const getRandomLng = (lng1, lng2) => {
+    if (Math.abs(lng1) === 180 && Math.abs(lng2) === 180) { // If both +-180, we'll assume it's [-180, 180].
+        lng1 = undefined;
+        lng2 = undefined;
+    }
+    if (lng1 == null || lng2 == null) {
+        return Math.random() * 360 - 180;
+    }
+    if (lng1 === lng2) {
+        return lng1;
+    }
+
+    // Normalize to [-180, 180].
+    lng1 = ((lng1 + 180) % 360 + 360) % 360 - 180;
+    lng2 = ((lng2 + 180) % 360 + 360) % 360 - 180;
+
+    // If lng1 > lng2, it overlaps the prime meridian and we pick a side randomly.
+    // If both are on the same side, it's straightforward.
+    // This logic will weight how much area is on each side of the prime meridian so it should behave the same anywhere.
+    if (lng1 > lng2) {
+        const range1Start = lng1;
+        const range1End = 180;
+        const range2Start = -180;
+        const range2End = lng2;
+
+        const width1 = range1End - range1Start; // e.g. 180 - 170 = 10
+        const width2 = range2End - range2Start; // e.g. -170 - (-180) = 10
+        const totalWidth = width1 + width2;
+
+        // Decide which segment to pick from.
+        const rand = Math.random();
+        if (rand < width1 / totalWidth) {
+            return Math.random() * width1 + range1Start;
+        } else {
+            return Math.random() * width2 + range2Start;
+        }
+    } else {
+        return Math.random() * (lng2 - lng1) + lng1;
+    }
+};
+
+/**
+  Get random { lat, lng } between the given bounds, or for the full Earth if bounds are not provided.
+  lat is [-90, 90], lng is [-180, 180]. Negative is south and west, positive is north and east.
+*/
 const getRandomLoc = (minLat = null, maxLat = null, minLng = null, maxLng = null) => {
-    const lat = (Math.random() - 0.5) * 180;
-    const lng = (Math.random() - 0.5) * 180;
+    const lat = getRandomLat(minLat, maxLat);
+    const lng = getRandomLng(minLng, maxLng);
     return { lat, lng };
 };
 
@@ -1102,7 +1167,7 @@ const updateInFrame = (forceState = null) => {
     const mod = MODS.inFrame;
     const active = updateMod(mod, forceState);
 
-    const loc = getCurrentLoc();
+    const actual = getActualLoc();
     const smallMapContainer = getSmallMapContainer();
 
     if (IN_FRAME_INTERVAL) {
@@ -1112,7 +1177,7 @@ const updateInFrame = (forceState = null) => {
     if (active) {
         const showInFrame = () => {
             const currentBounds = getMapBounds();
-            const inFrame = isInBounds(loc, currentBounds);
+            const inFrame = isInBounds(actual, currentBounds);
             const color = inFrame ? 'green' : 'red';
 
             const smallMapStyle = {
@@ -1140,9 +1205,6 @@ const updateInFrame = (forceState = null) => {
 
 let LOTTERY_DISPLAY; // Display elements for lottery mod. (counter and button).
 let LOTTERY_COUNT; // How many remaining guesses you have.
-
-// TODO: add options for making it within a certain lat/lng range.
-// TODO: remove token div when the mod is disabled.
 
 const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     const container = document.createElement('div'); // Contains the full lottery display.
@@ -1172,11 +1234,20 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         if (LOTTERY_COUNT === 0) {
             return;
         }
-        const { lat, lng } = getRandomLoc();
+        const mod = MODS.lottery;
+        const nDegLat = getOption(mod, 'nDegLat');
+        const nDegLng = getOption(mod, 'nDegLng');
+        const actual = getActualLoc();
+        const minLat = actual.lat - nDegLat;
+        const maxLat = actual.lat + nDegLat;
+        const minLng = actual.lng - nDegLng;
+        const maxLng = actual.lng + nDegLng;
+
+        const { lat, lng } = getRandomLoc(minLat, maxLat, minLng, maxLng);
         LOTTERY_COUNT -= 1;
         counter.innerText = LOTTERY_COUNT;
         clickAt(lat, lng);
-        setMapCenter(lat, lng); // Keep current zoom level. TODO: this is not working
+        setMapCenter(lat, lng);
     };
     button.addEventListener('click', onClick);
 };
@@ -1196,6 +1267,10 @@ const updateLottery = (forceState = null) => {
         makeLotteryDisplay();
         setGuessMapEvents(false);
     } else {
+        const container = document.querySelector(`#gg-lottery`);
+        if (container) {
+            container.parentElement.removeChild(container);
+        }
         setGuessMapEvents(true);
     }
 };
@@ -1221,6 +1296,10 @@ const _BINDINGS = [
     [MODS.lottery, updateLottery],
 ];
 
+const closePopup = (evt) => { // Always close the popup menu when disabling a mod.
+
+};
+
 const bindButtons = () => {
     for (const [mod, callback] of _BINDINGS) {
         if (!mod.show) {
@@ -1232,7 +1311,11 @@ const bindButtons = () => {
             console.error(`Mod ${mod.key} not found.`);
             continue;
         }
-        button.addEventListener('click', () => callback()); // Don't pass the click event since updateMod doesn't need it.
+        // If option menu is open, close it. If enabling a mod, open the option menu.
+        button.addEventListener('click', () => {
+            closeOptionMenu(); // Synchronous.
+            setTimeout(callback, 0); // Async, must happen after closing menu.
+        });
     }
 };
 
@@ -1308,11 +1391,17 @@ const _QUOTES = [
     // Funny, light-hearted, or from movies/TV/celebrities.
     `Don't hate the player. Hate the game. — Ice-T`,
     `I came here to chew bubblegum and kick [butt], and I'm all out of bubblegum — Roddy Piper`,
-    `That rug really tied the room together. — Jeffrey Lebowski`,
+    `That rug really tied the room together. — The Dude`,
     `You miss 100% of the shots you don’t take. — Michael Scott`,
     `Those who mind don't matter, those who matter don't mind. — Dr. Seuss`,
     `If you don't know what you want, you end up with a lot you don't. — Tyler Durden`,
     `Do. Or do not. There is no try. — Yoda`,
+    `Big Gulps, huh? Alright! Welp, see ya later! — Lloyd Christmas`,
+    `You are tearing me apart, Lisa! — Johnny (Tommy Wiseau)`,
+    `I'm Ron Burgundy? — Ron Burgundy`,
+    `You're out of your element, Donny! — Walter Sobchak`,
+    `I am rather tired of these snakes on this gosh darn plane — No one ever`,
+    `Welcome to CostCo. I love you. — Unknown (2505)`,
 
 ];
 
@@ -1347,7 +1436,7 @@ window.addEventListener('load', () => {
         'z-index': '99999999',
     });
     const quoteDiv = document.createElement('div');
-    const quote = getRandomQuote();
+    const quote = SHOW_QUOTES ? getRandomQuote() : 'Loading...';
     let parts;
     try {
         parts = splitQuote(quote);
@@ -1390,6 +1479,10 @@ window.addEventListener('load', () => {
     // We have to have the map loaded to do the anti-cheat clicks. This is done down below in the map load event bubble.
     cheatOverlay.appendChild(quoteDiv);
     _CHEAT_OVERLAY = document.body.insertBefore(cheatOverlay, document.body.firstChild);
+
+    // Other measures are taken, but no matter what we can't let this div brick thie entire site,
+    //   e.g. if they change the URL naming scheme. Race condition with map loading, but so be it.
+    setTimeout(clearCheatOverlay, 3000);
 });
 
 /**
@@ -1412,8 +1505,6 @@ const clickGarbage = (nMilliseconds = 900) => {
     }
     clickAt(0, 0); // Race condition, but whatever.
 };
-
-
 
 // -------------------------------------------------------------------------------------------------------------------------------
 
@@ -1534,9 +1625,16 @@ document.addEventListener('DOMContentLoaded', (event) => {
 				});
 
                 if (DEBUG) {
-                    this.addListener('contextmenu', (evt) => {
+                    this.addListener('contextmenu', (evt) => { // Add right click listener to guess map for debugging.
                         debugMap(this, evt);
                     });
+                    const modContainer = document.querySelector('#gg-mod-container');
+                    if (modContainer) {
+                        modContainer.addEventListener('contextmenu', (evt) => {
+                            evt.preventDefault();
+                            debugMap(this, evt);
+                        });
+                    }
                 }
 
                 GOOGLE_MAP = this; // Store globally for use in other functions once this is instantiated.
@@ -1792,6 +1890,7 @@ const style = `
         background-color: rgba(0, 100, 0, 0.8);
         padding: 0.5em;
         border-radius: 10px;
+        z-index: 9999;
     }
 
     #gg-lottery-counter-div {
@@ -1819,7 +1918,7 @@ const style = `
         height: 100%;
         position: absolute;
         pointer-events: none;
-        z-index: 9999;
+        z-index: 99999999;
     }
 `;
 
