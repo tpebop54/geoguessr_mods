@@ -1361,6 +1361,7 @@ const addButtons = () => { // Add mod buttons to the active round.
 // Should make it obvious in the replay and stream if someone is using this mod pack.
 // Advanced coders could figure it out if they want, but with compiled code and intentional obfuscation here, it will be difficult.
 // Credit to Bennett Foddy for assembling many of these quotes and for a few himself, from my favorite game (Getting Over It with Bennett Foddy).
+// Use the — character (dash, not hyphen) to apply a quote credit, which will show up as a smaller text under the quote.
 
 const _QUOTES = [
 
@@ -1376,16 +1377,16 @@ const _QUOTES = [
     `The grass is greenest where you water it — Unknown`,
     `People fear what they don't understand and hate what they can't conquer — Andrew Smith`,
     `Be who you needed when you were younger. — Unknown`,
-    `A ship in port is safe, but that’s not why ships are built — Unknown`,
+    `A ship in harbor is safe, but that is not what ships are built for. — John A. Shedd`,
     `There is no hopeless situation, only hopeless people. — Atatürk`,
     `And those who were seen dancing were thought to be insane by those who could not hear the music. — Friedrich Nietzsche`,
     `There are no regrets in life, just lessons. — Jennifer Aniston`,
-    `You must be the change you wish to see in the world. – Mahatma Gandhi`,
-    `Don’t count the days, make the days count. – Muhammad Ali`,
-    `I have not failed. I've just found 10,000 ways that won't work. – Thomas Edison`,
-    `Don’t watch the clock. Do what it does. Keep going. – Sam Levenson`,
-    `The best way to predict the future is to create it. – Peter Drucker`,
-    `Do not go where the path may lead, go instead where there is no path and leave a trail. – Ralph Waldo Emerson`,
+    `You must be the change you wish to see in the world. — Mahatma Gandhi`,
+    `Don’t count the days, make the days count. — Muhammad Ali`,
+    `I have not failed. I've just found 10,000 ways that won't work. — Thomas Edison`,
+    `Don’t watch the clock. Do what it does. Keep going. — Sam Levenson`,
+    `The best way to predict the future is to create it. — Peter Drucker`,
+    `Do not go where the path may lead, go instead where there is no path and leave a trail. — Ralph Waldo Emerson`,
 
     // Heavy stuff.
     `This thing that we call failure is not the falling down, but the staying down. — Mary Pickford`,
@@ -1400,7 +1401,7 @@ const _QUOTES = [
     `In the end… We only regret the chances we didn’t take. — Lewis Carroll`,
     `There’s no feeling more intense than starting over. Starting over is harder than starting up. — Bennett Foddy`,
     `Imaginary mountains build themselves from our efforts to climb them, and it's our repeated attempts to reach the summit that turns those mountains into something real. — Bennett Foddy`,
-    `Be yourself. Everyone else is already taken. – Oscar Wilde`,
+    `Be yourself. Everyone else is already taken. — Oscar Wilde`,
     `Whether you think you can or you think you can’t, you’re right. — Henry Ford`,
 
     // Funny, light-hearted, or from movies/TV/celebrities.
@@ -1429,13 +1430,20 @@ const _QUOTES = [
     `Do your shoes have holes in them? No? Then how did you get your feet in them?`,
     `A magician was walking down the street. Then he turned into a grocery store.`,
     `Why do scuba divers fall backward off the boat? If they fell forward, they'd still be in the boat.`,
+    `In the vacuum of space, no one can hear you get mad at your GeoGuessr game.`,
 
     // Fun facts.
-    `Sloths can hold their breath longer than dolphins`,
+    `Sloths can hold their breath longer than dolphins.`,
     `Koalas have fingerprints so similar to humans that they can confuse crime scene investigators.`,
     `The pistol shrimp snaps its claw so fast it creates a bubble hotter than the surface of the sun.`,
     `Dogs' nose prints are as unique as human fingerprints.`,
-    `Sharks existed before trees`,
+    `Sharks existed before trees.`,
+    `Jupiter has the shortest day of any planet in our solar system.`,
+    `There are more permutations of a deck of playing cards than stars in the obervable universe. Like, a lot more.`,
+    `Earth would turn into a black hole if condensed into a 0.87cm radius.`,
+    `Elephants have about 3 times as many neurons as humans.`,
+    `Scientists simulated a fruit fly brain fully. This has 140k neurons, compared to 86 billion in humans.`,
+    `On average, Mercury is closer to Earth than Venus.`,
 
 ];
 
@@ -1495,11 +1503,12 @@ window.addEventListener('load', () => {
         'font-size': '40px',
     };
     const authorStyle = { // Styling for just the author.
+        'margin-top': '10px',
         'font-size': '20px',
     };
     for (const [ix, part] of Object.entries(parts)) {
         const div = document.createElement('div');
-        if (Number(ix) === parts.length - 1) {
+        if (Number(ix) === parts.length - 1 && parts.length > 1) {
             div.innerText = '— ' + part;
             Object.assign(div.style, authorStyle);
         } else {
