@@ -1240,9 +1240,19 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         const actual = getActualLoc();
         const minLat = actual.lat - nDegLat;
         const maxLat = actual.lat + nDegLat;
-        const minLng = actual.lng - nDegLng;
-        const maxLng = actual.lng + nDegLng;
 
+        // The logic gets confusing across the prime meridian with large lng ranges.
+        // Just assume that [-180, 180] means the entire world's longitude. Should be fine.
+        // There may be some flaws in the logic here, but it's okay for now.
+        let minLng, maxLng;
+        if (nDegLng === 180) {
+            minLng = -180;
+            maxLng = 180;
+        } else {
+            const normalizedLng = ((actual.lng + 180) % 360 + 360) % 360 - 180;
+            minLng = normalizedLng - nDegLng;
+            maxLng = normalizedLng + nDegLng;
+        }
         const { lat, lng } = getRandomLoc(minLat, maxLat, minLng, maxLng);
         LOTTERY_COUNT -= 1;
         counter.innerText = LOTTERY_COUNT;
