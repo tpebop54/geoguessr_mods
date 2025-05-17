@@ -23,11 +23,10 @@ CREDIT WHERE CREDIT IS DUE
 USER NOTES
 - When loading, you may have to refresh the page once or twice.
 - You can disable the quotes if you want via the SHOW_QUOTES variable. Blackout screen is non-negotiable.
+- If things go super bad, press "Alt Shift ." (period is actually a > with Shift active). This will disable all mods and refresh the page.
 /*
 
-
 // TODO:
-// - full reset shortcut for when things go awry.
 // - figure out why sometimes the map doesn't load properly.
 
 // MOD IDEAS
@@ -1339,7 +1338,7 @@ const addButtons = () => { // Add mod buttons to the active round.
     const element = document.createElement('div');
     element.id = 'gg-mod-container';
 
-    let innerHTML = `<div class="gg-title">TPEBOP'S MODS</div>`;
+    let innerHTML = `<div id="tpebops-mods-header" class="gg-title">TPEBOP'S MODS</div>`;
     for (const mod of Object.values(MODS)) {
         if (!mod.show) {
             continue;
@@ -1638,9 +1637,9 @@ document.addEventListener('DOMContentLoaded', (event) => {
                     this.addListener('contextmenu', (evt) => { // Add right click listener to guess map for debugging.
                         debugMap(this, evt);
                     });
-                    const modContainer = document.querySelector('#gg-mod-container');
-                    if (modContainer) {
-                        modContainer.addEventListener('contextmenu', (evt) => {
+                    const modHeader = document.querySelector('#tpebops-mods-header');
+                    if (modHeader) {
+                        modHeader.addEventListener('contextmenu', (evt) => {
                             evt.preventDefault();
                             debugMap(this, evt);
                         });
@@ -1674,16 +1673,23 @@ GeoGuessrEventFramework.init().then(GEF => {
         GG_CLICK = undefined;
     });
 
-	document.addEventListener('keypress', (e) => {
+	document.addEventListener('keydown', (evt) => {
 		if (document.activeElement.tagName === 'INPUT') {
             return;
         }
-        if (e.key === ',' && GOOGLE_MAP && !isActive(MODS.zoomInOnly)) {
+        if (evt.key === ',' && GOOGLE_MAP && !isActive(MODS.zoomInOnly)) {
             GOOGLE_MAP.setZoom(GOOGLE_MAP.getZoom() - 0.6);
-
         }
-        if (e.key === '.' && GOOGLE_MAP) {
+        if (evt.key === '.' && GOOGLE_MAP) {
             GOOGLE_MAP.setZoom(GOOGLE_MAP.getZoom() + 0.6);
+        }
+
+        console.log(`${evt.altKey}  ${evt.shiftKey} ${evt.key}`);
+
+        // Nuclear option to disable all mods if things get out of control.
+        if (evt.altKey && evt.shiftKey && evt.key === '>') {
+            clearState();
+            window.location.reload();
         }
 	});
 
