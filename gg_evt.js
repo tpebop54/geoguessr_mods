@@ -562,7 +562,7 @@ const closeOptionMenu = () => {
 // Mod utility functions.
 // ===============================================================================================================================
 
-const getCurrentLoc = () => {
+const getActualLoc = () => {
     if (!GG_ROUND) {
         return undefined;
     }
@@ -626,7 +626,7 @@ const getScore = () => {
     if (!GG_CLICK || !GG_ROUND) {
         return;
     }
-    const actual = getCurrentLoc();
+    const actual = getActualLoc();
     const guess = GG_CLICK;
     const dist = getDistance(actual, guess);
 
@@ -720,10 +720,70 @@ const scoreListener = (evt) => {
     }, 50);
 };
 
-// TODO: take mins and maxes
+const getRandomLat = (lat1, lat2) => {
+    if (lat1 == null || lat2 == null) {
+        return Math.random() * 180 - 90;
+    }
+    if (lat1 === lat2) {
+        return lat1;
+    }
+    lat1 = Math.max(-90, Math.min(90, lat1));
+    lat2 = Math.max(-90, Math.min(90, lat2));
+    if (lat1 > lat2) {
+        [lat1, lat2] = [lat2, lat1];
+    }
+    const lat = Math.random() * (lat2 - lat1) + lat1;
+    return lat
+};
+
+/**
+  Get random longitude. This one is complicated because it can cross the prime meridian.
+  Thank you ChatGPT... I am so screwed as a software engineer.
+*/
+const getRandomLng = (lng1, lng2) => {
+    if (lng1 == null || lng2 == null) {
+        return Math.random() * 360 - 180;
+    }
+    if (lng1 === lng2) {
+        return lng1;
+    }
+
+    // Normalize to [-180, 180].
+    lng1 = ((lng1 + 180) % 360 + 360) % 360 - 180;
+    lng2 = ((lng2 + 180) % 360 + 360) % 360 - 180;
+
+    // If lng1 > lng2, it overlaps the prime meridian and we pick a side randomly.
+    // If both are on the same side, it's straightforward.
+    // This logic will weight how much area is on each side of the prime meridian so it should behave the same anywhere.
+    if (lng1 > lng2) {
+        const range1Start = lng1;
+        const range1End = 180;
+        const range2Start = -180;
+        const range2End = lng2;
+
+        const width1 = range1End - range1Start; // e.g. 180 - 170 = 10
+        const width2 = range2End - range2Start; // e.g. -170 - (-180) = 10
+        const totalWidth = width1 + width2;
+
+        // Decide which segment to pick from.
+        const rand = Math.random();
+        if (rand < width1 / totalWidth) {
+            return Math.random() * width1 + range1Start;
+        } else {
+            return Math.random() * width2 + range2Start;
+        }
+    } else {
+        return Math.random() * (lng2 - lng1) + lng1;
+    }
+};
+
+/**
+  Get random { lat, lng } between the given bounds, or for the full Earth if bounds are not provided.
+  lat is [-90, 90], lng is [-180, 180]. Negative is south and west, positive is north and east.
+*/
 const getRandomLoc = (minLat = null, maxLat = null, minLng = null, maxLng = null) => {
-    const lat = (Math.random() - 0.5) * 180;
-    const lng = (Math.random() - 0.5) * 180;
+    const lat = getRandomLat(minLat, maxLat);
+    const lng = getRandomLng(minLng, maxLng);
     return { lat, lng };
 };
 
@@ -1103,7 +1163,7 @@ const updateInFrame = (forceState = null) => {
     const mod = MODS.inFrame;
     const active = updateMod(mod, forceState);
 
-    const loc = getCurrentLoc();
+    const actual = getActualLoc();
     const smallMapContainer = getSmallMapContainer();
 
     if (IN_FRAME_INTERVAL) {
@@ -1113,7 +1173,7 @@ const updateInFrame = (forceState = null) => {
     if (active) {
         const showInFrame = () => {
             const currentBounds = getMapBounds();
-            const inFrame = isInBounds(loc, currentBounds);
+            const inFrame = isInBounds(actual, currentBounds);
             const color = inFrame ? 'green' : 'red';
 
             const smallMapStyle = {
@@ -1143,7 +1203,6 @@ let LOTTERY_DISPLAY; // Display elements for lottery mod. (counter and button).
 let LOTTERY_COUNT; // How many remaining guesses you have.
 
 // TODO: add options for making it within a certain lat/lng range.
-// TODO: remove token div when the mod is disabled.
 
 const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     const container = document.createElement('div'); // Contains the full lottery display.
@@ -1173,11 +1232,20 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         if (LOTTERY_COUNT === 0) {
             return;
         }
-        const { lat, lng } = getRandomLoc();
+        const mod = MODS.lottery;
+        const nDegLat = getOption(mod, 'nDegLat');
+        const nDegLng = getOption(mod, 'nDegLng');
+        const actual = getActualLoc();
+        const minLat = actual.lat - nDegLat;
+        const maxLat = actual.lat + nDegLat;
+        const minLng = actual.lng - nDegLng;
+        const maxLng = actual.lng + nDegLng;
+
+        const { lat, lng } = getRandomLoc(minLat, maxLat, minLng, maxLng);
         LOTTERY_COUNT -= 1;
         counter.innerText = LOTTERY_COUNT;
         clickAt(lat, lng);
-        setMapCenter(lat, lng); // Keep current zoom level. TODO: this is not working
+        setMapCenter(lat, lng);
     };
     button.addEventListener('click', onClick);
 };
@@ -1197,6 +1265,10 @@ const updateLottery = (forceState = null) => {
         makeLotteryDisplay();
         setGuessMapEvents(false);
     } else {
+        const container = document.querySelector(`#gg-lottery`);
+        if (container) {
+            container.parentElement.removeChild(container);
+        }
         setGuessMapEvents(true);
     }
 };
