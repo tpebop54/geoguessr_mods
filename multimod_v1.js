@@ -196,8 +196,6 @@ const MODS = {
 
 
 
-
-
 // Debugging utilities.
 // ===============================================================================================================================
 // If true, add a right click listener to the guess map that will give you access to JS variables in your browser console.
@@ -1382,6 +1380,12 @@ const _QUOTES = [
     `There is no hopeless situation, only hopeless people. — Atatürk`,
     `And those who were seen dancing were thought to be insane by those who could not hear the music. — Friedrich Nietzsche`,
     `There are no regrets in life, just lessons. — Jennifer Aniston`,
+    `You must be the change you wish to see in the world. – Mahatma Gandhi`,
+    `Don’t count the days, make the days count. – Muhammad Ali`,
+    `I have not failed. I've just found 10,000 ways that won't work. – Thomas Edison`,
+    `Don’t watch the clock; do what it does. Keep going. – Sam Levenson`,
+    `The best way to predict the future is to create it. – Peter Drucker`,
+    `Do not go where the path may lead, go instead where there is no path and leave a trail. – Ralph Waldo Emerson`,
 
     // Heavy stuff.
     `This thing that we call failure is not the falling down, but the staying down. — Mary Pickford`,
@@ -1396,12 +1400,13 @@ const _QUOTES = [
     `In the end… We only regret the chances we didn’t take. — Lewis Carroll`,
     `There’s no feeling more intense than starting over. Starting over is harder than starting up. — Bennett Foddy`,
     `Imaginary mountains build themselves from our efforts to climb them, and it's our repeated attempts to reach the summit that turns those mountains into something real. — Bennett Foddy`,
+    `Be yourself; everyone else is already taken. – Oscar Wilde`,
+    `Whether you think you can or you think you can’t, you’re right. – Henry Ford`,
 
     // Funny, light-hearted, or from movies/TV/celebrities.
     `Don't hate the player. Hate the game. — Ice-T`,
     `I came here to chew bubblegum and kick [butt], and I'm all out of bubblegum — Roddy Piper`,
     `That rug really tied the room together. — The Dude`,
-    `You miss 100% of the shots you don’t take. — Michael Scott`,
     `Those who mind don't matter, those who matter don't mind. — Dr. Seuss`,
     `If you don't know what you want, you end up with a lot you don't. — Tyler Durden`,
     `Do. Or do not. There is no try. — Yoda`,
@@ -1409,8 +1414,21 @@ const _QUOTES = [
     `You are tearing me apart, Lisa! — Johnny (Tommy Wiseau)`,
     `I'm Ron Burgundy? — Ron Burgundy`,
     `You're out of your element, Donny! — Walter Sobchak`,
-    `I am rather tired of these snakes on this gosh darn plane — No one ever`,
+    `I have had it with these [gosh darn] snakes on this [gosh darn] plane — Neville Flynn`,
     `Welcome to CostCo. I love you. — Unknown (2505)`,
+    `So you're telling me there's a chance! — Lloyd Christmas`,
+    `I am serious, and don't call me Shirley. — Steve McCroskey`,
+    `What is this, a center for ants? ... The center has to be at least three times bigger than this. — Derek Zoolander`,
+    `Did we just become best friends? YUP!! — Dale Doback, Brennan Huff`,
+
+    // Jokes and fun facts.
+    `When birds fly in V-formation, one side is usually longer. Know why? That side has more birds on it.`,
+    `I broke my leg in two places. My doctor told me to stop going to those places.`,
+    `Why do birds fly south in the winter? Because it's too far to walk.`,
+    `Orion's Belt is a massive waist of space.`,
+    `Do your shoes have holes in them? No? Then how did you get your feet in them?`,
+    `A magician was walking down the street. Then he turned into a grocery store.`,
+    `Why do scuba divers fall backward off the boat? If they fell forward, they'd still be in the boat.`,
 
 ];
 
