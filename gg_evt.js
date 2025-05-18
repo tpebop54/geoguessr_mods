@@ -1305,6 +1305,10 @@ const updateLottery = (forceState = null) => {
 
 // Unfortunately, we can't use the 3D canvas, so we recreate it as a 2D canvas to make the puzzle.
 // This may make this mod unusable with some others.
+// Also, if you're reading this, gat dang this was hard to figure out.
+
+// TODO:
+// - Hide the moving arrows since they are inactive with the 2d canvas
 
 const updatePuzzle = (forceState = null) => {
     const mod = MODS.puzzle;
@@ -1313,21 +1317,21 @@ const updatePuzzle = (forceState = null) => {
     const canvas3d = getBigMapCanvas(); // 3D even for NMPZ.
     const ctx3d = canvas3d.getContext('webgl');
 
-    // Sigh... thanks ChatGPT.
-    const pixels = new Uint8Array(canvas3d.width * canvas3d.height * 4);
+    const pixels = new Uint8Array(canvas3d.width * canvas3d.height * 4); // Read image from 3D view.
     ctx3d.readPixels(
         0, 0,
         canvas3d.width, canvas3d.height,
         ctx3d.RGBA, ctx3d.UNSIGNED_BYTE,
         pixels,
     );
+    const imageData3d = new ImageData(new Uint8ClampedArray(pixels), canvas3d.width, canvas3d.height);
 
-    const imageData = new ImageData(new Uint8ClampedArray(pixels), canvas3d.width, canvas3d.height);
-    const canvas2d = document.createElement('canvas');
+
+    const canvas2d = document.createElement('canvas'); // Paste the 3D image onto a 2D canvas so we can mess with it.
     canvas2d.width = canvas3d.width;
     canvas2d.height = canvas3d.height;
     const ctx2d = canvas2d.getContext('2d');
-    ctx2d.putImageData(imageData, 0, 0); // Paste the 3D image onto a 2D canvas so we can mess with it.
+    ctx2d.putImageData(imageData3d, 0, 0);
 
     const nRows = getOption(mod, 'nRows');
     const nCols = getOption(mod, 'nCols');
@@ -1356,7 +1360,8 @@ const updatePuzzle = (forceState = null) => {
         ctx2d.putImageData(imageData, sx, sy);
     }
 
-    canvas3d.parentElement.insertBefore(canvas2d, canvas3d.parentElement.firstChild);
+    const mapBase3d = canvas3d.parentElement.parentElement;
+    mapBase3d.insertBefore(canvas2d, mapBase3d.firstChild);
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
