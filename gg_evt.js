@@ -1303,59 +1303,60 @@ const updateLottery = (forceState = null) => {
 // MOD: Puzzle.
 // ===============================================================================================================================
 
+// Unfortunately, we can't use the 3D canvas, so we recreate it as a 2D canvas to make the puzzle.
+// This may make this mod unusable with some others.
+
 const updatePuzzle = (forceState = null) => {
     const mod = MODS.puzzle;
     const active = updateMod(mod, forceState);
 
-    const canvas = getBigMapCanvas();
-    const ctxGL = canvas.getContext('webgl');
+    const canvas3d = getBigMapCanvas(); // 3D even for NMPZ.
+    const ctx3d = canvas3d.getContext('webgl');
 
     // Sigh... thanks ChatGPT.
-    const pixels = new Uint8Array(canvas.width * canvas.height * 4);
-    ctxGL.readPixels(
+    const pixels = new Uint8Array(canvas3d.width * canvas3d.height * 4);
+    ctx3d.readPixels(
         0, 0,
-        canvas.width, canvas.height,
-        ctxGL.RGBA, ctxGL.UNSIGNED_BYTE,
-        pixels
+        canvas3d.width, canvas3d.height,
+        ctx3d.RGBA, ctx3d.UNSIGNED_BYTE,
+        pixels,
     );
+
+    const imageData = new ImageData(new Uint8ClampedArray(pixels), canvas3d.width, canvas3d.height);
+    const canvas2d = document.createElement('canvas');
+    canvas2d.width = canvas3d.width;
+    canvas2d.height = canvas3d.height;
+    const ctx2d = canvas2d.getContext('2d');
+    ctx2d.putImageData(imageData, 0, 0); // Paste the 3D image onto a 2D canvas so we can mess with it.
 
     const nRows = getOption(mod, 'nRows');
     const nCols = getOption(mod, 'nCols');
-
-    const imageData = new ImageData(new Uint8ClampedArray(pixels), canvas.width, canvas.height);
-    const canvas2d = document.createElement('canvas');
-    canvas2d.width = canvas.width;
-    canvas2d.height = canvas.height;
-    const ctx2d = canvas2d.getContext('2d');
-    ctx2d.putImageData(imageData, 0, 0); // TODO
-
-    const pieceHeight = canvas.height / nRows;
-    const pieceWidth = canvas.width / nCols;
+    const pieceHeight = canvas3d.height / nRows;
+    const pieceWidth = canvas3d.width / nCols;
 
     const pieces = [];
     for (let row = 0; row < nRows; row++) {
         for (let col = 0; col < nCols; col++) {
             const sx = col * pieceWidth;
             const sy = row * pieceHeight;
-            const imageData = ctx2d.getImageData(sx, sy, pieceWidth, pieceHeight);
-            pieces.push({ imageData, sx, sy });
+            const pieceData = ctx2d.getImageData(sx, sy, pieceWidth, pieceHeight);
+            pieces.push({ imageData: pieceData, sx, sy });
         }
     }
 
-    // Shuffle destination positions
-    const shuffledPositions = pieces.map(p => ({ x: p.sx, y: p.sy }));
-    for (let i = shuffledPositions.length - 1; i > 0; i--) {
+    const shuffledPieces = [...pieces];
+    for (let i = shuffledPieces.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [shuffledPositions[i], shuffledPositions[j]] = [shuffledPositions[j], shuffledPositions[i]];
+        [shuffledPieces[i], shuffledPieces[j]] = [shuffledPieces[j], shuffledPieces[i]];
     }
 
-    // Clear canvas and draw shuffled pieces
-    ctx2d.clearRect(0, 0, canvas.width, canvas.height);
-    for (let i = 0; i < pieces.length; i++) {
-        const { imageData } = pieces[i];
-        const { x, y } = shuffledPositions[i];
-        ctx2d.putImageData(imageData, x, y);
+    ctx2d.clearRect(0, 0, canvas2d.width, canvas2d.height); // Remove the original paste and redraw as scrambled.
+    for (const piece of pieces) {
+        const { imageData, sx, sy } = piece;
+        ctx2d.putImageData(imageData, sx, sy);
     }
+
+    canvas3d.parentElement.insertBefore(canvas2d, canvas3d.parentElement.firstChild);
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -1751,7 +1752,7 @@ const _getIsCheatingOrMaybeNotCheating = () => {
         const e = Math.floor(Math.random() * (_ + 1));
         [o[_], o[e]] = [o[e], o[_]];
     }
-    return o && cheaterHash;
+    return cheaterHash << o;
 };
 
 const _YOURE_LOOKING_AT_MY_CODE = (v) => {
