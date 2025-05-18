@@ -1310,9 +1310,19 @@ const updateLottery = (forceState = null) => {
 // TODO:
 // - Hide the moving arrows since they are inactive with the 2d canvas
 
+let CANVAS_2D;
+
 const updatePuzzle = (forceState = null) => {
     const mod = MODS.puzzle;
     const active = updateMod(mod, forceState);
+
+    if (!active) {
+        if (CANVAS_2D) {
+            CANVAS_2D.parentElement.removeChild(CANVAS_2D);
+            CANVAS_2D = undefined;
+        }
+        return;
+    }
 
     const canvas3d = getBigMapCanvas(); // 3D even for NMPZ.
     const ctx3d = canvas3d.getContext('webgl');
@@ -1327,10 +1337,13 @@ const updatePuzzle = (forceState = null) => {
     const imageData3d = new ImageData(new Uint8ClampedArray(pixels), canvas3d.width, canvas3d.height);
 
 
-    const canvas2d = document.createElement('canvas'); // Paste the 3D image onto a 2D canvas so we can mess with it.
-    canvas2d.width = canvas3d.width;
-    canvas2d.height = canvas3d.height;
-    const ctx2d = canvas2d.getContext('2d');
+    CANVAS_2D = document.createElement('canvas'); // Paste the 3D image onto a 2D canvas so we can mess with it.
+    CANVAS_2D.width = canvas3d.width;
+    CANVAS_2D.height = canvas3d.height;
+    Object.assign(CANVAS_2D.style, {
+        'pointer-events': 'none',
+    });
+    const ctx2d = CANVAS_2D.getContext('2d');
     ctx2d.putImageData(imageData3d, 0, 0);
 
     const nRows = getOption(mod, 'nRows');
@@ -1344,24 +1357,36 @@ const updatePuzzle = (forceState = null) => {
             const sx = col * pieceWidth;
             const sy = row * pieceHeight;
             const pieceData = ctx2d.getImageData(sx, sy, pieceWidth, pieceHeight);
-            pieces.push({ imageData: pieceData, sx, sy });
+            pieces.push({ imageData: pieceData, sx, sy, originalRow: row, originalCol: col });
         }
     }
 
-    const shuffledPieces = [...pieces];
-    for (let i = shuffledPieces.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffledPieces[i], shuffledPieces[j]] = [shuffledPieces[j], shuffledPieces[i]];
+    const shuffle = (arr) => { // TODO: move to utility.
+        const shuffled = [...arr];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    };
+
+    // Scramble the puzzle pieces.
+    const locs = pieces.map(piece => [piece.sx, piece.sy]);
+    const shuffledLocs = shuffle(locs);
+    for (const [ix, piece] of Object.entries(pieces)) {
+        const [sx, sy] = shuffledLocs[Number(ix)];
+        Object.assign(piece, { sx, sy });
     }
 
-    ctx2d.clearRect(0, 0, canvas2d.width, canvas2d.height); // Remove the original paste and redraw as scrambled.
+    ctx2d.clearRect(0, 0, CANVAS_2D.width, CANVAS_2D.height); // Remove the original pasted image and redraw as scrambled.
+
+    const mapBase3d = canvas3d.parentElement.parentElement; // TODO: move to end.
+    mapBase3d.insertBefore(CANVAS_2D, mapBase3d.firstChild);
+
     for (const piece of pieces) {
         const { imageData, sx, sy } = piece;
         ctx2d.putImageData(imageData, sx, sy);
     }
-
-    const mapBase3d = canvas3d.parentElement.parentElement;
-    mapBase3d.insertBefore(canvas2d, mapBase3d.firstChild);
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
