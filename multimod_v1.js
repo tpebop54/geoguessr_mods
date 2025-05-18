@@ -1336,7 +1336,6 @@ const updatePuzzle = (forceState = null) => {
     );
     const imageData3d = new ImageData(new Uint8ClampedArray(pixels), canvas3d.width, canvas3d.height);
 
-
     CANVAS_2D = document.createElement('canvas'); // Paste the 3D image onto a 2D canvas so we can mess with it.
     CANVAS_2D.id = 'gg-big-canvas-2d';
     CANVAS_2D.width = canvas3d.width;
@@ -1347,8 +1346,12 @@ const updatePuzzle = (forceState = null) => {
     const ctx2d = CANVAS_2D.getContext('2d');
     ctx2d.putImageData(imageData3d, 0, 0);
 
-    const nRows = getOption(mod, 'nRows');
-    const nCols = getOption(mod, 'nCols');
+    // TODO: revert
+    // const nRows = getOption(mod, 'nRows');
+    // const nCols = getOption(mod, 'nCols');
+    const nRows = 8;
+    const nCols = 8;
+
     const pieceHeight = canvas3d.height / nRows;
     const pieceWidth = canvas3d.width / nCols;
 
