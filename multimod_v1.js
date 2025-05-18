@@ -1068,7 +1068,7 @@ const updateSeizure = (forceState = null) => {
     const mod = MODS.seizure;
     const active = updateMod(mod, forceState);
 
-    const bigMap = getBigMap();
+    const bigMap = getBigMapContainer();
 
     if (!active) {
         if (SEIZURE_INTERVAL) {
@@ -1435,7 +1435,7 @@ const addButtons = () => { // Add mod buttons to the active round.
 // The goal of this is to fuck up the replay file and distract the user by blacking out the screen for the first second or two and clicking around.
 // Should make it obvious in the replay and stream if someone is using this mod pack.
 // Advanced coders could figure it out if they want, but with compiled code and intentional obfuscation here, it will be difficult.
-// Credit to Bennett Foddy for assembling many of these quotes and for a few himself, from my favorite game (Getting Over It with Bennett Foddy).
+// Credit to Bennett Foddy for assembling several of these quotes and for a few himself, from my favorite game (Getting Over It with Bennett Foddy).
 // Use the — character (dash, not hyphen) to apply a quote credit, which will show up as a smaller text under the quote.
 
 const _QUOTES = [
@@ -1554,7 +1554,7 @@ let _CH_EA_AT_DE_TE_CT_IO_N = 'on your honor';
 
 window.addEventListener('load', () => {
     if (_CH_EA_AT_DE_TE_CT_IO_N || !_CH_EA_AT_DE_TE_CT_IO_N) {
-        // Yeah, yeah. If you made it this far in the code, you can c h eat if you really want.
+        // Yeah, yeah. If you made it this far in the code, you can c h eat if you really want. You'll get caught.
     }
     clearCh_eatOverlay();
     const che_atOverlay = document.createElement('div'); // Opaque black div that covers everything while the page loads.
@@ -1616,11 +1616,11 @@ window.addEventListener('load', () => {
 });
 
 /**
-Click around the map *after* it is loaded and idle, and the screen is blacked out.
-This will be a callback in the google maps section of this script.
-This will completely mess up the replay file. We have 1 second to do this.
-Always end with a click at { lat: 0, lng: 0 }. This will be extremely obvious in replays, both for streaming and the actual replay files.
-This function is sloppy, but it doesn't really matter as long as we screw up the replay.
+  Click around the map *after* it is loaded and idle, and the screen is blacked out.
+  This will be a callback in the google maps section of this script.
+  This will completely mess up the replay file. We have 1 second to do this.
+  Always end with a click at { lat: 0, lng: 0 }. This will be extremely obvious in replays, both for streaming and the actual replay files.
+  This function is sloppy, but it doesn't really matter as long as we screw up the replay.
 */
 const clickGarbage = (nMilliseconds = 900) => {
     const nClicks = 20; // Approximately...
