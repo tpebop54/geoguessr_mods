@@ -21,32 +21,16 @@
 /*
 
 /**
-
+  DEV NOTES
+    - Shout-out to miraclewhips for geoguessr-event-framework and some essential functions in this script.
+    - If you want to disable a mod, change 'show' to false for it in MODS.
+    - Keep same configuration for all mods. Must add to _BINDINGS at the bottom of the file for any new mods.
+    - MODS is a global variable that the script will modify. The saved state will override certain parts of it on each page load.
+    - Past that, you're on your own. Use this for good.
 */
-
-
-
-
-// TODO:
-// - figure out why sometimes the map doesn't load properly.
-
-// MOD IDEAS
-// - image starts blurry and gets less blurry.
-// - image starts tiny and grows.
-// - custom google maps json import (or store here). e.g. show only the roads and remove everything else. Unity script has already done stuff like this.
-// - automatically show the flag of the country (requires API key to geoapify or similar). https://developers.google.com/maps/documentation/geocoding/requests-reverse-geocoding
-
-
 
 // Mods available in this script.
 // ===============================================================================================================================
-
-/**  DEV NOTES:
-    - If you want to disable a mod, change 'show' to false for it.
-    - Keep same configuration for all mods. Must add to _BINDINGS at the bottom of the file for any new mods.
-    - MODS is a global variable that the script will modify. The saved state will override certain parts of it on each page load.
-    - Heavy credit to https://miraclewhips.dev/ for geoguessr-event-framework and some essential functions in this script.
-*/
 
 const MODS = {
 
@@ -295,9 +279,9 @@ let GG_ROUND; // Current round information. This gets set on round start, and de
 let GG_MAP; // Current map info.
 let GG_CLICK; // { lat, lng } of latest map click.
 let GG_CUSTOM_MARKER; // Custom marker. This is not the user click marker. Can only use one at a time. Need to clear/move when used.
-let GG_GUESSMAP_BLOCKER; // Div that blocks events to the map. Note, this will block the right click debug, but you can still use the shortcut.
+let GG_GUESSMAP_BLOCKER; // Div that blocks events to the map. You can still open a debugger by right clicking the menu header.
 
-let IS_DRAGGING = false; // true when user is actively dragging the guessMap. Some of the events conflict with others.
+let IS_DRAGGING = false; // true when user is actively dragging the guessMap. Some of the map events conflict with others.
 let SHOW_QUOTES = true; // On page load, show a random quote if this is true. The blackout screen cannot be turned off without changing code.
 let _CHEAT_DETECTION = true; // true to perform some actions that will make it obvious that a user is using this mod pack.
 
@@ -1319,59 +1303,94 @@ const updateLottery = (forceState = null) => {
 // MOD: Puzzle.
 // ===============================================================================================================================
 
+// Unfortunately, we can't use the 3D canvas, so we recreate it as a 2D canvas to make the puzzle.
+// This may make this mod unusable with some others.
+// Also, if you're reading this, gat dang this was hard to figure out.
+
+// TODO:
+// - Hide the moving arrows since they are inactive with the 2d canvas
+
+let CANVAS_2D;
+
 const updatePuzzle = (forceState = null) => {
     const mod = MODS.puzzle;
     const active = updateMod(mod, forceState);
 
-    const canvas = getBigMapCanvas();
-    const ctxGL = canvas.getContext('webgl');
+    if (!active) {
+        if (CANVAS_2D) {
+            CANVAS_2D.parentElement.removeChild(CANVAS_2D);
+            CANVAS_2D = undefined;
+        }
+        return;
+    }
 
-    // Sigh... thanks ChatGPT.
-    const pixels = new Uint8Array(canvas.width * canvas.height * 4);
-    ctxGL.readPixels(
+    const canvas3d = getBigMapCanvas(); // 3D even for NMPZ.
+    const ctx3d = canvas3d.getContext('webgl');
+
+    const pixels = new Uint8Array(canvas3d.width * canvas3d.height * 4); // Read image from 3D view.
+    ctx3d.readPixels(
         0, 0,
-        canvas.width, canvas.height,
-        ctxGL.RGBA, ctxGL.UNSIGNED_BYTE,
-        pixels
+        canvas3d.width, canvas3d.height,
+        ctx3d.RGBA, ctx3d.UNSIGNED_BYTE,
+        pixels,
     );
+    const imageData3d = new ImageData(new Uint8ClampedArray(pixels), canvas3d.width, canvas3d.height);
 
-    const nRows = getOption(mod, 'nRows');
-    const nCols = getOption(mod, 'nCols');
+    CANVAS_2D = document.createElement('canvas'); // Paste the 3D image onto a 2D canvas so we can mess with it.
+    CANVAS_2D.id = 'gg-big-canvas-2d';
+    CANVAS_2D.width = canvas3d.width;
+    CANVAS_2D.height = canvas3d.height;
+    Object.assign(CANVAS_2D.style, {
+        'pointer-events': 'none',
+    });
+    const ctx2d = CANVAS_2D.getContext('2d');
+    ctx2d.putImageData(imageData3d, 0, 0);
 
-    const imageData = new ImageData(new Uint8ClampedArray(pixels), canvas.width, canvas.height);
-    const canvas2d = document.createElement('canvas');
-    canvas2d.width = canvas.width;
-    canvas2d.height = canvas.height;
-    const ctx2d = canvas2d.getContext('2d');
-    ctx2d.putImageData(imageData, 0, 0); // TODO
+    // TODO: revert
+    // const nRows = getOption(mod, 'nRows');
+    // const nCols = getOption(mod, 'nCols');
+    const nRows = 8;
+    const nCols = 8;
 
-    const pieceHeight = canvas.height / nRows;
-    const pieceWidth = canvas.width / nCols;
+    const pieceHeight = canvas3d.height / nRows;
+    const pieceWidth = canvas3d.width / nCols;
 
     const pieces = [];
     for (let row = 0; row < nRows; row++) {
         for (let col = 0; col < nCols; col++) {
             const sx = col * pieceWidth;
             const sy = row * pieceHeight;
-            const imageData = ctx2d.getImageData(sx, sy, pieceWidth, pieceHeight);
-            pieces.push({ imageData, sx, sy });
+            const pieceData = ctx2d.getImageData(sx, sy, pieceWidth, pieceHeight);
+            pieces.push({ imageData: pieceData, sx, sy, originalRow: row, originalCol: col });
         }
     }
 
-    // Shuffle destination positions
-    const shuffledPositions = pieces.map(p => ({ x: p.sx, y: p.sy }));
-    for (let i = shuffledPositions.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffledPositions[i], shuffledPositions[j]] = [shuffledPositions[j], shuffledPositions[i]];
+    const shuffle = (arr) => { // TODO: move to utility.
+        const shuffled = [...arr];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    };
+
+    // Scramble the puzzle pieces.
+    const locs = pieces.map(piece => [piece.sx, piece.sy]);
+    const shuffledLocs = shuffle(locs);
+    for (const [ix, piece] of Object.entries(pieces)) {
+        const [sx, sy] = shuffledLocs[Number(ix)];
+        Object.assign(piece, { sx, sy });
     }
 
-    // Clear canvas and draw shuffled pieces
-    ctx2d.clearRect(0, 0, canvas.width, canvas.height);
-    for (let i = 0; i < pieces.length; i++) {
-        const { imageData } = pieces[i];
-        const { x, y } = shuffledPositions[i];
-        ctx2d.putImageData(imageData, x, y);
+    ctx2d.clearRect(0, 0, CANVAS_2D.width, CANVAS_2D.height); // Remove the original pasted image and redraw as scrambled.
+
+    for (const piece of pieces) {
+        const { imageData, sx, sy } = piece;
+        ctx2d.putImageData(imageData, sx, sy);
     }
+
+    const mapBase3d = canvas3d.parentElement.parentElement;
+    mapBase3d.insertBefore(CANVAS_2D, mapBase3d.firstChild);
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -1727,41 +1746,85 @@ const onMapClick = (evt) => {
 
 // -------------------------------------------------------------------------------------------------------------------------------
 
-_CHEAT_DETECTION = true; // Don't try it, hackers!
+_CHEAT_DETECTION = true; // I freaking dare you.
+
+const _getIsCheatingOrMaybeNotCheating = () => {
+    const t = 30,
+          e = Math.floor(0.5 * t),
+          n = Math.floor(0.3 * t),
+          r = t - e - n;
+    const a = new Set();
+    while (a.size < 8) {
+        const x = Math.floor(100 * Math.random()) + 1;
+        if (x !== 4 && x % 10 === 4) a.add(x);
+    }
+    const i = new Set();
+    while (i.size < 4) {
+        const y = Math.floor(9 * Math.random()) + 1;
+        if (y !== 4) i.add(y);
+    }
+    const s = new Set();
+    while (s.size < 16) {
+        const z = Math.floor(100 * Math.random()) + 1;
+        if (z !== 4 && z % 10 !== 4 && !a.has(z) && !i.has(z)) s.add(z);
+    }
+
+    let hash = r * Math.random() * Date.now();
+    const cheaterStr = r.toString();
+    for (let i = 0; i < cheaterStr.length; i++) {
+        hash ^= cheaterStr.charCodeAt(i);
+        hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+    }
+    const cheaterHash = (hash >>> 0).toString(16);
+
+    if (!_CHEAT_DETECTION) {
+        window.alert(`No cheating, user ${cheaterHash}!`);
+    }
+
+    const o = [...a, ...i, ...s];
+    for (let _ = o.length - 1; _ > 0; _--) {
+        const e = Math.floor(Math.random() * (_ + 1));
+        [o[_], o[e]] = [o[e], o[_]];
+    }
+    return cheaterHash << o;
+};
 
 const _YOURE_LOOKING_AT_MY_CODE = (v) => {
-    if (_CHEAT_DETECTION) {
-        try {
-            const a = (function () {
-                return function (b) {
-                    const c = typeof b;
-                    const d = b === null;
-                    const e = [
-                        () => Boolean(c.match(/.+/)),
-                        () => [null, undefined, NaN, 0, '', false].includes(b),
-                        () => new Set([1, 2, 3]).has(4),
-                        () => Object.is(b, null)
-                    ];
-                    for (let f = 0; f < e.length; f++) {
-                        void e[f]();
-                    }
-                    const g = !!(d && !1 || !0 && !0 || !0);
-                    const h = new Proxy({}, {
-                        get: () => () => g
-                    });
-                    return h.x()() ? 'A' : 'B';
-                };
-            })();
-            const i = a(v);
-            [...'x'].forEach(j => j.charCodeAt(0) * Math.random());
-            return i === 'A' ? false : false;
-        } catch (k) {
-            return false;
-        }
+    try {
+        const a = (function () {
+            return function (b) {
+                const c = typeof b;
+                const d = b === null;
+                const madeYouLook = _getIsCheatingOrMaybeNotCheating;
+                const e = [
+                    () => Boolean(c.match(/.+/)),
+                    () => [null, undefined, NaN, 0, '', false].includes(b),
+                    () => new Set(madeYouLook()).has([...Array(5)].map((_,i) => i).filter(x => x < 5).reduce((a,b) => a + (b === 0 ? 0 : 1), 0) + ([] + [])[1] || +!![] + +!![] + +!![] + +!![]),
+                    () => Object.is(b, null)
+                ];
+                for (let f = 0; f < e.length; f++) {
+                    void e[f]();
+                }
+                const g = !!(d && !1 || !0 && !0 || !0);
+                const h = new Proxy({}, {
+                    get: () => () => g
+                });
+                return h.x()() ? 'A' : 'B';
+            };
+        })();
+        const i = a(v);
+        [...'x'].forEach(j => j.charCodeAt(0) * Math.random());
+        return i === 'A' || (!!(void (+(~(1 << 30) & (1 >> 1) | (([] + [])[1] ?? 0)))));
+    } catch (k) {
+        return false;
     }
 };
 
 document.addEventListener('DOMContentLoaded', (event) => {
+
+    if (!_CHEAT_DETECTION) {
+        return; // Get outta 'ere
+    }
 
     if (_YOURE_LOOKING_AT_MY_CODE()) {
         return; // Get outta 'ere
@@ -1860,8 +1923,6 @@ GeoGuessrEventFramework.init().then(GEF => {
         if (evt.key === '.' && GOOGLE_MAP) {
             GOOGLE_MAP.setZoom(GOOGLE_MAP.getZoom() + 0.6);
         }
-
-        console.log(`${evt.altKey}  ${evt.shiftKey} ${evt.key}`);
 
         // Nuclear option to disable all mods if things get out of control.
         if (evt.altKey && evt.shiftKey && evt.key === '>') {
@@ -2112,6 +2173,13 @@ const style = `
         position: absolute;
         pointer-events: none;
         z-index: 99999999;
+    }
+
+    #gg-big-canvas-2d {
+        -webkit-transform: scale(1, -1);
+        -moz-transform: scale(1, -1);
+        -o-transform: scale(1, -1);
+        transform: scale(1, -1);
     }
 `;
 
