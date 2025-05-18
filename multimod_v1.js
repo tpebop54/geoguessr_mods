@@ -198,15 +198,15 @@ const MODS = {
         name: 'Puzzle',
         tooltip: 'Split up the large map into pieces and rearrange them randomly',
         options: {
-            nHorizontal: {
-                label: '# Horizontal Pieces',
-                default: 4,
-                tooltip: 'How many pieces to split up the puzzle into horizontally.',
-            },
-            nVertical: {
-                label: '# Vertical Pieces',
+            nRows: {
+                label: '# Rows',
                 default: 4,
                 tooltip: 'How many pieces to split up the puzzle into vertically.',
+            },
+            nCols: {
+                label: '# Vertical Pieces',
+                default: 4,
+                tooltip: 'How many pieces to split up the puzzle into horizontally.',
             },
         },
     },
@@ -1324,37 +1324,54 @@ const updatePuzzle = (forceState = null) => {
     const active = updateMod(mod, forceState);
 
     const canvas = getBigMapCanvas();
-    const ctx = canvas.getContext('2d');
+    const ctxGL = canvas.getContext('webgl');
 
-    const nHorizontal = getOption(mod, 'nHorizontal');
-    const nVertical = getOption(mod, 'nVertical');
+    // Sigh... thanks ChatGPT.
+    const pixels = new Uint8Array(canvas.width * canvas.height * 4);
+    ctxGL.readPixels(
+        0, 0,
+        canvas.width, canvas.height,
+        ctxGL.RGBA, ctxGL.UNSIGNED_BYTE,
+        pixels
+    );
 
-    const width = canvas.width;
-    const height = canvas.height;
-    const pieceWidth = width / nHorizontal;
-    const pieceHeight = height / nVertical;
+    const nRows = getOption(mod, 'nRows');
+    const nCols = getOption(mod, 'nCols');
+
+    const imageData = new ImageData(new Uint8ClampedArray(pixels), canvas.width, canvas.height);
+    const canvas2d = document.createElement('canvas');
+    canvas2d.width = canvas.width;
+    canvas2d.height = canvas.height;
+    const ctx2d = canvas2d.getContext('2d');
+    ctx2d.putImageData(imageData, 0, 0); // TODO
+
+    const pieceHeight = canvas.height / nRows;
+    const pieceWidth = canvas.width / nCols;
 
     const pieces = [];
-    for (let y = 0; y < nVertical; y++) {
-        for (let x = 0; x < nHorizontal; x++) {
-            const piece = ctx.getImageData(
-                x * pieceWidth,
-                y * pieceHeight,
-                pieceWidth,
-                pieceHeight,
-            );
-            pieces.push(piece);
+    for (let row = 0; row < nRows; row++) {
+        for (let col = 0; col < nCols; col++) {
+            const sx = col * pieceWidth;
+            const sy = row * pieceHeight;
+            const imageData = ctx2d.getImageData(sx, sy, pieceWidth, pieceHeight);
+            pieces.push({ imageData, sx, sy });
         }
     }
 
-    const shuffled = [...pieces].sort(() => Math.random() - 0.5);
-    ctx.clearRect(0, 0, width, height);
+    // Shuffle destination positions
+    const shuffledPositions = pieces.map(p => ({ x: p.sx, y: p.sy }));
+    for (let i = shuffledPositions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledPositions[i], shuffledPositions[j]] = [shuffledPositions[j], shuffledPositions[i]];
+    }
 
-    shuffled.forEach((piece, ix) => {
-        const x = (ix % nHorizontal) * pieceWidth;
-        const y = Math.floor(ix / nHorizontal) * pieceHeight;
-        ctx.putImageData(piece, x, y);
-    });
+    // Clear canvas and draw shuffled pieces
+    ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < pieces.length; i++) {
+        const { imageData } = pieces[i];
+        const { x, y } = shuffledPositions[i];
+        ctx2d.putImageData(imageData, x, y);
+    }
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
