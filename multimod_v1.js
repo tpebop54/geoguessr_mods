@@ -14,17 +14,18 @@
 
 
 /**
-CREDIT WHERE CREDIT IS DUE
-- Heavy credit to https://miraclewhips.dev/ for geoguessr-event-framework and some essential functions in this script.
+  USER NOTES
+    - When loading, you may occasionally have to refresh the page once or twice.
+    - You can disable the quotes if you want via the SHOW_QUOTES variable. Blackout screen is non-negotiable.
+    - If things go super bad, press "Alt Shift ." (period is actually a > with Shift active). This will disable all mods and refresh the page.
+/*
+
+/**
+
 */
 
 
-/**
-USER NOTES
-- When loading, you may have to refresh the page once or twice.
-- You can disable the quotes if you want via the SHOW_QUOTES variable. Blackout screen is non-negotiable.
-- If things go super bad, press "Alt Shift ." (period is actually a > with Shift active). This will disable all mods and refresh the page.
-/*
+
 
 // TODO:
 // - figure out why sometimes the map doesn't load properly.
@@ -32,7 +33,7 @@ USER NOTES
 // MOD IDEAS
 // - image starts blurry and gets less blurry.
 // - image starts tiny and grows.
-// - custom google maps json import (or store here). e.g. show only the roads and remove everything else.
+// - custom google maps json import (or store here). e.g. show only the roads and remove everything else. Unity script has already done stuff like this.
 // - automatically show the flag of the country (requires API key to geoapify or similar). https://developers.google.com/maps/documentation/geocoding/requests-reverse-geocoding
 
 
@@ -44,6 +45,7 @@ USER NOTES
     - If you want to disable a mod, change 'show' to false for it.
     - Keep same configuration for all mods. Must add to _BINDINGS at the bottom of the file for any new mods.
     - MODS is a global variable that the script will modify. The saved state will override certain parts of it on each page load.
+    - Heavy credit to https://miraclewhips.dev/ for geoguessr-event-framework and some essential functions in this script.
 */
 
 const MODS = {
@@ -190,6 +192,25 @@ const MODS = {
         },
     },
 
+    puzzle: {
+        show: true,
+        key: 'puzzle',
+        name: 'Puzzle',
+        tooltip: 'Split up the large map into pieces and rearrange them randomly',
+        options: {
+            nHorizontal: {
+                label: '# Horizontal Pieces',
+                default: 4,
+                tooltip: 'How many pieces to split up the puzzle into horizontally.',
+            },
+            nVertical: {
+                label: '# Vertical Pieces',
+                default: 4,
+                tooltip: 'How many pieces to split up the puzzle into vertically.',
+            },
+        },
+    },
+
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -278,6 +299,7 @@ let GG_GUESSMAP_BLOCKER; // Div that blocks events to the map. Note, this will b
 
 let IS_DRAGGING = false; // true when user is actively dragging the guessMap. Some of the events conflict with others.
 let SHOW_QUOTES = true; // On page load, show a random quote if this is true. The blackout screen cannot be turned off without changing code.
+let _CHEAT_DETECTION = true; // true to perform some actions that will make it obvious that a user is using this mod pack.
 
 /**
   SCORE_FUNC is a function used to display the overlay that shows how well you clicked (score, direction, whatever).
@@ -313,16 +335,16 @@ const getSmallMap = () => {
     return document.querySelector('div[class^="guess-map_canvas__"]');
 };
 
-const getCanvas = () => {
+const getBigMapContainer = () => {
     return document.querySelector(`div[class^="game_canvas__"]`);
 };
 
-const getBigMap = () => {
-    const canvas = getCanvas();
-    if (!canvas) {
+const getBigMapCanvas = () => {
+    const container = getBigMapContainer();
+    if (!container) {
         return undefined;
     }
-    return canvas.querySelector('.widget-scene-canvas');
+    return container.querySelector('.widget-scene-canvas');
 };
 
 const getModDiv = () => {
@@ -1294,6 +1316,50 @@ const updateLottery = (forceState = null) => {
 
 
 
+// MOD: Puzzle.
+// ===============================================================================================================================
+
+const updatePuzzle = (forceState = null) => {
+    const mod = MODS.puzzle;
+    const active = updateMod(mod, forceState);
+
+    const canvas = getBigMapCanvas();
+    const ctx = canvas.getContext('2d');
+
+    const nHorizontal = getOption(mod, 'nHorizontal');
+    const nVertical = getOption(mod, 'nVertical');
+
+    const width = canvas.width;
+    const height = canvas.height;
+    const pieceWidth = width / nHorizontal;
+    const pieceHeight = height / nVertical;
+
+    const pieces = [];
+    for (let y = 0; y < nVertical; y++) {
+        for (let x = 0; x < nHorizontal; x++) {
+            const piece = ctx.getImageData(
+                x * pieceWidth,
+                y * pieceHeight,
+                pieceWidth,
+                pieceHeight,
+            );
+            pieces.push(piece);
+        }
+    }
+
+    const shuffled = [...pieces].sort(() => Math.random() - 0.5);
+    ctx.clearRect(0, 0, width, height);
+
+    shuffled.forEach((piece, ix) => {
+        const x = (ix % nHorizontal) * pieceWidth;
+        const y = Math.floor(ix / nHorizontal) * pieceHeight;
+        ctx.putImageData(piece, x, y);
+    });
+};
+
+// -------------------------------------------------------------------------------------------------------------------------------
+
+
 
 // Add bindings and start the script.
 // ===============================================================================================================================
@@ -1309,6 +1375,7 @@ const _BINDINGS = [
     [MODS.bopIt, updateBopIt],
     [MODS.inFrame, updateInFrame],
     [MODS.lottery, updateLottery],
+    [MODS.puzzle, updatePuzzle],
 ];
 
 const closePopup = (evt) => { // Always close the popup menu when disabling a mod.
@@ -1335,8 +1402,8 @@ const bindButtons = () => {
 };
 
 const addButtons = () => { // Add mod buttons to the active round.
-	const canvas = getCanvas();
-	if (!canvas || getModDiv()) {
+	const container = getBigMapContainer();
+	if (!container || getModDiv()) {
         return;
     }
 
@@ -1353,7 +1420,7 @@ const addButtons = () => { // Add mod buttons to the active round.
     }
 	element.innerHTML = innerHTML;
 
-	canvas.appendChild(element);
+	container.appendChild(element);
 	bindButtons();
 };
 
@@ -1362,7 +1429,7 @@ const addButtons = () => { // Add mod buttons to the active round.
 
 
 
-// Cheat blockers.
+// C hee tah blockers.
 // ===============================================================================================================================
 
 // The goal of this is to fuck up the replay file and distract the user by blacking out the screen for the first second or two and clicking around.
@@ -1395,6 +1462,7 @@ const _QUOTES = [
     `Don’t watch the clock. Do what it does. Keep going. — Sam Levenson`,
     `The best way to predict the future is to create it. — Peter Drucker`,
     `Do not go where the path may lead, go instead where there is no path and leave a trail. — Ralph Waldo Emerson`,
+    `Those who mind don't matter, those who matter don't mind. — Dr. Seuss`,
 
     // Heavy stuff.
     `This thing that we call failure is not the falling down, but the staying down. — Mary Pickford`,
@@ -1411,12 +1479,14 @@ const _QUOTES = [
     `Imaginary mountains build themselves from our efforts to climb them, and it's our repeated attempts to reach the summit that turns those mountains into something real. — Bennett Foddy`,
     `Be yourself. Everyone else is already taken. — Oscar Wilde`,
     `Whether you think you can or you think you can’t, you’re right. — Henry Ford`,
+    `The only true wisdom is in knowing you know nothing. — Socrates`,
+    `Painting is silent poetry, and poetry is painting that speaks. — Plutarch`,
+    `Muddy water is best cleared by leaving it alone. — Watts`,
 
     // Funny, light-hearted, or from movies/TV/celebrities.
     `Don't hate the player. Hate the game. — Ice-T`,
     `I came here to chew bubblegum and kick [butt], and I'm all out of bubblegum — Roddy Piper`,
     `That rug really tied the room together. — The Dude`,
-    `Those who mind don't matter, those who matter don't mind. — Dr. Seuss`,
     `If you don't know what you want, you end up with a lot you don't. — Tyler Durden`,
     `Do. Or do not. There is no try. — Yoda`,
     `Big Gulps, huh? Alright! Welp, see ya later! — Lloyd Christmas`,
@@ -1425,6 +1495,7 @@ const _QUOTES = [
     `You're out of your element, Donny! — Walter Sobchak`,
     `I have had it with these [gosh darn] snakes on this [gosh darn] plane — Neville Flynn`,
     `Welcome to CostCo. I love you. — Unknown (2505)`,
+    `Brawndo's got what plants crave. It's got electrolytes. — Secretary of State (2505)`,
     `So you're telling me there's a chance! — Lloyd Christmas`,
     `I am serious, and don't call me Shirley. — Steve McCroskey`,
     `What is this, a center for ants? ... The center has to be at least three times bigger than this. — Derek Zoolander`,
@@ -1438,7 +1509,7 @@ const _QUOTES = [
     `Do your shoes have holes in them? No? Then how did you get your feet in them?`,
     `A magician was walking down the street. Then he turned into a grocery store.`,
     `Why do scuba divers fall backward off the boat? If they fell forward, they'd still be in the boat.`,
-    `In the vacuum of space, no one can hear you get mad at your GeoGuessr game.`,
+    `Did the old lady fall down the well because she didn't see that well, or that well because she didn't see the well?`,
 
     // Fun facts.
     `Sloths can hold their breath longer than dolphins.`,
@@ -1450,8 +1521,11 @@ const _QUOTES = [
     `There are more permutations of a deck of playing cards than stars in the obervable universe. Like, a lot more.`,
     `Earth would turn into a black hole if condensed into a 0.87cm radius.`,
     `Elephants have about 3 times as many neurons as humans.`,
-    `Scientists simulated a fruit fly brain fully. This has 140k neurons, compared to 86 billion in humans.`,
+    `Scientists simulated a fruit fly brain fully. This has 140k neurons (humans have 86 billion)`,
     `On average, Mercury is closer to Earth than Venus.`,
+
+    // Misc.
+    `In the vacuum of space, no one can hear you get mad at your GeoGuessr game.`,
 
 ];
 
@@ -1467,19 +1541,24 @@ const splitQuote = (quote) => {
     return parts;
 };
 
-let _CHEAT_OVERLAY; // Div to block view.
+let _CHEA_T_OVERLAY; // Div to block view.
 
-const clearCheatOverlay = () => {
-    if (_CHEAT_OVERLAY) {
-        _CHEAT_OVERLAY.parentElement.removeChild(_CHEAT_OVERLAY);
-        _CHEAT_OVERLAY = undefined;
+const clearCh_eatOverlay = () => {
+    if (_CHEA_T_OVERLAY) {
+        _CHEA_T_OVERLAY.parentElement.removeChild(_CHEA_T_OVERLAY);
+        _CHEA_T_OVERLAY = undefined;
     }
 };
 
+let _CH_EA_AT_DE_TE_CT_IO_N = 'on your honor';
+
 window.addEventListener('load', () => {
-    clearCheatOverlay();
-    const cheatOverlay = document.createElement('div'); // Opaque black div that covers everything while the page loads.
-    Object.assign(cheatOverlay.style, { // Intentionally not in CSS to make it harder for people to figure out.
+    if (_CH_EA_AT_DE_TE_CT_IO_N || !_CH_EA_AT_DE_TE_CT_IO_N) {
+        // Yeah, yeah. If you made it this far in the code, you can c h eat if you really want.
+    }
+    clearCh_eatOverlay();
+    const che_atOverlay = document.createElement('div'); // Opaque black div that covers everything while the page loads.
+    Object.assign(che_atOverlay.style, { // Intentionally not in CSS to make it harder for people to figure out.
         height: '100vh',
         width: '100vw',
         background: 'black',
@@ -1527,13 +1606,13 @@ window.addEventListener('load', () => {
     }
 
     // On page load, black out everything. Then, we listen for the google map load event, add a time buffer, and remove it after that.
-    // We have to have the map loaded to do the anti-cheat clicks. This is done down below in the map load event bubble.
-    cheatOverlay.appendChild(quoteDiv);
-    _CHEAT_OVERLAY = document.body.insertBefore(cheatOverlay, document.body.firstChild);
+    // We have to have the map loaded to do the anti-c_h_eat clicks. This is done down below in the map load event bubble.
+    che_atOverlay.appendChild(quoteDiv);
+    _CHEA_T_OVERLAY = document.body.insertBefore(che_atOverlay, document.body.firstChild);
 
     // Other measures are taken, but no matter what we can't let this div brick thie entire site,
     //   e.g. if they change the URL naming scheme. Race condition with map loading, but so be it.
-    setTimeout(clearCheatOverlay, 3000);
+    setTimeout(clearCh_eatOverlay, 3000);
 });
 
 /**
@@ -1631,7 +1710,46 @@ const onMapClick = (evt) => {
 
 // -------------------------------------------------------------------------------------------------------------------------------
 
+_CHEAT_DETECTION = true; // Don't try it, hackers!
+
+const _YOURE_LOOKING_AT_MY_CODE = (v) => {
+    if (_CHEAT_DETECTION) {
+        try {
+            const a = (function () {
+                return function (b) {
+                    const c = typeof b;
+                    const d = b === null;
+                    const e = [
+                        () => Boolean(c.match(/.+/)),
+                        () => [null, undefined, NaN, 0, '', false].includes(b),
+                        () => new Set([1, 2, 3]).has(4),
+                        () => Object.is(b, null)
+                    ];
+                    for (let f = 0; f < e.length; f++) {
+                        void e[f]();
+                    }
+                    const g = !!(d && !1 || !0 && !0 || !0);
+                    const h = new Proxy({}, {
+                        get: () => () => g
+                    });
+                    return h.x()() ? 'A' : 'B';
+                };
+            })();
+            const i = a(v);
+            [...'x'].forEach(j => j.charCodeAt(0) * Math.random());
+            return i === 'A' ? false : false;
+        } catch (k) {
+            return false;
+        }
+    }
+};
+
 document.addEventListener('DOMContentLoaded', (event) => {
+
+    if (_YOURE_LOOKING_AT_MY_CODE()) {
+        return; // Get outta 'ere
+    }
+
 	injecter(() => {
 		const google = getGoogle();
 		if (!google) {
@@ -1661,7 +1779,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 				google.maps.event.addListenerOnce(this, 'idle', () => { // Actions on initial guess map load.
                     initMods();
                     console.log('GeoGuessr mods initialized.');
-                    setTimeout(clearCheatOverlay, 1000);
+                    setTimeout(clearCh_eatOverlay, 1000);
                     clickGarbage(900);
 				});
 
