@@ -220,6 +220,7 @@ const debugMap = (map, evt) => {
 // ===============================================================================================================================
 
 let GOOGLE_STREETVIEW, GOOGLE_MAP, GOOGLE_SVC; // Assigned in the google API portion of the script.
+let PREV_GOOGLE_STREETVIEW_POV, PREV_GOOGLE_STREETVIEW_POSITION; // Stored state of streetview POV and position, used to detect if either has changed.s
 
 const GG_DEFAULT = {} // Used for default options and restoring options.
 for (const mod of Object.values(MODS)) {
@@ -1321,14 +1322,18 @@ const updateLottery = (forceState = null) => {
 // MOD: Puzzle.
 // ===============================================================================================================================
 
-// TODO: if active on load, block for an extra second or something, or figure out when tiles are loaded
+// TODO:
+// - if active on load, block for an extra second or something, or figure out when tiles are loaded
+// - Need to run on interval and detect if position or pov has changed, because tiles may not be rendered.
 
 // Unfortunately, we can't use the 3D canvas, so we recreate it as a 2D canvas to make the puzzle.
 // This may make this mod unusable with some others. Haven't tested out every combination.
 
 let CANVAS_2D; // canvas element that overlays the 3D one.
-let CANVAS_2D_IMAGE_ARR; // Array of positional and pixel data.
-let CANVAS_2D_REDRAW_INTERVAL; // Interval for redrawing canvas 2D overlay.
+let CANVAS_2D_TILES; // Array of positional and pixel data.
+let CANVAS_2D_POV_LISTENER; // Listener for POV changes on big map.
+let CANVAS_2D_POSITION_LISTENER; // Listener for position changes on big map.
+
 let _IS_REDRAWING_2D = false; // If we're still redrawing the previous frame, this can brick the site.
 
 const clearCanvas2d = () => {
@@ -1336,18 +1341,56 @@ const clearCanvas2d = () => {
         CANVAS_2D.parentElement.removeChild(CANVAS_2D);
         CANVAS_2D = undefined;
     }
-    if (CANVAS_2D_IMAGE_ARR) {
-        delete CANVAS_2D_IMAGE_ARR;
-        CANVAS_2D_IMAGE_ARR = undefined;
+    if (CANVAS_2D_TILES) {
+        delete CANVAS_2D_TILES;
+        CANVAS_2D_TILES = undefined;
+    }
+    if (!GOOGLE_STREETVIEW) {
+        return;
+    }
+    if (CANVAS_2D_POV_LISTENER) {
+        GOOGLE_STREETVIEW.removeEventListener(CANVAS_2D_POV_LISTENER);
+    }
+    if (CANVAS_2D_POSITION_LISTENER) {
+        GOOGLE_STREETVIEW.removeEventListener(CANVAS_2D_POSITION_LISTENER);
     }
 };
 
-const clearCanvas2dInterval = () => {
-    if (CANVAS_2D_REDRAW_INTERVAL) {
-        clearInterval(CANVAS_2D_REDRAW_INTERVAL);
-        CANVAS_2D_REDRAW_INTERVAL = undefined;
-    }
+// TODO: generalize this, allow callbacks with global variables enabled or some shit.
+// Unclear if I need a timeout or if I can just trigger stuff
+const onViewChange = (evt) => {
+    debugger;
 };
+let POV_TIMEOUT = (evt) => {
+    debugger;
+};
+let POS_TIMEOUT = (evt) => {
+    debugger;
+};
+
+
+
+
+const addStreetViewListeners = () => {
+    if (!GOOGLE_STREETVIEW) {
+        return;
+    }
+
+    let motionEndTimeout;
+    let MOTION_END_DELAY = 300; // milliseconds after last change
+
+    // Listen for changes in POV
+    panorama.addListener('pov_changed', () => {
+        motionEndTimeout = setTimeout(onMotionEnd, MOTION_END_DELAY);
+    });
+
+    // Optional: Listen for position changes if you're navigating places
+    panorama.addListener('position_changed', () => {
+        motionEndTimeout = setTimeout(onMotionEnd, MOTION_END_DELAY);
+    });
+};
+
+
 
 /**
   Redraw the 3D canvas as a 2D canvas so we can mess around with it. We have to extract the image data, essentially a screenshot.
@@ -1356,7 +1399,7 @@ const clearCanvas2dInterval = () => {
     and just redraw the canvas on an interval.
   Need to clear the canvas before calling this function because of the interval.
 */
-const redrawAs2d = (nRows, nCols) => {
+const redrawCanvasAs2d = (nRows, nCols) => {
     if (_IS_REDRAWING_2D) {
         return;
     }
@@ -1434,9 +1477,7 @@ const updatePuzzle = (forceState = null) => {
     // Sometimes, the streetview is slow to load. The idle event will trigger before all tiles are rendered.
     // So just retry and redraw the canvas on an interval. This will also take care of moving mode,
     //   though there will be lag.
-    clearCanvas2dInterval();
-    redrawAs2d(nRows, nCols); // Once synchronously and then start interval.
-    CANVAS_2D_REDRAW_INTERVAL = setInterval(() => redrawAs2d(nRows, nCols), 1000);
+    redrawCanvasAs2d(nRows, nCols);
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
