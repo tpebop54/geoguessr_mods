@@ -1345,7 +1345,7 @@ const clearCanvas2d = () => {
 */
 const redrawAs2d = (nRows, nCols) => {
     const canvas3d = getBigMapCanvas(); // This is a 3D canvas even for NMPZ.
-    const ctx3d = canvas3d.getContext('webgl');
+    const ctx3d = canvas3d.getContext('webgl', { preserveDrawingBuffer: true });
 
     if (_IS_REDRAWING_2D) {
         return;
