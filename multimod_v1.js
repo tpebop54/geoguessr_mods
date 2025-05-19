@@ -835,6 +835,15 @@ const setGuessMapEvents = (enabled = true) => {
     container.style.pointerEvents = enabled ? 'auto' : 'none';
 };
 
+const shuffleArray = (arr, inPlace = false) => {
+    const shuffled = inPlace ? arr : [...arr];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+};
+
 // -------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -1303,31 +1312,49 @@ const updateLottery = (forceState = null) => {
 // MOD: Puzzle.
 // ===============================================================================================================================
 
+// TODO: if active on load, block for an extra second or something, or figure out when tiles are loaded
+
 // Unfortunately, we can't use the 3D canvas, so we recreate it as a 2D canvas to make the puzzle.
-// This may make this mod unusable with some others.
-// Also, if you're reading this, gat dang this was hard to figure out.
+// This may make this mod unusable with some others. Haven't tested out every combination.
 
-// TODO:
-// - Hide the moving arrows since they are inactive with the 2d canvas
+let CANVAS_2D; // canvas element that overlays the 3D one.
+let CANVAS_2D_IMAGE_ARR; // Array of positional and pixel data.
+let CANVAS_2D_REDRAW_INTERVAL; // Interval for redrawing canvas 2D overlay.
+let _IS_REDRAWING_2D = false; // If we're still redrawing the previous frame, this can brick the site.
 
-let CANVAS_2D;
+const clearCanvas2d = () => {
+    if (CANVAS_2D) {
+        CANVAS_2D.parentElement.removeChild(CANVAS_2D);
+        CANVAS_2D = undefined;
+    }
+    if (CANVAS_2D_IMAGE_ARR) {
+        delete CANVAS_2D_IMAGE_ARR;
+        CANVAS_2D_IMAGE_ARR = undefined;
+    }
+    if (CANVAS_2D_REDRAW_INTERVAL) {
+        clearInterval(CANVAS_2D_REDRAW_INTERVAL);
+        CANVAS_2D_REDRAW_INTERVAL = undefined;
+    }
+};
 
-const updatePuzzle = (forceState = null) => {
-    const mod = MODS.puzzle;
-    const active = updateMod(mod, forceState);
+/**
+  Redraw the 3D canvas as a 2D canvas so we can mess around with it. We have to extract the image data, essentially a screenshot.
+  Because the tile loading is irregular and there isn't an event to tell when all tiles are loaded,
+    and also to allow for redraws in moving mode, we are going to make a pretty expensive function
+    and just redraw the canvas on an interval.
+*/
+const redrawAs2d = (nRows, nCols) => {
+    const canvas3d = getBigMapCanvas(); // This is a 3D canvas even for NMPZ.
+    const ctx3d = canvas3d.getContext('webgl');
 
-    if (!active) {
-        if (CANVAS_2D) {
-            CANVAS_2D.parentElement.removeChild(CANVAS_2D);
-            CANVAS_2D = undefined;
-        }
+    if (_IS_REDRAWING_2D) {
         return;
     }
 
-    const canvas3d = getBigMapCanvas(); // 3D even for NMPZ.
-    const ctx3d = canvas3d.getContext('webgl');
+    clearCanvas2d();
+    _IS_REDRAWING_2D = true;
 
-    const pixels = new Uint8Array(canvas3d.width * canvas3d.height * 4); // Read image from 3D view.
+    const pixels = new Uint8Array(canvas3d.width * canvas3d.height * 4); // Read image from 3D view. * 4 is because RGBA.
     ctx3d.readPixels(
         0, 0,
         canvas3d.width, canvas3d.height,
@@ -1346,12 +1373,6 @@ const updatePuzzle = (forceState = null) => {
     const ctx2d = CANVAS_2D.getContext('2d');
     ctx2d.putImageData(imageData3d, 0, 0);
 
-    // TODO: revert
-    // const nRows = getOption(mod, 'nRows');
-    // const nCols = getOption(mod, 'nCols');
-    const nRows = 8;
-    const nCols = 8;
-
     const pieceHeight = canvas3d.height / nRows;
     const pieceWidth = canvas3d.width / nCols;
 
@@ -1365,18 +1386,9 @@ const updatePuzzle = (forceState = null) => {
         }
     }
 
-    const shuffle = (arr) => { // TODO: move to utility.
-        const shuffled = [...arr];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-        return shuffled;
-    };
-
     // Scramble the puzzle pieces.
     const locs = pieces.map(piece => [piece.sx, piece.sy]);
-    const shuffledLocs = shuffle(locs);
+    const shuffledLocs = shuffleArray(locs);
     for (const [ix, piece] of Object.entries(pieces)) {
         const [sx, sy] = shuffledLocs[Number(ix)];
         Object.assign(piece, { sx, sy });
@@ -1391,6 +1403,28 @@ const updatePuzzle = (forceState = null) => {
 
     const mapBase3d = canvas3d.parentElement.parentElement;
     mapBase3d.insertBefore(CANVAS_2D, mapBase3d.firstChild);
+
+    _IS_REDRAWING_2D = false;
+};
+
+const updatePuzzle = (forceState = null) => {
+    const mod = MODS.puzzle;
+    const active = updateMod(mod, forceState);
+
+    clearCanvas2d();
+
+    if (!active) {
+        return;
+    }
+
+    const nRows = getOption(mod, 'nRows');
+    const nCols = getOption(mod, 'nCols');
+
+    // Sometimes, the streetview is slow to load. The idle event will trigger before all tiles are rendered.
+    // So just retry and redraw the canvas on an interval. This will also take care of moving mode,
+    //   though there will be lag.
+    redrawAs2d(); // Once synchronously and then start interval.
+    CANVAS_2D_REDRAW_INTERVAL = setInterval(() => redrawAs2d(nRows, nCols), 1000);
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -1518,6 +1552,7 @@ const _QUOTES = [
     `The only true wisdom is in knowing you know nothing. — Socrates`,
     `Painting is silent poetry, and poetry is painting that speaks. — Plutarch`,
     `Muddy water is best cleared by leaving it alone. — Watts`,
+    `Do not go gentle into that good night. Old age should burn and rave at close of day. Rage, rage against the dying of the light. — Dylan Thomas`,
 
     // Funny, light-hearted, or from movies/TV/celebrities.
     `Don't hate the player. Hate the game. — Ice-T`,
