@@ -282,8 +282,15 @@ let GG_CUSTOM_MARKER; // Custom marker. This is not the user click marker. Can o
 let GG_GUESSMAP_BLOCKER; // Div that blocks events to the map. You can still open a debugger by right clicking the menu header.
 
 let IS_DRAGGING = false; // true when user is actively dragging the guessMap. Some of the map events conflict with others.
-let SHOW_QUOTES = true; // On page load, show a random quote if this is true. The blackout screen cannot be turned off without changing code.
-let _CHEAT_DETECTION = true; // true to perform some actions that will make it obvious that a user is using this mod pack.
+
+// On page load, show random quotes, jokes, facts, etc. The blackout screen cannot be turned off without changing code.
+const SHOW_QUOTES = {
+    inspirational: true,
+    heavy: true, // I'll understand if you want to turn this one off.
+    media: true, // From movies and stuff. Generally light-hearted.
+    jokes: true,
+    funFacts: true,
+};
 
 /**
   SCORE_FUNC is a function used to display the overlay that shows how well you clicked (score, direction, whatever).
@@ -294,6 +301,8 @@ let _CHEAT_DETECTION = true; // true to perform some actions that will make it o
 let SCORE_FUNC;
 
 const UPDATE_CALLBACKS = {};
+
+let _CHEAT_DETECTION = true; // true to perform some actions that will make it obvious that a user is using this mod pack.
 
 // -------------------------------------------------------------------------------------------------------------------------------
 
@@ -1331,6 +1340,9 @@ const clearCanvas2d = () => {
         delete CANVAS_2D_IMAGE_ARR;
         CANVAS_2D_IMAGE_ARR = undefined;
     }
+};
+
+const clearCanvas2dInterval = () => {
     if (CANVAS_2D_REDRAW_INTERVAL) {
         clearInterval(CANVAS_2D_REDRAW_INTERVAL);
         CANVAS_2D_REDRAW_INTERVAL = undefined;
@@ -1342,17 +1354,17 @@ const clearCanvas2d = () => {
   Because the tile loading is irregular and there isn't an event to tell when all tiles are loaded,
     and also to allow for redraws in moving mode, we are going to make a pretty expensive function
     and just redraw the canvas on an interval.
+  Need to clear the canvas before calling this function because of the interval.
 */
 const redrawAs2d = (nRows, nCols) => {
-    const canvas3d = getBigMapCanvas(); // This is a 3D canvas even for NMPZ.
-    const ctx3d = canvas3d.getContext('webgl', { preserveDrawingBuffer: true });
-
     if (_IS_REDRAWING_2D) {
         return;
     }
 
-    clearCanvas2d();
     _IS_REDRAWING_2D = true;
+
+    const canvas3d = getBigMapCanvas(); // This is a 3D canvas even for NMPZ.
+    const ctx3d = canvas3d.getContext('webgl', { preserveDrawingBuffer: true });
 
     const pixels = new Uint8Array(canvas3d.width * canvas3d.height * 4); // Read image from 3D view. * 4 is because RGBA.
     ctx3d.readPixels(
@@ -1403,7 +1415,6 @@ const redrawAs2d = (nRows, nCols) => {
 
     const mapBase3d = canvas3d.parentElement.parentElement;
     mapBase3d.insertBefore(CANVAS_2D, mapBase3d.firstChild);
-
     _IS_REDRAWING_2D = false;
 };
 
@@ -1423,7 +1434,8 @@ const updatePuzzle = (forceState = null) => {
     // Sometimes, the streetview is slow to load. The idle event will trigger before all tiles are rendered.
     // So just retry and redraw the canvas on an interval. This will also take care of moving mode,
     //   though there will be lag.
-    redrawAs2d(); // Once synchronously and then start interval.
+    clearCanvas2dInterval();
+    redrawAs2d(nRows, nCols); // Once synchronously and then start interval.
     CANVAS_2D_REDRAW_INTERVAL = setInterval(() => redrawAs2d(nRows, nCols), 1000);
 };
 
@@ -1508,101 +1520,112 @@ const addButtons = () => { // Add mod buttons to the active round.
 // Credit to Bennett Foddy for assembling several of these quotes and for a few himself, from my favorite game (Getting Over It with Bennett Foddy).
 // Use the — character (dash, not hyphen) to apply a quote credit, which will show up as a smaller text under the quote.
 
-const _QUOTES = [
+const _QUOTES = {
 
-    // Inspirational.
-    `It is in falling short of your own goals that you will surpass those who exceed theirs. — Tokugawa Ieyasu`,
-    `If you love life, do not waste time- for time is what life is made up of — Bruce Lee`,
-    `Don't let the fear of the time it will take to accomplish something stand in the way of doing it. The time will pass anyway... — Earl Nightingale`,
-    `Spend so much time on the improvement of yourself that you have no time to criticize others — Christian Larson`,
-    `This too shall pass. — Unknown`,
-    `No one can make you feel inferior without your consent — Eleanor Roosevelt`,
-    `Never interrupt your enemy when he is making a mistake. — Napoleon Bonaparte`,
-    `The magic you are looking for is in the work you are avoiding — Unknown`,
-    `The grass is greenest where you water it — Unknown`,
-    `People fear what they don't understand and hate what they can't conquer — Andrew Smith`,
-    `Be who you needed when you were younger. — Unknown`,
-    `A ship in harbor is safe, but that is not what ships are built for. — John A. Shedd`,
-    `There is no hopeless situation, only hopeless people. — Atatürk`,
-    `And those who were seen dancing were thought to be insane by those who could not hear the music. — Friedrich Nietzsche`,
-    `There are no regrets in life, just lessons. — Jennifer Aniston`,
-    `You must be the change you wish to see in the world. — Mahatma Gandhi`,
-    `Don’t count the days, make the days count. — Muhammad Ali`,
-    `I have not failed. I've just found 10,000 ways that won't work. — Thomas Edison`,
-    `Don’t watch the clock. Do what it does. Keep going. — Sam Levenson`,
-    `The best way to predict the future is to create it. — Peter Drucker`,
-    `Do not go where the path may lead, go instead where there is no path and leave a trail. — Ralph Waldo Emerson`,
-    `Those who mind don't matter, those who matter don't mind. — Dr. Seuss`,
+    inspirational: [
+        `It is in falling short of your own goals that you will surpass those who exceed theirs. — Tokugawa Ieyasu`,
+        `If you love life, do not waste time- for time is what life is made up of — Bruce Lee`,
+        `Don't let the fear of the time it will take to accomplish something stand in the way of doing it. The time will pass anyway... — Earl Nightingale`,
+        `Spend so much time on the improvement of yourself that you have no time to criticize others — Christian Larson`,
+        `This too shall pass. — Unknown`,
+        `No one can make you feel inferior without your consent — Eleanor Roosevelt`,
+        `Never interrupt your enemy when he is making a mistake. — Napoleon Bonaparte`,
+        `The magic you are looking for is in the work you are avoiding — Unknown`,
+        `The grass is greenest where you water it — Unknown`,
+        `People fear what they don't understand and hate what they can't conquer — Andrew Smith`,
+        `Be who you needed when you were younger. — Unknown`,
+        `A ship in harbor is safe, but that is not what ships are built for. — John A. Shedd`,
+        `There is no hopeless situation, only hopeless people. — Atatürk`,
+        `And those who were seen dancing were thought to be insane by those who could not hear the music. — Friedrich Nietzsche`,
+        `There are no regrets in life, just lessons. — Jennifer Aniston`,
+        `You must be the change you wish to see in the world. — Mahatma Gandhi`,
+        `Don’t count the days, make the days count. — Muhammad Ali`,
+        `I have not failed. I've just found 10,000 ways that won't work. — Thomas Edison`,
+        `Don’t watch the clock. Do what it does. Keep going. — Sam Levenson`,
+        `The best way to predict the future is to create it. — Peter Drucker`,
+        `Do not go where the path may lead, go instead where there is no path and leave a trail. — Ralph Waldo Emerson`,
+        `Those who mind don't matter, those who matter don't mind. — Dr. Seuss`,
+    ],
 
-    // Heavy stuff.
-    `This thing that we call failure is not the falling down, but the staying down. — Mary Pickford`,
-    `The soul would have no rainbow had the eyes no tears. — John Vance Cheney`,
-    `The pain I feel now is the happiness I had before. That's the deal. — C.S. Lewis`,
-    `I feel within me a peace above all earthly dignities, a still and quiet consciences. — William Shakespeare`,
-    `You cannot believe now that you'll ever feel better. But this is not true. You are sure to be happy again. Knowing this, truly believing it, will make you less miserable now. — Abraham Lincoln`,
-    `Do not stand at my grave and cry, I am not there, I did not die. — Mary Frye`,
-    `To live is to suffer. To survive is to find meaning in the suffering. — Friedrich Nietzsche`,
-    `Of all sad words of tongue or pen, the saddest are these, 'It might have been'. — John Greenleaf Whittier`,
-    `If you try to please audiences, uncritically accepting their tastes, it can only mean that you have no respect for them. — Andrei Tarkovsky`,
-    `In the end… We only regret the chances we didn’t take. — Lewis Carroll`,
-    `There’s no feeling more intense than starting over. Starting over is harder than starting up. — Bennett Foddy`,
-    `Imaginary mountains build themselves from our efforts to climb them, and it's our repeated attempts to reach the summit that turns those mountains into something real. — Bennett Foddy`,
-    `Be yourself. Everyone else is already taken. — Oscar Wilde`,
-    `Whether you think you can or you think you can’t, you’re right. — Henry Ford`,
-    `The only true wisdom is in knowing you know nothing. — Socrates`,
-    `Painting is silent poetry, and poetry is painting that speaks. — Plutarch`,
-    `Muddy water is best cleared by leaving it alone. — Watts`,
-    `Do not go gentle into that good night. Old age should burn and rave at close of day. Rage, rage against the dying of the light. — Dylan Thomas`,
+    heavy: [
+        `This thing that we call failure is not the falling down, but the staying down. — Mary Pickford`,
+        `The soul would have no rainbow had the eyes no tears. — John Vance Cheney`,
+        `The pain I feel now is the happiness I had before. That's the deal. — C.S. Lewis`,
+        `I feel within me a peace above all earthly dignities, a still and quiet consciences. — William Shakespeare`,
+        `You cannot believe now that you'll ever feel better. But this is not true. You are sure to be happy again. Knowing this, truly believing it, will make you less miserable now. — Abraham Lincoln`,
+        `Do not stand at my grave and cry, I am not there, I did not die. — Mary Frye`,
+        `To live is to suffer. To survive is to find meaning in the suffering. — Friedrich Nietzsche`,
+        `Of all sad words of tongue or pen, the saddest are these, 'It might have been. — John Greenleaf Whittier`,
+        `If you try to please audiences, uncritically accepting their tastes, it can only mean that you have no respect for them. — Andrei Tarkovsky`,
+        `In the end… We only regret the chances we didn’t take. — Lewis Carroll`,
+        `There’s no feeling more intense than starting over. Starting over is harder than starting up. — Bennett Foddy`,
+        `Imaginary mountains build themselves from our efforts to climb them, and it's our repeated attempts to reach the summit that turns those mountains into something real. — Bennett Foddy`,
+        `Be yourself. Everyone else is already taken. — Oscar Wilde`,
+        `Whether you think you can or you think you can’t, you’re right. — Henry Ford`,
+        `The only true wisdom is in knowing you know nothing. — Socrates`,
+        `Painting is silent poetry, and poetry is painting that speaks. — Plutarch`,
+        `Muddy water is best cleared by leaving it alone. — Alan Watts`,
+        `Do not go gentle into that good night. Old age should burn and rave at close of day. Rage, rage against the dying of the light. — Dylan Thomas`,
+        `You can be mad as a mad dog at the way things went. You could swear, and curse the fates. But when it comes to the end, you have to let go. — Benjamin Button`,
+        `It's a funny thing about comin' home. Looks the same, smells the same, feels the same. You'll realize what's changed is you. — Benjamin Button`,
+    ],
 
-    // Funny, light-hearted, or from movies/TV/celebrities.
-    `Don't hate the player. Hate the game. — Ice-T`,
-    `I came here to chew bubblegum and kick [butt], and I'm all out of bubblegum — Roddy Piper`,
-    `That rug really tied the room together. — The Dude`,
-    `If you don't know what you want, you end up with a lot you don't. — Tyler Durden`,
-    `Do. Or do not. There is no try. — Yoda`,
-    `Big Gulps, huh? Alright! Welp, see ya later! — Lloyd Christmas`,
-    `You are tearing me apart, Lisa! — Johnny (Tommy Wiseau)`,
-    `I'm Ron Burgundy? — Ron Burgundy`,
-    `You're out of your element, Donny! — Walter Sobchak`,
-    `I have had it with these [gosh darn] snakes on this [gosh darn] plane — Neville Flynn`,
-    `Welcome to CostCo. I love you. — Unknown (2505)`,
-    `Brawndo's got what plants crave. It's got electrolytes. — Secretary of State (2505)`,
-    `So you're telling me there's a chance! — Lloyd Christmas`,
-    `I am serious, and don't call me Shirley. — Steve McCroskey`,
-    `What is this, a center for ants? ... The center has to be at least three times bigger than this. — Derek Zoolander`,
-    `Did we just become best friends? YUP!! — Dale Doback, Brennan Huff`,
+    media: [ // Funny, light-hearted, or from movies/TV/celebrities. Some of the heavy stuff is also from media, but they belong in the heavy section.
+        `Don't hate the player. Hate the game. — Ice-T`,
+        `I came here to chew bubblegum and kick [butt], and I'm all out of bubblegum — Roddy Piper`,
+        `That rug really tied the room together. — The Dude`,
+        `If you don't know what you want, you end up with a lot you don't. — Tyler Durden`,
+        `Do. Or do not. There is no try. — Yoda`,
+        `Big Gulps, huh? Alright! Welp, see ya later! — Lloyd Christmas`,
+        `You are tearing me apart, Lisa! — Johnny (Tommy Wiseau)`,
+        `I'm Ron Burgundy? — Ron Burgundy`,
+        `You're out of your element, Donny! — Walter Sobchak`,
+        `I have had it with these [gosh darn] snakes on this [gosh darn] plane — Neville Flynn`,
+        `Welcome to CostCo. I love you. — Unknown (2505)`,
+        `Brawndo's got what plants crave. It's got electrolytes. — Secretary of State (2505)`,
+        `So you're telling me there's a chance! — Lloyd Christmas`,
+        `I am serious, and don't call me Shirley. — Steve McCroskey`,
+        `What is this, a center for ants? ... The center has to be at least three times bigger than this. — Derek Zoolander`,
+        `Did we just become best friends? YUP!! — Dale Doback, Brennan Huff`,
 
-    // Jokes.
-    `When birds fly in V-formation, one side is usually longer. Know why? That side has more birds on it.`,
-    `I broke my leg in two places. My doctor told me to stop going to those places.`,
-    `Why do birds fly south in the winter? Because it's too far to walk.`,
-    `Orion's Belt is a massive waist of space.`,
-    `Do your shoes have holes in them? No? Then how did you get your feet in them?`,
-    `A magician was walking down the street. Then he turned into a grocery store.`,
-    `Why do scuba divers fall backward off the boat? If they fell forward, they'd still be in the boat.`,
-    `Did the old lady fall down the well because she didn't see that well, or that well because she didn't see the well?`,
+    ],
 
-    // Fun facts.
-    `Sloths can hold their breath longer than dolphins.`,
-    `Koalas have fingerprints so similar to humans that they can confuse crime scene investigators.`,
-    `The pistol shrimp snaps its claw so fast it creates a bubble hotter than the surface of the sun.`,
-    `Dogs' nose prints are as unique as human fingerprints.`,
-    `Sharks existed before trees.`,
-    `Jupiter has the shortest day of any planet in our solar system.`,
-    `There are more permutations of a deck of playing cards than stars in the obervable universe. Like, a lot more.`,
-    `Earth would turn into a black hole if condensed into a 0.87cm radius.`,
-    `Elephants have about 3 times as many neurons as humans.`,
-    `Scientists simulated a fruit fly brain fully. This has 140k neurons (humans have 86 billion)`,
-    `On average, Mercury is closer to Earth than Venus.`,
+    jokes: [
+        `When birds fly in V-formation, one side is usually longer. Know why? That side has more birds on it.`,
+        `I broke my leg in two places. My doctor told me to stop going to those places.`,
+        `Why do birds fly south in the winter? Because it's too far to walk.`,
+        `Orion's Belt is a massive waist of space.`,
+        `Do your shoes have holes in them? No? Then how did you get your feet in them?`,
+        `A magician was walking down the street. Then he turned into a grocery store.`,
+        `Why do scuba divers fall backward off the boat? If they fell forward, they'd still be in the boat.`,
+        `Did the old lady fall down the well because she didn't see that well, or that well because she didn't see the well?`,
+        `In the vacuum of space, no one can hear you get mad at your GeoGuessr game.`,
+    ],
 
-    // Misc.
-    `In the vacuum of space, no one can hear you get mad at your GeoGuessr game.`,
+    funFacts: [
+        `Sloths can hold their breath longer than dolphins.`,
+        `Koalas have fingerprints so similar to humans that they can confuse crime scene investigators.`,
+        `The pistol shrimp snaps its claw so fast it creates a bubble hotter than the surface of the sun.`,
+        `Dogs' nose prints are as unique as human fingerprints.`,
+        `Sharks existed before trees.`,
+        `Jupiter has the shortest day of any planet in our solar system.`,
+        `There are more permutations of a deck of playing cards than stars in the obervable universe. Like, a lot more.`,
+        `Earth would turn into a black hole if condensed into a 0.87cm radius.`,
+        `Elephants have about 3 times as many neurons as humans.`,
+        `Scientists simulated a fruit fly brain fully. This has 140k neurons (humans have 86 billion)`,
+        `On average, Mercury is closer to Earth than Venus.`,
+    ],
 
-];
+};
+
+const _QUOTES_FLAT = Object.values(_QUOTES).flat();
 
 const getRandomQuote = () => {
-    const ix = Math.floor(Math.random() * _QUOTES.length);
-    const quote = _QUOTES[ix];
+    if (SHOW_QUOTES === false || SHOW_QUOTES == null) {
+        return 'Loading...';
+    }
+    const ix = Math.floor(Math.random() * _QUOTES_FLAT.length);
+    const quote = _QUOTES_FLAT[ix];
     return quote;
 };
 
