@@ -108,8 +108,8 @@ const MODS = {
         }
     },
 
-    seizure: {
-        show: true,
+    seizure: { // This one is disabled by default because it's a little insensitive and not safe for streaming. But try it if you want!
+        show: false,
         key: 'seizure',
         name: 'Seizure',
         tooltip: 'Makes large map jitter around. Seizure warning!!',
@@ -1323,90 +1323,26 @@ const updateLottery = (forceState = null) => {
 // ===============================================================================================================================
 
 // TODO:
-// - if active on load, block for an extra second or something, or figure out when tiles are loaded
-// - Need to run on interval and detect if position or pov has changed, because tiles may not be rendered.
+// - Run on interval with data change check.
 
 // Unfortunately, we can't use the 3D canvas, so we recreate it as a 2D canvas to make the puzzle.
-// This may make this mod unusable with some others. Haven't tested out every combination.
+// This may make this mod unusable with some others. I haven't tested out every combination.
 
 let CANVAS_2D; // canvas element that overlays the 3D one.
-let CANVAS_2D_TILES; // Array of positional and pixel data.
-let CANVAS_2D_POV_LISTENER; // Listener for POV changes on big map.
-let CANVAS_2D_POSITION_LISTENER; // Listener for position changes on big map.
-
-let _IS_REDRAWING_2D = false; // If we're still redrawing the previous frame, this can brick the site.
+let CANVAS_2D_IS_REDRAWING = false; // If we're still redrawing the previous frame, this can brick the site.
+let CANVAS_3D_START; // Used to check if the 3D view has changed. We don't want to constantly redraw the canvas for no reason.
+let CANVAS_3D_END; // Also used to check for 3D view changes.
+let CANVAS_2D_REDRAW_INTERVAL; // Interval for redrawing 3D canvas to 2D. Only redraws when first tile has changed.
+let CANVAS_2D_HAS_DRAWN = false; // Track if we've drawn the 2D canvas in the current 3D canvas view.
 
 const clearCanvas2d = () => {
-    if (CANVAS_2D) {
+    if (CANVAS_2D && CANVAS_2D.parentElement) {
         CANVAS_2D.parentElement.removeChild(CANVAS_2D);
-        CANVAS_2D = undefined;
     }
-    if (CANVAS_2D_TILES) {
-        delete CANVAS_2D_TILES;
-        CANVAS_2D_TILES = undefined;
-    }
-    if (!GOOGLE_STREETVIEW) {
-        return;
-    }
-    if (CANVAS_2D_POV_LISTENER) {
-        GOOGLE_STREETVIEW.removeEventListener(CANVAS_2D_POV_LISTENER);
-    }
-    if (CANVAS_2D_POSITION_LISTENER) {
-        GOOGLE_STREETVIEW.removeEventListener(CANVAS_2D_POSITION_LISTENER);
-    }
+    CANVAS_2D = undefined;
 };
 
-// TODO: generalize this, allow callbacks with global variables enabled or some shit.
-// Unclear if I need a timeout or if I can just trigger stuff
-const onViewChange = (evt) => {
-    debugger;
-};
-let POV_TIMEOUT = (evt) => {
-    debugger;
-};
-let POS_TIMEOUT = (evt) => {
-    debugger;
-};
-
-
-
-
-const addStreetViewListeners = () => {
-    if (!GOOGLE_STREETVIEW) {
-        return;
-    }
-
-    let motionEndTimeout;
-    let MOTION_END_DELAY = 300; // milliseconds after last change
-
-    // Listen for changes in POV
-    panorama.addListener('pov_changed', () => {
-        motionEndTimeout = setTimeout(onMotionEnd, MOTION_END_DELAY);
-    });
-
-    // Optional: Listen for position changes if you're navigating places
-    panorama.addListener('position_changed', () => {
-        motionEndTimeout = setTimeout(onMotionEnd, MOTION_END_DELAY);
-    });
-};
-
-
-
-/**
-  Redraw the 3D canvas as a 2D canvas so we can mess around with it. We have to extract the image data, essentially a screenshot.
-  Because the tile loading is irregular and there isn't an event to tell when all tiles are loaded,
-    and also to allow for redraws in moving mode, we are going to make a pretty expensive function
-    and just redraw the canvas on an interval.
-  Need to clear the canvas before calling this function because of the interval.
-*/
-const redrawCanvasAs2d = (nRows, nCols) => {
-    if (_IS_REDRAWING_2D) {
-        return;
-    }
-
-    _IS_REDRAWING_2D = true;
-
-    const canvas3d = getBigMapCanvas(); // This is a 3D canvas even for NMPZ.
+const getImageData3d = (canvas3d) => {
     const ctx3d = canvas3d.getContext('webgl', { preserveDrawingBuffer: true });
 
     const pixels = new Uint8Array(canvas3d.width * canvas3d.height * 4); // Read image from 3D view. * 4 is because RGBA.
@@ -1417,48 +1353,117 @@ const redrawCanvasAs2d = (nRows, nCols) => {
         pixels,
     );
     const imageData3d = new ImageData(new Uint8ClampedArray(pixels), canvas3d.width, canvas3d.height);
+    return imageData3d;
+};
 
-    CANVAS_2D = document.createElement('canvas'); // Paste the 3D image onto a 2D canvas so we can mess with it.
-    CANVAS_2D.id = 'gg-big-canvas-2d';
-    CANVAS_2D.width = canvas3d.width;
-    CANVAS_2D.height = canvas3d.height;
-    Object.assign(CANVAS_2D.style, {
-        'pointer-events': 'none',
-    });
+/**
+  Check if the first little bit of the 3D canvas has changed.
+  On loading, it might come through as a completely black image. If that's the case, redraw.
+  If the image is actually fully black, we'll have to live with redrawing it, but that should never happen.
+*/
+const shouldRedraw = (imageData3d) => {
+    if (!CANVAS_2D_HAS_DRAWN) {
+        return true; // Initial draw of current view.
+    }
+    if (!imageData3d || !imageData3d.data) {
+        return true; // Keep trying until data comes in.
+    }
+    CANVAS_3D_START = imageData3d.data.slice(0, 5000);
+    CANVAS_3D_END = imageData3d.slice(-5000);
+
+    const uniqueStart = new Set(CANVAS_3D_START);
+    const uniqueEnd = new Set(CANVAS_3D_END);
+    if (uniqueStart.size === 1 && uniqueStart.has(0) && uniqueEnd.size === 1 && uniqueEnd.has(0)) {
+        return true; // Map tiles have not loaded yet.
+    }
+
+    return false; // 3D canvas has not changed since the last 2D canvas redraw.
+};
+
+/**
+  Redraw the 3D canvas as a 2D canvas so we can mess around with it.
+  We have to extract the image data from the 3D canvas, essentially a screenshot.
+*/
+const redrawCanvasAs2d = () => {
+    if (CANVAS_2D_IS_REDRAWING) {
+        return;
+    }
+
+    CANVAS_2D_IS_REDRAWING = true;
+
+    try {
+        // Paste the 3D image onto a 2D canvas so we can mess with it.
+        const canvas3d = getBigMapCanvas(); // This is a 3D canvas even for NMPZ.
+        const imageData3d = getImageData3d();
+
+        clearCanvas2d();
+        CANVAS_2D = document.createElement('canvas');
+        CANVAS_2D.id = 'gg-big-canvas-2d';
+        CANVAS_2D.width = canvas3d.width;
+        CANVAS_2D.height = canvas3d.height;
+        Object.assign(CANVAS_2D.style, {
+            'pointer-events': 'none',
+        });
+
+        if (!shouldRedraw(imageData3d)) { // If user has not moved, we don't need to do wasteful canvas redraws.
+            CANVAS_2D_IS_REDRAWING = false;
+            return;
+        }
+
+        const ctx2d = CANVAS_2D.getContext('2d');
+        ctx2d.putImageData(imageData3d, 0, 0);
+
+        // Insert the 2D canvas over the 3D canvas. The 3D canvas will remain but is blocked.
+        // Controls will still work on the 3D canvas because we set the pointer-events to none on the 2D canvas (CSS).
+        const mapParent = canvas3d.parentElement.parentElement;
+        mapParent.insertBefore(CANVAS_2D, mapParent.firstChild);
+    } catch (err) {
+        console.log(err);
+        clearCanvas2d();
+    }
+
+    CANVAS_2D_IS_REDRAWING = false;
+};
+
+/**
+  Scatter the canvas into tiles and redraw it.
+  This function assumes that the 2D canvas has already been filled.
+  Sometimes, the 3D canvas takes a little while to load, so this shold be run (sparingly) on an interval,
+    while checking if tile data has changed.
+*/
+const scatterCanvas2d = (nRows, nCols) => {
+    if (!CANVAS_2D) {
+        return;
+    }
+
     const ctx2d = CANVAS_2D.getContext('2d');
-    ctx2d.putImageData(imageData3d, 0, 0);
+    const pieceHeight = CANVAS_2D.height / nRows;
+    const pieceWidth = CANVAS_2D.width / nCols;
 
-    const pieceHeight = canvas3d.height / nRows;
-    const pieceWidth = canvas3d.width / nCols;
-
-    const pieces = [];
+    const tiles = [];
     for (let row = 0; row < nRows; row++) {
         for (let col = 0; col < nCols; col++) {
             const sx = col * pieceWidth;
             const sy = row * pieceHeight;
-            const pieceData = ctx2d.getImageData(sx, sy, pieceWidth, pieceHeight);
-            pieces.push({ imageData: pieceData, sx, sy, originalRow: row, originalCol: col });
+            const tile = ctx2d.getImageData(sx, sy, pieceWidth, pieceHeight);
+            tiles.push({ imageData: tile, sx, sy, originalRow: row, originalCol: col });
         }
     }
 
-    // Scramble the puzzle pieces.
-    const locs = pieces.map(piece => [piece.sx, piece.sy]);
+    // Scramble the tiles.
+    const locs = tiles.map(tile => [tile.sx, tile.sy]);
     const shuffledLocs = shuffleArray(locs);
-    for (const [ix, piece] of Object.entries(pieces)) {
+    for (const [ix, tile] of Object.entries(tiles)) {
         const [sx, sy] = shuffledLocs[Number(ix)];
-        Object.assign(piece, { sx, sy });
+        Object.assign(tile, { sx, sy });
     }
 
-    ctx2d.clearRect(0, 0, CANVAS_2D.width, CANVAS_2D.height); // Remove the original pasted image and redraw as scrambled.
-
-    for (const piece of pieces) {
-        const { imageData, sx, sy } = piece;
+    // Remove the original pasted image and redraw as scrambled.
+    ctx2d.clearRect(0, 0, CANVAS_2D.width, CANVAS_2D.height);
+    for (const tile of tiles) {
+        const { imageData, sx, sy } = tile;
         ctx2d.putImageData(imageData, sx, sy);
     }
-
-    const mapBase3d = canvas3d.parentElement.parentElement;
-    mapBase3d.insertBefore(CANVAS_2D, mapBase3d.firstChild);
-    _IS_REDRAWING_2D = false;
 };
 
 const updatePuzzle = (forceState = null) => {
@@ -1468,16 +1473,28 @@ const updatePuzzle = (forceState = null) => {
     clearCanvas2d();
 
     if (!active) {
+        if (CANVAS_2D_REDRAW_INTERVAL) {
+            clearInterval(CANVAS_2D_REDRAW_INTERVAL);
+            CANVAS_2D_REDRAW_INTERVAL = undefined;
+        }
         return;
     }
 
     const nRows = getOption(mod, 'nRows');
     const nCols = getOption(mod, 'nCols');
 
+    const makePuzzle = () => {
+        if (CANVAS_2D_IS_REDRAWING) {
+            return;
+        }
+        redrawCanvasAs2d();
+        scatterCanvas2d(nRows, nCols);
+    };
+
     // Sometimes, the streetview is slow to load. The idle event will trigger before all tiles are rendered.
-    // So just retry and redraw the canvas on an interval. This will also take care of moving mode,
-    //   though there will be lag.
-    redrawCanvasAs2d(nRows, nCols);
+    // So just retry and redraw the canvas on an interval. This will also take care of NM and NMPZ modes, though there will be lag.
+    makePuzzle();
+    CANVAS_2D_REDRAW_INTERVAL = setInterval(makePuzzle, 500);
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -1628,7 +1645,9 @@ const _QUOTES = {
         `I am serious, and don't call me Shirley. — Steve McCroskey`,
         `What is this, a center for ants? ... The center has to be at least three times bigger than this. — Derek Zoolander`,
         `Did we just become best friends? YUP!! — Dale Doback, Brennan Huff`,
-
+        `I said "A" "L" "B" "U" .... .... "QUERQUE" — Weird Al`,
+        `Badgers? Badgers? We don't need no stinking badgers! — Raul Hernandez`,
+        `Time to deliver a pizza ball! — Eric Andre`,
     ],
 
     jokes: [
@@ -1655,6 +1674,7 @@ const _QUOTES = {
         `Elephants have about 3 times as many neurons as humans.`,
         `Scientists simulated a fruit fly brain fully. This has 140k neurons (humans have 86 billion)`,
         `On average, Mercury is closer to Earth than Venus.`,
+        `The Jamaican flag is the only country flag that does not contain red, white, or blue.`,
     ],
 
 };
