@@ -1363,6 +1363,7 @@ const getImageData3d = () => {
 
     // For some reason, this will ofthen return a full black image. Just ignore those. We'll take what we can get.
     const pixelSet = new Set(pixels);
+    console.log(pixelSet);
     if (pixelSet.size === 1 && pixelSet.has(0)) {
         return null;
     }
@@ -1512,7 +1513,7 @@ const updatePuzzle = (forceState = null) => {
     // Sometimes, the streetview is slow to load. The idle event will trigger before all tiles are rendered.
     // So just retry and redraw the canvas on an interval. This will also take care of NM and NMPZ modes, though there will be lag.
     makePuzzle();
-    CANVAS_2D_REDRAW_INTERVAL = setInterval(makePuzzle, 500);
+    CANVAS_2D_REDRAW_INTERVAL = setInterval(makePuzzle, 1000);
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
