@@ -1322,8 +1322,21 @@ const updateLottery = (forceState = null) => {
 // MOD: Puzzle.
 // ===============================================================================================================================
 
-// TODO:
-// - Run on interval with data change check.
+// TODO: why the fuck is it giving all 0s for the 3d view?
+// possible simpler solution: https://stackoverflow.com/questions/40273927/read-pixel-information-from-a-webgl-3d-canvas-return-all-0-0-0-255/40390638
+
+/**
+var webglCanvas;
+
+var offscreenCanvas = document.createElement("canvas");
+offscreenCanvas.width = webglCanvas.width;
+offscreenCanvas.height = webglCanvas.height;
+var ctx = offscreenCanvas.getContext("2d");
+
+ctx.drawImage(webglCanvas,0,0);
+var imageData = ctx.getImageData(0,0, offscreenCanvas.width, offscreenCanvas.height);
+*/
+
 
 // Unfortunately, we can't use the 3D canvas, so we recreate it as a 2D canvas to make the puzzle.
 // This may make this mod unusable with some others. I haven't tested out every combination.
@@ -1333,7 +1346,6 @@ let CANVAS_2D_IS_REDRAWING = false; // If we're still redrawing the previous fra
 let CANVAS_3D_START; // Used to check if the 3D view has changed. We don't want to constantly redraw the canvas for no reason.
 let CANVAS_3D_END; // Also used to check for 3D view changes.
 let CANVAS_2D_REDRAW_INTERVAL; // Interval for redrawing 3D canvas to 2D. Only redraws when first tile has changed.
-let CANVAS_2D_HAS_DRAWN = false; // Track if we've drawn the 2D canvas in the current 3D canvas view.
 
 const clearCanvas2d = () => {
     if (CANVAS_2D && CANVAS_2D.parentElement) {
@@ -1342,51 +1354,57 @@ const clearCanvas2d = () => {
     CANVAS_2D = undefined;
 };
 
-const getImageData3d = (canvas3d) => {
-    const ctx3d = canvas3d.getContext('webgl', { preserveDrawingBuffer: true });
+const getImageData3d = () => {
+    const canvas3d = getBigMapCanvas();
+    const { width, height } = canvas3d;
+    const gl = canvas3d.getContext('webgl'); // { preserveDrawingBuffer: true }
 
     const pixels = new Uint8Array(canvas3d.width * canvas3d.height * 4); // Read image from 3D view. * 4 is because RGBA.
-    ctx3d.readPixels(
+
+    // For some reason, this will ofthen return a full black image. Just ignore those. We'll take what we can get.
+    const pixelSet = new Set(pixels);
+    if (pixelSet.size === 1 && pixelSet.has(0)) {
+        return null;
+    }
+
+    gl.readPixels(
         0, 0,
-        canvas3d.width, canvas3d.height,
-        ctx3d.RGBA, ctx3d.UNSIGNED_BYTE,
+        width, height,
+        gl.RGBA, gl.UNSIGNED_BYTE,
         pixels,
     );
+    console.log(new Set(pixels));
     const imageData3d = new ImageData(new Uint8ClampedArray(pixels), canvas3d.width, canvas3d.height);
     return imageData3d;
 };
 
 /**
-  Check if the first little bit of the 3D canvas has changed.
-  On loading, it might come through as a completely black image. If that's the case, redraw.
-  If the image is actually fully black, we'll have to live with redrawing it, but that should never happen.
+  Check if the start or end of the 3D image has changed (user changed view in any way).
+  If so, we need to redraw the 2D canvas.
 */
 const shouldRedraw = (imageData3d) => {
-    if (!CANVAS_2D_HAS_DRAWN) {
-        return true; // Initial draw of current view.
-    }
     if (!imageData3d || !imageData3d.data) {
-        return true; // Keep trying until data comes in.
+        return false; // Most likely returned a black screen.
     }
     CANVAS_3D_START = imageData3d.data.slice(0, 5000);
-    CANVAS_3D_END = imageData3d.slice(-5000);
+    CANVAS_3D_END = imageData3d.data.slice(-5000);
 
-    const uniqueStart = new Set(CANVAS_3D_START);
+    const uniqueStart = new Set(CANVAS_3D_START); // Technically could be the exact same Set of pixels, but it's unlikely.
     const uniqueEnd = new Set(CANVAS_3D_END);
     if (uniqueStart.size === 1 && uniqueStart.has(0) && uniqueEnd.size === 1 && uniqueEnd.has(0)) {
         return true; // Map tiles have not loaded yet.
     }
-
     return false; // 3D canvas has not changed since the last 2D canvas redraw.
 };
 
 /**
   Redraw the 3D canvas as a 2D canvas so we can mess around with it.
   We have to extract the image data from the 3D canvas, essentially a screenshot.
+  Return true if the canvas was redrawn, else false.
 */
 const redrawCanvasAs2d = () => {
     if (CANVAS_2D_IS_REDRAWING) {
-        return;
+        return false;
     }
 
     CANVAS_2D_IS_REDRAWING = true;
@@ -1395,6 +1413,11 @@ const redrawCanvasAs2d = () => {
         // Paste the 3D image onto a 2D canvas so we can mess with it.
         const canvas3d = getBigMapCanvas(); // This is a 3D canvas even for NMPZ.
         const imageData3d = getImageData3d();
+
+        if (!shouldRedraw(imageData3d)) { // If no data, or if user has not moved, we don't need to do wasteful canvas redraws.
+            CANVAS_2D_IS_REDRAWING = false;
+            return false;
+        }
 
         clearCanvas2d();
         CANVAS_2D = document.createElement('canvas');
@@ -1405,11 +1428,6 @@ const redrawCanvasAs2d = () => {
             'pointer-events': 'none',
         });
 
-        if (!shouldRedraw(imageData3d)) { // If user has not moved, we don't need to do wasteful canvas redraws.
-            CANVAS_2D_IS_REDRAWING = false;
-            return;
-        }
-
         const ctx2d = CANVAS_2D.getContext('2d');
         ctx2d.putImageData(imageData3d, 0, 0);
 
@@ -1417,19 +1435,19 @@ const redrawCanvasAs2d = () => {
         // Controls will still work on the 3D canvas because we set the pointer-events to none on the 2D canvas (CSS).
         const mapParent = canvas3d.parentElement.parentElement;
         mapParent.insertBefore(CANVAS_2D, mapParent.firstChild);
+
+        CANVAS_2D_IS_REDRAWING = false;
+        return true; // canvas was redrawn; need to perform additional functions.
     } catch (err) {
         console.log(err);
         clearCanvas2d();
+        return false; // Specifically for error catch.
     }
-
-    CANVAS_2D_IS_REDRAWING = false;
 };
 
 /**
   Scatter the canvas into tiles and redraw it.
   This function assumes that the 2D canvas has already been filled.
-  Sometimes, the 3D canvas takes a little while to load, so this shold be run (sparingly) on an interval,
-    while checking if tile data has changed.
 */
 const scatterCanvas2d = (nRows, nCols) => {
     if (!CANVAS_2D) {
@@ -1440,6 +1458,7 @@ const scatterCanvas2d = (nRows, nCols) => {
     const pieceHeight = CANVAS_2D.height / nRows;
     const pieceWidth = CANVAS_2D.width / nCols;
 
+    // Split 2D image into tiles.
     const tiles = [];
     for (let row = 0; row < nRows; row++) {
         for (let col = 0; col < nCols; col++) {
@@ -1484,11 +1503,10 @@ const updatePuzzle = (forceState = null) => {
     const nCols = getOption(mod, 'nCols');
 
     const makePuzzle = () => {
-        if (CANVAS_2D_IS_REDRAWING) {
-            return;
+        const wasRedrawn = redrawCanvasAs2d();
+        if (wasRedrawn) {
+            scatterCanvas2d(nRows, nCols);
         }
-        redrawCanvasAs2d();
-        scatterCanvas2d(nRows, nCols);
     };
 
     // Sometimes, the streetview is slow to load. The idle event will trigger before all tiles are rendered.
