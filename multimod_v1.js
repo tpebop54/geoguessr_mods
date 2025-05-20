@@ -1326,6 +1326,10 @@ const updateLottery = (forceState = null) => {
 // Unfortunately, we can't use the 3D canvas, so we recreate it as a 2D canvas to make the puzzle.
 // This may make this mod unusable with some others. I haven't tested out every combination.
 
+// TODO
+// - for some reason, it requires a moving motion to start the scramble.
+// - check previous frame so it doesn't rescramble eveery second
+
 let CANVAS_2D; // canvas element that overlays the 3D one.
 let CANVAS_2D_IS_REDRAWING = false; // If we're still redrawing the previous frame, this can brick the site.
 let CANVAS_3D_START; // Used to check if the 3D view has changed. We don't want to constantly redraw the canvas for no reason.
@@ -1338,20 +1342,27 @@ const clearCanvas2d = () => {
         CANVAS_2D.parentElement.removeChild(CANVAS_2D);
     }
     CANVAS_2D = undefined;
+    CANVAS_2D_IS_REDRAWING = false;
+};
+
+const getPixels2d = () => {
+    if (!CANVAS_2D) {
+        return undefined;
+    }
+    const ctx = CANVAS_2D.getContext('2d');
+    const imageData = ctx.getImageData(0, 0 , CANVAS_2D.width, CANVAS_2D.height);
+    return imageData.data;
 };
 
 /**
   Check if the start or end of the 3D image has changed (user changed view in any way).
   If so, we need to redraw the 2D canvas.
 */
-const shouldRedraw = (pixels) => {
-    if (!pixels || !pixels.length) {
+const shouldRedraw = () => {
+    const pixels2d = getPixels2d();
+    if (!pixels2d || !pixels2d.length) {
         return false;
     }
-
-    CANVAS_3D_START = pixels.slice(0, 5000);
-    CANVAS_3D_END = pixels.slice(-5000);
-
     const uniqueStart = new Set(CANVAS_3D_START); // Technically could be the exact same Set of pixels, but it's unlikely.
     const uniqueEnd = new Set(CANVAS_3D_END);
     if (uniqueStart.size === 1 && uniqueStart.has(0) && uniqueEnd.size === 1 && uniqueEnd.has(0)) {
@@ -1385,11 +1396,9 @@ const drawCanvas2d = () => {
         Object.assign(CANVAS_2D.style, {
             'pointer-events': 'none',
         });
-
         // Put 2D canvas on top of 3D and allow pointer events to the 3D.
         const mapParent = canvas3d.parentElement.parentElement;
         mapParent.insertBefore(CANVAS_2D, mapParent.firstChild);
-
         CANVAS_2D_IS_REDRAWING = false;
         return true; // canvas was redrawn; need to perform additional functions.
     } catch (err) {
