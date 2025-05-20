@@ -9,6 +9,7 @@
 // @grant        unsafeWindow
 // @grant        GM_addStyle
 // @grant        GM_openInTab
+// @grant        GM.xmlHttpRequest
 
 // ==/UserScript==
 
@@ -1323,6 +1324,7 @@ const updateLottery = (forceState = null) => {
 // ===============================================================================================================================
 
 // TODO: why the fuck is it giving all 0s for the 3d view?
+// Seems to work after doing a move
 // possible simpler solution: https://stackoverflow.com/questions/40273927/read-pixel-information-from-a-webgl-3d-canvas-return-all-0-0-0-255/40390638
 
 /**
@@ -1354,41 +1356,33 @@ const clearCanvas2d = () => {
     CANVAS_2D = undefined;
 };
 
-const getImageData3d = () => {
+/**
+const getPixels3d = () => {
     const canvas3d = getBigMapCanvas();
     const { width, height } = canvas3d;
     const gl = canvas3d.getContext('webgl'); // { preserveDrawingBuffer: true }
-
     const pixels = new Uint8Array(canvas3d.width * canvas3d.height * 4); // Read image from 3D view. * 4 is because RGBA.
-
-    // For some reason, this will ofthen return a full black image. Just ignore those. We'll take what we can get.
-    const pixelSet = new Set(pixels);
-    console.log(pixelSet);
-    if (pixelSet.size === 1 && pixelSet.has(0)) {
-        return null;
-    }
-
     gl.readPixels(
         0, 0,
         width, height,
         gl.RGBA, gl.UNSIGNED_BYTE,
         pixels,
     );
-    console.log(new Set(pixels));
-    const imageData3d = new ImageData(new Uint8ClampedArray(pixels), canvas3d.width, canvas3d.height);
-    return imageData3d;
+    return pixels;
 };
+*/
 
 /**
   Check if the start or end of the 3D image has changed (user changed view in any way).
   If so, we need to redraw the 2D canvas.
 */
-const shouldRedraw = (imageData3d) => {
-    if (!imageData3d || !imageData3d.data) {
-        return false; // Most likely returned a black screen.
+/**
+const shouldRedraw = (pixels) => {
+    if (!pixels || !pixels.length) {
+        return false;
     }
-    CANVAS_3D_START = imageData3d.data.slice(0, 5000);
-    CANVAS_3D_END = imageData3d.data.slice(-5000);
+    CANVAS_3D_START = pixels.slice(0, 5000);
+    CANVAS_3D_END = pixels.slice(-5000);
 
     const uniqueStart = new Set(CANVAS_3D_START); // Technically could be the exact same Set of pixels, but it's unlikely.
     const uniqueEnd = new Set(CANVAS_3D_END);
@@ -1397,48 +1391,58 @@ const shouldRedraw = (imageData3d) => {
     }
     return false; // 3D canvas has not changed since the last 2D canvas redraw.
 };
+*/
 
 /**
   Redraw the 3D canvas as a 2D canvas so we can mess around with it.
   We have to extract the image data from the 3D canvas, essentially a screenshot.
   Return true if the canvas was redrawn, else false.
 */
-const redrawCanvasAs2d = () => {
-    if (CANVAS_2D_IS_REDRAWING) {
+const drawCanvas2d = () => {
+        if (CANVAS_2D_IS_REDRAWING) {
         return false;
     }
 
     CANVAS_2D_IS_REDRAWING = true;
 
+    //Paste the 3D canvas onto 2D so we can mess with it easier.
     try {
+        clearCanvas2d();
+        const canvas3d = getBigMapCanvas();
+        CANVAS_2D = document.createElement('canvas');
+        CANVAS_2D.id = 'gg-big-canvas-2d';
+        CANVAS_2D.width = canvas3d.width;
+        CANVAS_2D.height = canvas3d.height;
+        const ctx2d = CANVAS_2D.getContext('2d');
+        ctx2d.drawImage(canvas3d, 0, 0);
+        Object.assign(CANVAS_2D.style, {
+            'pointer-events': 'none',
+        });
+
+        // Put 2D canvas on top of 3D and allow pointer events to the 3D.
+        const mapParent = canvas3d.parentElement.parentElement;
+        mapParent.insertBefore(CANVAS_2D, mapParent.firstChild);
+
+        CANVAS_2D_IS_REDRAWING = false;
+        return true; // canvas was redrawn; need to perform additional functions.
+
+        /**
         // Paste the 3D image onto a 2D canvas so we can mess with it.
         const canvas3d = getBigMapCanvas(); // This is a 3D canvas even for NMPZ.
-        const imageData3d = getImageData3d();
+        const pixels = getPixels3d();
 
-        if (!shouldRedraw(imageData3d)) { // If no data, or if user has not moved, we don't need to do wasteful canvas redraws.
+        if (!shouldRedraw(pixels)) { // If no data, or if user has not moved, we don't need to do wasteful canvas redraws.
             CANVAS_2D_IS_REDRAWING = false;
             return false;
         }
 
         clearCanvas2d();
         CANVAS_2D = document.createElement('canvas');
-        CANVAS_2D.id = 'gg-big-canvas-2d';
+
         CANVAS_2D.width = canvas3d.width;
         CANVAS_2D.height = canvas3d.height;
-        Object.assign(CANVAS_2D.style, {
-            'pointer-events': 'none',
-        });
+        */
 
-        const ctx2d = CANVAS_2D.getContext('2d');
-        ctx2d.putImageData(imageData3d, 0, 0);
-
-        // Insert the 2D canvas over the 3D canvas. The 3D canvas will remain but is blocked.
-        // Controls will still work on the 3D canvas because we set the pointer-events to none on the 2D canvas (CSS).
-        const mapParent = canvas3d.parentElement.parentElement;
-        mapParent.insertBefore(CANVAS_2D, mapParent.firstChild);
-
-        CANVAS_2D_IS_REDRAWING = false;
-        return true; // canvas was redrawn; need to perform additional functions.
     } catch (err) {
         console.log(err);
         clearCanvas2d();
@@ -1504,7 +1508,7 @@ const updatePuzzle = (forceState = null) => {
     const nCols = getOption(mod, 'nCols');
 
     const makePuzzle = () => {
-        const wasRedrawn = redrawCanvasAs2d();
+        const wasRedrawn = drawCanvas2d();
         if (wasRedrawn) {
             scatterCanvas2d(nRows, nCols);
         }
@@ -1868,7 +1872,7 @@ const initModsCallback = () => {
         const google = getGoogle();
         google.maps.event.addListenerOnce(GOOGLE_MAP, 'idle', () => { // Actions on initial guess map load.
             initMods();
-            console.log('GeoGuessr mods initialized.');
+            console.log(`Tpebop's mods initialized.`);
         });
     };
 };
