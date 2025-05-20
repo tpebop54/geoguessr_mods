@@ -1323,23 +1323,6 @@ const updateLottery = (forceState = null) => {
 // MOD: Puzzle.
 // ===============================================================================================================================
 
-// TODO: why the fuck is it giving all 0s for the 3d view?
-// Seems to work after doing a move
-// possible simpler solution: https://stackoverflow.com/questions/40273927/read-pixel-information-from-a-webgl-3d-canvas-return-all-0-0-0-255/40390638
-
-/**
-var webglCanvas;
-
-var offscreenCanvas = document.createElement("canvas");
-offscreenCanvas.width = webglCanvas.width;
-offscreenCanvas.height = webglCanvas.height;
-var ctx = offscreenCanvas.getContext("2d");
-
-ctx.drawImage(webglCanvas,0,0);
-var imageData = ctx.getImageData(0,0, offscreenCanvas.width, offscreenCanvas.height);
-*/
-
-
 // Unfortunately, we can't use the 3D canvas, so we recreate it as a 2D canvas to make the puzzle.
 // This may make this mod unusable with some others. I haven't tested out every combination.
 
@@ -1348,6 +1331,7 @@ let CANVAS_2D_IS_REDRAWING = false; // If we're still redrawing the previous fra
 let CANVAS_3D_START; // Used to check if the 3D view has changed. We don't want to constantly redraw the canvas for no reason.
 let CANVAS_3D_END; // Also used to check for 3D view changes.
 let CANVAS_2D_REDRAW_INTERVAL; // Interval for redrawing 3D canvas to 2D. Only redraws when first tile has changed.
+let CANVAS_3D_USER_LISTENERS; // Callback when the user moves, pans, or zooms.
 
 const clearCanvas2d = () => {
     if (CANVAS_2D && CANVAS_2D.parentElement) {
@@ -1357,30 +1341,14 @@ const clearCanvas2d = () => {
 };
 
 /**
-const getPixels3d = () => {
-    const canvas3d = getBigMapCanvas();
-    const { width, height } = canvas3d;
-    const gl = canvas3d.getContext('webgl'); // { preserveDrawingBuffer: true }
-    const pixels = new Uint8Array(canvas3d.width * canvas3d.height * 4); // Read image from 3D view. * 4 is because RGBA.
-    gl.readPixels(
-        0, 0,
-        width, height,
-        gl.RGBA, gl.UNSIGNED_BYTE,
-        pixels,
-    );
-    return pixels;
-};
-*/
-
-/**
   Check if the start or end of the 3D image has changed (user changed view in any way).
   If so, we need to redraw the 2D canvas.
 */
-/**
 const shouldRedraw = (pixels) => {
     if (!pixels || !pixels.length) {
         return false;
     }
+
     CANVAS_3D_START = pixels.slice(0, 5000);
     CANVAS_3D_END = pixels.slice(-5000);
 
@@ -1391,7 +1359,6 @@ const shouldRedraw = (pixels) => {
     }
     return false; // 3D canvas has not changed since the last 2D canvas redraw.
 };
-*/
 
 /**
   Redraw the 3D canvas as a 2D canvas so we can mess around with it.
@@ -1425,28 +1392,10 @@ const drawCanvas2d = () => {
 
         CANVAS_2D_IS_REDRAWING = false;
         return true; // canvas was redrawn; need to perform additional functions.
-
-        /**
-        // Paste the 3D image onto a 2D canvas so we can mess with it.
-        const canvas3d = getBigMapCanvas(); // This is a 3D canvas even for NMPZ.
-        const pixels = getPixels3d();
-
-        if (!shouldRedraw(pixels)) { // If no data, or if user has not moved, we don't need to do wasteful canvas redraws.
-            CANVAS_2D_IS_REDRAWING = false;
-            return false;
-        }
-
-        clearCanvas2d();
-        CANVAS_2D = document.createElement('canvas');
-
-        CANVAS_2D.width = canvas3d.width;
-        CANVAS_2D.height = canvas3d.height;
-        */
-
     } catch (err) {
         console.log(err);
         clearCanvas2d();
-        return false; // Specifically for error catch.
+        return false;
     }
 };
 
@@ -1541,6 +1490,7 @@ const _BINDINGS = [
     [MODS.puzzle, updatePuzzle],
 ];
 
+// TODO
 const closePopup = (evt) => { // Always close the popup menu when disabling a mod.
 
 };
@@ -2317,12 +2267,6 @@ const style = `
         z-index: 99999999;
     }
 
-    #gg-big-canvas-2d {
-        -webkit-transform: scale(1, -1);
-        -moz-transform: scale(1, -1);
-        -o-transform: scale(1, -1);
-        transform: scale(1, -1);
-    }
 `;
 
 GM_addStyle(style);
