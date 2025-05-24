@@ -1339,6 +1339,7 @@ let CANVAS_3D_START; // Used to check if the 3D view has changed. We don't want 
 let CANVAS_3D_END; // Also used to check for 3D view changes.
 let CANVAS_2D_REDRAW_INTERVAL; // Interval for redrawing 3D canvas to 2D. Only redraws when first tile has changed.
 let CANVAS_3D_USER_LISTENERS; // Callback when the user moves, pans, or zooms.
+const PUZZLE_HOVER_TINT = '#009900'; // Used for drag and drop formatting.
 
 const clearCanvas2d = () => {
     if (CANVAS_2D && CANVAS_2D.parentElement) {
@@ -1497,7 +1498,7 @@ const updatePuzzle = (forceState = null) => {
     let tileHeight;
     let currentTile;
     let currentDropTile;
-    let mouse;
+    let mouse = { x: 0, y: 0 };
 
     const onPuzzleClick = (evt) => {
         if (evt.layerX || evt.layerX === 0) {
@@ -1542,7 +1543,7 @@ const updatePuzzle = (forceState = null) => {
                 mouse.x < tile.xPos ||
                 mouse.x > tile.xPos + tileWidth ||
                 mouse.y < tile.yPos ||
-                mouse.y > tile.yPos + tileHeight,
+                mouse.y > tile.yPos + tileHeight
             ) {
                 // Tile was not clicked.
             } else {
@@ -1552,16 +1553,16 @@ const updatePuzzle = (forceState = null) => {
         return null;
     };
 
-    CANVAS_2D.addEventListener('load', onImage, false); // TODO
+    // CANVAS_2D.addEventListener('load', onImage, false); // TODO
 
     const updatePuzzle = (e) => {
         currentDropTile = null;
         if (e.layerX || e.layerX == 0) {
-            mouse.x = e.layerX - canvas.offsetLeft;
-            mouse.y = e.layerY - canvas.offsetTop;
+            mouse.x = e.layerX - CANVAS_2D.offsetLeft;
+            mouse.y = e.layerY - CANVAS_2D.offsetTop;
         } else if (e.offsetX || e.offsetX == 0) {
-            mouse.x = e.offsetX - canvas.offsetLeft;
-            mouse.y = e.offsetY - canvas.offsetTop;
+            mouse.x = e.offsetX - CANVAS_2D.offsetLeft;
+            mouse.y = e.offsetY - CANVAS_2D.offsetTop;
         }
         ctx.clearRect(0, 0, puzzleWidth, puzzleHeight);
         for (const tile of tiles) {
@@ -1900,8 +1901,12 @@ const _QUOTES = {
 // Can be configured toward the top of the file. If you don't like jokes or something.
 const _QUOTES_FLAT = [];
 for (const [key, value] of Object.entries(SHOW_QUOTES)) {
-    if (key) {
-        _QUOTES_FLAT.push(...value);
+    if (value) {
+        const quotesThisCategory = _QUOTES[key];
+        if (!quotesThisCategory) {
+            continue;
+        }
+        _QUOTES_FLAT.push(...quotesThisCategory);
     }
 }
 
