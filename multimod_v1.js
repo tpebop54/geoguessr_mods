@@ -181,17 +181,17 @@ const MODS = {
         show: true,
         key: 'puzzle',
         name: 'Puzzle',
-        tooltip: 'Split up the large map into pieces and rearrange them randomly',
+        tooltip: 'Split up the large map into tiles and rearrange them randomly',
         options: {
             nRows: {
                 label: '# Rows',
                 default: 4,
-                tooltip: 'How many pieces to split up the puzzle into vertically.',
+                tooltip: 'How many tiles to split up the puzzle into vertically.',
             },
             nCols: {
                 label: '# Columns',
                 default: 4,
-                tooltip: 'How many pieces to split up the puzzle into horizontally.',
+                tooltip: 'How many tiles to split up the puzzle into horizontally.',
             },
         },
     },
@@ -1325,11 +1325,13 @@ const updateLottery = (forceState = null) => {
 
 // Unfortunately, we can't use the 3D canvas, so we recreate it as a 2D canvas to make the puzzle.
 // This may make this mod unusable with some others. I haven't tested out every combination.
+// Also, shit this was hard to figure out.
 
 // TODO
 // - for some reason, it requires a moving motion to start the scramble.
-// - check previous frame so it doesn't rescramble eveery second
+// - check previous frame so it doesn't rescramble eveery second.
 // - add option to rescramble every X milliseconds.
+// - add option to make to actual puzzle.
 
 let CANVAS_2D; // canvas element that overlays the 3D one.
 let CANVAS_2D_IS_REDRAWING = false; // If we're still redrawing the previous frame, this can brick the site.
@@ -1419,16 +1421,16 @@ const scatterCanvas2d = (nRows, nCols) => {
     }
 
     const ctx2d = CANVAS_2D.getContext('2d');
-    const pieceHeight = CANVAS_2D.height / nRows;
-    const pieceWidth = CANVAS_2D.width / nCols;
+    const tileWidth = CANVAS_2D.width / nCols;
+    const tileHeight = CANVAS_2D.height / nRows;
 
     // Split 2D image into tiles.
     const tiles = [];
     for (let row = 0; row < nRows; row++) {
         for (let col = 0; col < nCols; col++) {
-            const sx = col * pieceWidth;
-            const sy = row * pieceHeight;
-            const tile = ctx2d.getImageData(sx, sy, pieceWidth, pieceHeight);
+            const sx = col * tileWidth;
+            const sy = row * tileHeight;
+            const tile = ctx2d.getImageData(sx, sy, tileWidth, tileHeight);
             tiles.push({ imageData: tile, sx, sy, originalRow: row, originalCol: col });
         }
     }
@@ -1447,6 +1449,12 @@ const scatterCanvas2d = (nRows, nCols) => {
         const { imageData, sx, sy } = tile;
         ctx2d.putImageData(imageData, sx, sy);
     }
+
+    return {
+        tileWidth,
+        tileHeight,
+        tiles,
+    };
 };
 
 const updatePuzzle = (forceState = null) => {
@@ -1465,18 +1473,221 @@ const updatePuzzle = (forceState = null) => {
 
     const nRows = getOption(mod, 'nRows');
     const nCols = getOption(mod, 'nCols');
+    let tiles;
 
     const makePuzzle = () => {
         const wasRedrawn = drawCanvas2d();
         if (wasRedrawn) {
-            scatterCanvas2d(nRows, nCols);
+            const scattered = scatterCanvas2d(nRows, nCols); // TODO: don't run on interval unless specified.
+            tiles = scattered.tiles;
         }
     };
 
     // Sometimes, the streetview is slow to load. The idle event will trigger before all tiles are rendered.
     // So just retry and redraw the canvas on an interval. This will also take care of NM and NMPZ modes, though there will be lag.
     makePuzzle();
-    CANVAS_2D_REDRAW_INTERVAL = setInterval(makePuzzle, 1000);
+
+    // ref: https://webdesign.tutsplus.com/create-an-html5-canvas-tile-swapping-puzzle--active-10747t
+    const ctx = CANVAS_2D.getContext('2d');
+
+    const img = new Image();
+    let puzzleWidth;
+    let puzzleHeight;
+    let tileWidth;
+    let tileHeight;
+    let currentTile;
+    let currentDropTile;
+    let mouse;
+
+    const onPuzzleClick = (evt) => {
+        if (evt.layerX || evt.layerX === 0) {
+            mouse.x = evt.layerX - CANVAS_2D.offsetLeft;
+            mouse.y = evt.layerY - CANVAS_2D;
+        } else if (evt.offsetX || evt.offsetX === 0) {
+            mouse.x = evt.offsetX - CANVAS_2D.offsetLeft;
+            mouse.y = evt.offsetY - CANVAS_2D.offsetTop;
+        }
+        currentTile = checkTileClicked();
+        if (currentTile !== null) {
+            ctx.clearRect(
+                currentTile.xPos,
+                currentTile.yPos,
+                tileWidth,
+                tileHeight,
+            );
+            ctx.save();
+            ctx.globalAlpha = 0.9;
+            ctx.drawImage(
+                img,
+                currentTile.sx,
+                currentTile.sy,
+                tileWidth,
+                tileHeight,
+                mouse.x - tileWidth / 2,
+                mouse.y - tileHeight / 2,
+                tileWidth,
+                tileHeight,
+            );
+            ctx.restore();
+            document.onpointermove = updatePuzzle;
+            document.onpointerup = tileDropped;
+        }
+    }
+
+    document.onpointerdown = onPuzzleClick; // TODO
+
+    const checkTileClicked = () => {
+        for (const tile of tiles) { // TODO: clean this logic up
+            if (
+                mouse.x < tile.xPos ||
+                mouse.x > tile.xPos + tileWidth ||
+                mouse.y < tile.yPos ||
+                mouse.y > tile.yPos + tileHeight,
+            ) {
+                // Tile was not clicked.
+            } else {
+                return tile;
+            }
+        }
+        return null;
+    };
+
+    CANVAS_2D.addEventListener('load', onImage, false); // TODO
+
+    const updatePuzzle = (e) => {
+        currentDropTile = null;
+        if (e.layerX || e.layerX == 0) {
+            mouse.x = e.layerX - canvas.offsetLeft;
+            mouse.y = e.layerY - canvas.offsetTop;
+        } else if (e.offsetX || e.offsetX == 0) {
+            mouse.x = e.offsetX - canvas.offsetLeft;
+            mouse.y = e.offsetY - canvas.offsetTop;
+        }
+        ctx.clearRect(0, 0, puzzleWidth, puzzleHeight);
+        for (const tile of tiles) {
+            if (tile == currentTile) {
+                continue;
+            }
+            ctx.drawImage(
+                img,
+                tile.sx,
+                tile.sy,
+                tileWidth,
+                tileHeight,
+                tile.xPos,
+                tile.yPos,
+                tileWidth,
+                tileHeight
+            );
+            ctx.strokeRect(tile.xPos, tile.yPos, tileWidth, tileHeight);
+            if (currentDropTile == null) {
+                if ( // TODO: shares some logic from above
+                    mouse.x < tile.xPos ||
+                    mouse.x > tile.xPos + tileWidth ||
+                    mouse.y < tile.yPos ||
+                    mouse.y > tile.yPos + tileHeight
+                ) {
+                    //NOT OVER
+                } else {
+                    currentDropTile = tile;
+                    ctx.save();
+                    ctx.globalAlpha = 0.4;
+                    ctx.fillStyle = PUZZLE_HOVER_TINT;
+                    ctx.fillRect(
+                        currentDropTile.xPos,
+                        currentDropTile.yPos,
+                        tileWidth,
+                        tileHeight
+                    );
+                    ctx.restore();
+                }
+            }
+        }
+        ctx.save();
+        ctx.globalAlpha = 0.6;
+        ctx.drawImage(
+            img,
+            currentTile.sx,
+            currentTile.sy,
+            tileWidth,
+            tileHeight,
+            mouse.x - tileWidth / 2,
+            mouse.y - tileHeight / 2,
+            tileWidth,
+            tileHeight
+        );
+        ctx.restore();
+        ctx.strokeRect(
+            mouse.x - tileWidth / 2,
+            mouse.y - tileHeight / 2,
+            tileWidth,
+            tileHeight
+        );
+    };
+
+    /** TODO
+    const gameOver = () => {
+        document.onpointerdown = null;
+        document.onpointermove = null;
+        document.onpointerup = null;
+        initPuzzle();
+    }
+    */
+
+    const tileDropped = (e) => {
+        document.onpointermove = null;
+        document.onpointerup = null;
+        if (currentDropTile !== null) {
+            let tmp = {
+                xPos: c.xPos,
+                yPos: currentTile.yPos
+            };
+            currentTile.xPos = currentDropTile.xPos;
+            currentTile.yPos = currentDropTile.yPos;
+            currentDropTile.xPos = tmp.xPos;
+            currentDropTile.yPos = tmp.yPos;
+        }
+        resetPuzzleAndCheckWin();
+    }
+
+    const resetPuzzleAndCheckWin = () => {
+        ctx.clearRect(0, 0, puzzleWidth, puzzleHeight);
+        let gameWin = true;
+        for (const tile of tiles) {
+            ctx.drawImage(
+                img,
+                tile.sx,
+                tile.sy,
+                tileWidth,
+                tileHeight,
+                tile.xPos,
+                tile.yPos,
+                tileWidth,
+                tileHeight,
+            );
+            ctx.strokeRect(tile.xPos, tile.yPos, tileWidth, tileHeight);
+            if (tile.xPos != tile.sx || tile.yPos != tile.sy) {
+                gameWin = false;
+            }
+        }
+        if (gameWin) {
+            setTimeout(gameOver, 500);
+        }
+    }
+
+    /** TODO
+    const shuffleArray = (o) => {
+        for (
+            var j, x, i = o.length;
+            i;
+            j = parseInt(Math.random() * i), x = o[--i], o[i] = o[j], o[j] = x
+        );
+        return o;
+    }
+    */
+
+    // TODO: re-enable
+    // CANVAS_2D_REDRAW_INTERVAL = setInterval(makePuzzle, 1000);
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -1588,7 +1799,7 @@ const _QUOTES = {
         `Those who mind don't matter, those who matter don't mind. — Dr. Seuss`,
         `Never stop never stopping.`,
 
-        /** Turning these off because I don't know if bias toward certain languages would be an issue. Safer to just do English until I think about it more.
+        /** Turning these off because I don't know if bias toward certain languages would be an issue, and I can't do every language. Safer to just do English until I think about it more.
 
         // German.
         `Träume nicht dein Leben, sondern lebe deinen Traum.`,
