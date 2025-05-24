@@ -9,6 +9,7 @@
 // @grant        unsafeWindow
 // @grant        GM_addStyle
 // @grant        GM_openInTab
+// @grant        GM.xmlHttpRequest
 
 // ==/UserScript==
 
@@ -108,8 +109,8 @@ const MODS = {
         }
     },
 
-    seizure: {
-        show: true,
+    seizure: { // This one is disabled by default because it's a little insensitive and not safe for streaming. But try it if you want!
+        show: false,
         key: 'seizure',
         name: 'Seizure',
         tooltip: 'Makes large map jitter around. Seizure warning!!',
@@ -188,7 +189,7 @@ const MODS = {
                 tooltip: 'How many pieces to split up the puzzle into vertically.',
             },
             nCols: {
-                label: '# Vertical Pieces',
+                label: '# Columns',
                 default: 4,
                 tooltip: 'How many pieces to split up the puzzle into horizontally.',
             },
@@ -220,6 +221,7 @@ const debugMap = (map, evt) => {
 // ===============================================================================================================================
 
 let GOOGLE_STREETVIEW, GOOGLE_MAP, GOOGLE_SVC; // Assigned in the google API portion of the script.
+let PREV_GOOGLE_STREETVIEW_POV, PREV_GOOGLE_STREETVIEW_POSITION; // Stored state of streetview POV and position, used to detect if either has changed.s
 
 const GG_DEFAULT = {} // Used for default options and restoring options.
 for (const mod of Object.values(MODS)) {
@@ -282,8 +284,15 @@ let GG_CUSTOM_MARKER; // Custom marker. This is not the user click marker. Can o
 let GG_GUESSMAP_BLOCKER; // Div that blocks events to the map. You can still open a debugger by right clicking the menu header.
 
 let IS_DRAGGING = false; // true when user is actively dragging the guessMap. Some of the map events conflict with others.
-let SHOW_QUOTES = true; // On page load, show a random quote if this is true. The blackout screen cannot be turned off without changing code.
-let _CHEAT_DETECTION = true; // true to perform some actions that will make it obvious that a user is using this mod pack.
+
+// On page load, show random quotes, jokes, facts, etc. The blackout screen cannot be turned off without changing code.
+const SHOW_QUOTES = {
+    inspirational: true,
+    heavy: true, // I'll understand if you want to turn this one off.
+    media: true, // From movies and stuff. Generally light-hearted.
+    jokes: true,
+    funFacts: true,
+};
 
 /**
   SCORE_FUNC is a function used to display the overlay that shows how well you clicked (score, direction, whatever).
@@ -294,6 +303,8 @@ let _CHEAT_DETECTION = true; // true to perform some actions that will make it o
 let SCORE_FUNC;
 
 const UPDATE_CALLBACKS = {};
+
+let _CHEAT_DETECTION = true; // true to perform some actions that will make it obvious that a user is using this mod pack.
 
 // -------------------------------------------------------------------------------------------------------------------------------
 
@@ -835,6 +846,15 @@ const setGuessMapEvents = (enabled = true) => {
     container.style.pointerEvents = enabled ? 'auto' : 'none';
 };
 
+const shuffleArray = (arr, inPlace = false) => {
+    const shuffled = inPlace ? arr : [...arr];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+};
+
 // -------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -1304,93 +1324,159 @@ const updateLottery = (forceState = null) => {
 // ===============================================================================================================================
 
 // Unfortunately, we can't use the 3D canvas, so we recreate it as a 2D canvas to make the puzzle.
-// This may make this mod unusable with some others.
-// Also, if you're reading this, gat dang this was hard to figure out.
+// This may make this mod unusable with some others. I haven't tested out every combination.
 
-// TODO:
-// - Hide the moving arrows since they are inactive with the 2d canvas
+// TODO
+// - for some reason, it requires a moving motion to start the scramble.
+// - check previous frame so it doesn't rescramble eveery second
+// - add option to rescramble every X milliseconds.
 
-let CANVAS_2D;
+let CANVAS_2D; // canvas element that overlays the 3D one.
+let CANVAS_2D_IS_REDRAWING = false; // If we're still redrawing the previous frame, this can brick the site.
+let CANVAS_3D_START; // Used to check if the 3D view has changed. We don't want to constantly redraw the canvas for no reason.
+let CANVAS_3D_END; // Also used to check for 3D view changes.
+let CANVAS_2D_REDRAW_INTERVAL; // Interval for redrawing 3D canvas to 2D. Only redraws when first tile has changed.
+let CANVAS_3D_USER_LISTENERS; // Callback when the user moves, pans, or zooms.
+
+const clearCanvas2d = () => {
+    if (CANVAS_2D && CANVAS_2D.parentElement) {
+        CANVAS_2D.parentElement.removeChild(CANVAS_2D);
+    }
+    CANVAS_2D = undefined;
+    CANVAS_2D_IS_REDRAWING = false;
+};
+
+const getPixels2d = () => {
+    if (!CANVAS_2D) {
+        return undefined;
+    }
+    const ctx = CANVAS_2D.getContext('2d');
+    const imageData = ctx.getImageData(0, 0 , CANVAS_2D.width, CANVAS_2D.height);
+    return imageData.data;
+};
+
+/**
+  Check if the start or end of the 3D image has changed (user changed view in any way).
+  If so, we need to redraw the 2D canvas.
+*/
+const shouldRedraw = () => {
+    const pixels2d = getPixels2d();
+    if (!pixels2d || !pixels2d.length) {
+        return false;
+    }
+    const uniqueStart = new Set(CANVAS_3D_START); // Technically could be the exact same Set of pixels, but it's unlikely.
+    const uniqueEnd = new Set(CANVAS_3D_END);
+    if (uniqueStart.size === 1 && uniqueStart.has(0) && uniqueEnd.size === 1 && uniqueEnd.has(0)) {
+        return true; // Map tiles have not loaded yet.
+    }
+    return false; // 3D canvas has not changed since the last 2D canvas redraw.
+};
+
+/**
+  Redraw the 3D canvas as a 2D canvas so we can mess around with it.
+  We have to extract the image data from the 3D canvas, essentially a screenshot.
+  Return true if the canvas was redrawn, else false.
+*/
+const drawCanvas2d = () => {
+        if (CANVAS_2D_IS_REDRAWING) {
+        return false;
+    }
+
+    CANVAS_2D_IS_REDRAWING = true;
+
+    //Paste the 3D canvas onto 2D so we can mess with it easier.
+    try {
+        clearCanvas2d();
+        const canvas3d = getBigMapCanvas();
+        CANVAS_2D = document.createElement('canvas');
+        CANVAS_2D.id = 'gg-big-canvas-2d';
+        CANVAS_2D.width = canvas3d.width;
+        CANVAS_2D.height = canvas3d.height;
+        const ctx2d = CANVAS_2D.getContext('2d');
+        ctx2d.drawImage(canvas3d, 0, 0);
+        Object.assign(CANVAS_2D.style, {
+            'pointer-events': 'none',
+        });
+        // Put 2D canvas on top of 3D and allow pointer events to the 3D.
+        const mapParent = canvas3d.parentElement.parentElement;
+        mapParent.insertBefore(CANVAS_2D, mapParent.firstChild);
+        CANVAS_2D_IS_REDRAWING = false;
+        return true; // canvas was redrawn; need to perform additional functions.
+    } catch (err) {
+        console.log(err);
+        clearCanvas2d();
+        return false;
+    }
+};
+
+/**
+  Scatter the canvas into tiles and redraw it.
+  This function assumes that the 2D canvas has already been filled.
+*/
+const scatterCanvas2d = (nRows, nCols) => {
+    if (!CANVAS_2D) {
+        return;
+    }
+
+    const ctx2d = CANVAS_2D.getContext('2d');
+    const pieceHeight = CANVAS_2D.height / nRows;
+    const pieceWidth = CANVAS_2D.width / nCols;
+
+    // Split 2D image into tiles.
+    const tiles = [];
+    for (let row = 0; row < nRows; row++) {
+        for (let col = 0; col < nCols; col++) {
+            const sx = col * pieceWidth;
+            const sy = row * pieceHeight;
+            const tile = ctx2d.getImageData(sx, sy, pieceWidth, pieceHeight);
+            tiles.push({ imageData: tile, sx, sy, originalRow: row, originalCol: col });
+        }
+    }
+
+    // Scramble the tiles.
+    const locs = tiles.map(tile => [tile.sx, tile.sy]);
+    const shuffledLocs = shuffleArray(locs);
+    for (const [ix, tile] of Object.entries(tiles)) {
+        const [sx, sy] = shuffledLocs[Number(ix)];
+        Object.assign(tile, { sx, sy });
+    }
+
+    // Remove the original pasted image and redraw as scrambled.
+    ctx2d.clearRect(0, 0, CANVAS_2D.width, CANVAS_2D.height);
+    for (const tile of tiles) {
+        const { imageData, sx, sy } = tile;
+        ctx2d.putImageData(imageData, sx, sy);
+    }
+};
 
 const updatePuzzle = (forceState = null) => {
     const mod = MODS.puzzle;
     const active = updateMod(mod, forceState);
 
+    clearCanvas2d();
+
     if (!active) {
-        if (CANVAS_2D) {
-            CANVAS_2D.parentElement.removeChild(CANVAS_2D);
-            CANVAS_2D = undefined;
+        if (CANVAS_2D_REDRAW_INTERVAL) {
+            clearInterval(CANVAS_2D_REDRAW_INTERVAL);
+            CANVAS_2D_REDRAW_INTERVAL = undefined;
         }
         return;
     }
 
-    const canvas3d = getBigMapCanvas(); // 3D even for NMPZ.
-    const ctx3d = canvas3d.getContext('webgl');
+    const nRows = getOption(mod, 'nRows');
+    const nCols = getOption(mod, 'nCols');
 
-    const pixels = new Uint8Array(canvas3d.width * canvas3d.height * 4); // Read image from 3D view.
-    ctx3d.readPixels(
-        0, 0,
-        canvas3d.width, canvas3d.height,
-        ctx3d.RGBA, ctx3d.UNSIGNED_BYTE,
-        pixels,
-    );
-    const imageData3d = new ImageData(new Uint8ClampedArray(pixels), canvas3d.width, canvas3d.height);
-
-    CANVAS_2D = document.createElement('canvas'); // Paste the 3D image onto a 2D canvas so we can mess with it.
-    CANVAS_2D.id = 'gg-big-canvas-2d';
-    CANVAS_2D.width = canvas3d.width;
-    CANVAS_2D.height = canvas3d.height;
-    Object.assign(CANVAS_2D.style, {
-        'pointer-events': 'none',
-    });
-    const ctx2d = CANVAS_2D.getContext('2d');
-    ctx2d.putImageData(imageData3d, 0, 0);
-
-    // TODO: revert
-    // const nRows = getOption(mod, 'nRows');
-    // const nCols = getOption(mod, 'nCols');
-    const nRows = 8;
-    const nCols = 8;
-
-    const pieceHeight = canvas3d.height / nRows;
-    const pieceWidth = canvas3d.width / nCols;
-
-    const pieces = [];
-    for (let row = 0; row < nRows; row++) {
-        for (let col = 0; col < nCols; col++) {
-            const sx = col * pieceWidth;
-            const sy = row * pieceHeight;
-            const pieceData = ctx2d.getImageData(sx, sy, pieceWidth, pieceHeight);
-            pieces.push({ imageData: pieceData, sx, sy, originalRow: row, originalCol: col });
+    const makePuzzle = () => {
+        const wasRedrawn = drawCanvas2d();
+        if (wasRedrawn) {
+            scatterCanvas2d(nRows, nCols);
         }
-    }
-
-    const shuffle = (arr) => { // TODO: move to utility.
-        const shuffled = [...arr];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-        return shuffled;
     };
 
-    // Scramble the puzzle pieces.
-    const locs = pieces.map(piece => [piece.sx, piece.sy]);
-    const shuffledLocs = shuffle(locs);
-    for (const [ix, piece] of Object.entries(pieces)) {
-        const [sx, sy] = shuffledLocs[Number(ix)];
-        Object.assign(piece, { sx, sy });
-    }
-
-    ctx2d.clearRect(0, 0, CANVAS_2D.width, CANVAS_2D.height); // Remove the original pasted image and redraw as scrambled.
-
-    for (const piece of pieces) {
-        const { imageData, sx, sy } = piece;
-        ctx2d.putImageData(imageData, sx, sy);
-    }
-
-    const mapBase3d = canvas3d.parentElement.parentElement;
-    mapBase3d.insertBefore(CANVAS_2D, mapBase3d.firstChild);
+    // Sometimes, the streetview is slow to load. The idle event will trigger before all tiles are rendered.
+    // So just retry and redraw the canvas on an interval. This will also take care of NM and NMPZ modes, though there will be lag.
+    makePuzzle();
+    CANVAS_2D_REDRAW_INTERVAL = setInterval(makePuzzle, 1000);
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -1414,6 +1500,7 @@ const _BINDINGS = [
     [MODS.puzzle, updatePuzzle],
 ];
 
+// TODO
 const closePopup = (evt) => { // Always close the popup menu when disabling a mod.
 
 };
@@ -1470,104 +1557,149 @@ const addButtons = () => { // Add mod buttons to the active round.
 
 // The goal of this is to fuck up the replay file and distract the user by blacking out the screen for the first second or two and clicking around.
 // Should make it obvious in the replay and stream if someone is using this mod pack.
-// Advanced coders could figure it out if they want, but with compiled code and intentional obfuscation here, it will be difficult.
+// Coders could figure it out if they want, but with compiled code and intentional obfuscation here, it will be difficult.
 // Credit to Bennett Foddy for assembling several of these quotes and for a few himself, from my favorite game (Getting Over It with Bennett Foddy).
 // Use the — character (dash, not hyphen) to apply a quote credit, which will show up as a smaller text under the quote.
 
-const _QUOTES = [
+const _QUOTES = {
 
-    // Inspirational.
-    `It is in falling short of your own goals that you will surpass those who exceed theirs. — Tokugawa Ieyasu`,
-    `If you love life, do not waste time- for time is what life is made up of — Bruce Lee`,
-    `Don't let the fear of the time it will take to accomplish something stand in the way of doing it. The time will pass anyway... — Earl Nightingale`,
-    `Spend so much time on the improvement of yourself that you have no time to criticize others — Christian Larson`,
-    `This too shall pass. — Unknown`,
-    `No one can make you feel inferior without your consent — Eleanor Roosevelt`,
-    `Never interrupt your enemy when he is making a mistake. — Napoleon Bonaparte`,
-    `The magic you are looking for is in the work you are avoiding — Unknown`,
-    `The grass is greenest where you water it — Unknown`,
-    `People fear what they don't understand and hate what they can't conquer — Andrew Smith`,
-    `Be who you needed when you were younger. — Unknown`,
-    `A ship in harbor is safe, but that is not what ships are built for. — John A. Shedd`,
-    `There is no hopeless situation, only hopeless people. — Atatürk`,
-    `And those who were seen dancing were thought to be insane by those who could not hear the music. — Friedrich Nietzsche`,
-    `There are no regrets in life, just lessons. — Jennifer Aniston`,
-    `You must be the change you wish to see in the world. — Mahatma Gandhi`,
-    `Don’t count the days, make the days count. — Muhammad Ali`,
-    `I have not failed. I've just found 10,000 ways that won't work. — Thomas Edison`,
-    `Don’t watch the clock. Do what it does. Keep going. — Sam Levenson`,
-    `The best way to predict the future is to create it. — Peter Drucker`,
-    `Do not go where the path may lead, go instead where there is no path and leave a trail. — Ralph Waldo Emerson`,
-    `Those who mind don't matter, those who matter don't mind. — Dr. Seuss`,
+    inspirational: [
+        `It is in falling short of your own goals that you will surpass those who exceed theirs. — Tokugawa Ieyasu`,
+        `If you love life, do not waste time- for time is what life is made up of — Bruce Lee`,
+        `Don't let the fear of the time it will take to accomplish something stand in the way of doing it. The time will pass anyway... — Earl Nightingale`,
+        `Spend so much time on the improvement of yourself that you have no time to criticize others — Christian Larson`,
+        `This too shall pass. — Unknown`,
+        `No one can make you feel inferior without your consent — Eleanor Roosevelt`,
+        `Never interrupt your enemy when he is making a mistake. — Napoleon Bonaparte`,
+        `The magic you are looking for is in the work you are avoiding — Unknown`,
+        `The grass is greenest where you water it — Unknown`,
+        `People fear what they don't understand and hate what they can't conquer — Andrew Smith`,
+        `Be who you needed when you were younger. — Unknown`,
+        `A ship in harbor is safe, but that is not what ships are built for. — John A. Shedd`,
+        `There is no hopeless situation, only hopeless people. — Atatürk`,
+        `And those who were seen dancing were thought to be insane by those who could not hear the music. — Friedrich Nietzsche`,
+        `There are no regrets in life, just lessons. — Jennifer Aniston`,
+        `You must be the change you wish to see in the world. — Mahatma Gandhi`,
+        `Don’t count the days, make the days count. — Muhammad Ali`,
+        `I have not failed. I've just found 10,000 ways that won't work. — Thomas Edison`,
+        `Don’t watch the clock. Do what it does. Keep going. — Sam Levenson`,
+        `The best way to predict the future is to create it. — Peter Drucker`,
+        `Do not go where the path may lead, go instead where there is no path and leave a trail. — Ralph Waldo Emerson`,
+        `Those who mind don't matter, those who matter don't mind. — Dr. Seuss`,
+        `Never stop never stopping.`,
 
-    // Heavy stuff.
-    `This thing that we call failure is not the falling down, but the staying down. — Mary Pickford`,
-    `The soul would have no rainbow had the eyes no tears. — John Vance Cheney`,
-    `The pain I feel now is the happiness I had before. That's the deal. — C.S. Lewis`,
-    `I feel within me a peace above all earthly dignities, a still and quiet consciences. — William Shakespeare`,
-    `You cannot believe now that you'll ever feel better. But this is not true. You are sure to be happy again. Knowing this, truly believing it, will make you less miserable now. — Abraham Lincoln`,
-    `Do not stand at my grave and cry, I am not there, I did not die. — Mary Frye`,
-    `To live is to suffer. To survive is to find meaning in the suffering. — Friedrich Nietzsche`,
-    `Of all sad words of tongue or pen, the saddest are these, 'It might have been'. — John Greenleaf Whittier`,
-    `If you try to please audiences, uncritically accepting their tastes, it can only mean that you have no respect for them. — Andrei Tarkovsky`,
-    `In the end… We only regret the chances we didn’t take. — Lewis Carroll`,
-    `There’s no feeling more intense than starting over. Starting over is harder than starting up. — Bennett Foddy`,
-    `Imaginary mountains build themselves from our efforts to climb them, and it's our repeated attempts to reach the summit that turns those mountains into something real. — Bennett Foddy`,
-    `Be yourself. Everyone else is already taken. — Oscar Wilde`,
-    `Whether you think you can or you think you can’t, you’re right. — Henry Ford`,
-    `The only true wisdom is in knowing you know nothing. — Socrates`,
-    `Painting is silent poetry, and poetry is painting that speaks. — Plutarch`,
-    `Muddy water is best cleared by leaving it alone. — Watts`,
+        /** Turning these off because I don't know if bias toward certain languages would be an issue. Safer to just do English until I think about it more.
 
-    // Funny, light-hearted, or from movies/TV/celebrities.
-    `Don't hate the player. Hate the game. — Ice-T`,
-    `I came here to chew bubblegum and kick [butt], and I'm all out of bubblegum — Roddy Piper`,
-    `That rug really tied the room together. — The Dude`,
-    `If you don't know what you want, you end up with a lot you don't. — Tyler Durden`,
-    `Do. Or do not. There is no try. — Yoda`,
-    `Big Gulps, huh? Alright! Welp, see ya later! — Lloyd Christmas`,
-    `You are tearing me apart, Lisa! — Johnny (Tommy Wiseau)`,
-    `I'm Ron Burgundy? — Ron Burgundy`,
-    `You're out of your element, Donny! — Walter Sobchak`,
-    `I have had it with these [gosh darn] snakes on this [gosh darn] plane — Neville Flynn`,
-    `Welcome to CostCo. I love you. — Unknown (2505)`,
-    `Brawndo's got what plants crave. It's got electrolytes. — Secretary of State (2505)`,
-    `So you're telling me there's a chance! — Lloyd Christmas`,
-    `I am serious, and don't call me Shirley. — Steve McCroskey`,
-    `What is this, a center for ants? ... The center has to be at least three times bigger than this. — Derek Zoolander`,
-    `Did we just become best friends? YUP!! — Dale Doback, Brennan Huff`,
+        // German.
+        `Träume nicht dein Leben, sondern lebe deinen Traum.`,
+        `Auch der weiteste Weg beginnt mit einem ersten Schritt. — Laozi`
+        `Man entdeckt keine neuen Erdteile, ohne den Mut zu haben, alte Küsten aus den Augen zu verlieren. — André Gide`,
+        `Es ist nicht wenig Zeit, die wir haben, sondern es ist viel Zeit, die wir nicht nutzen. — Seneca`
 
-    // Jokes.
-    `When birds fly in V-formation, one side is usually longer. Know why? That side has more birds on it.`,
-    `I broke my leg in two places. My doctor told me to stop going to those places.`,
-    `Why do birds fly south in the winter? Because it's too far to walk.`,
-    `Orion's Belt is a massive waist of space.`,
-    `Do your shoes have holes in them? No? Then how did you get your feet in them?`,
-    `A magician was walking down the street. Then he turned into a grocery store.`,
-    `Why do scuba divers fall backward off the boat? If they fell forward, they'd still be in the boat.`,
-    `Did the old lady fall down the well because she didn't see that well, or that well because she didn't see the well?`,
+        // Polish.
+        `Największą mądrością jest umieć cieszyć się chwilą. — Stanisław Lem`,
+        `Lepiej zapalić świecę, niż przeklinać ciemność. — Jerzy Popiełuszko`,
 
-    // Fun facts.
-    `Sloths can hold their breath longer than dolphins.`,
-    `Koalas have fingerprints so similar to humans that they can confuse crime scene investigators.`,
-    `The pistol shrimp snaps its claw so fast it creates a bubble hotter than the surface of the sun.`,
-    `Dogs' nose prints are as unique as human fingerprints.`,
-    `Sharks existed before trees.`,
-    `Jupiter has the shortest day of any planet in our solar system.`,
-    `There are more permutations of a deck of playing cards than stars in the obervable universe. Like, a lot more.`,
-    `Earth would turn into a black hole if condensed into a 0.87cm radius.`,
-    `Elephants have about 3 times as many neurons as humans.`,
-    `Scientists simulated a fruit fly brain fully. This has 140k neurons (humans have 86 billion)`,
-    `On average, Mercury is closer to Earth than Venus.`,
+        */
+    ],
 
-    // Misc.
-    `In the vacuum of space, no one can hear you get mad at your GeoGuessr game.`,
+    heavy: [
+        `This thing that we call failure is not the falling down, but the staying down. — Mary Pickford`,
+        `The soul would have no rainbow had the eyes no tears. — John Vance Cheney`,
+        `The pain I feel now is the happiness I had before. That's the deal. — C.S. Lewis`,
+        `I feel within me a peace above all earthly dignities, a still and quiet consciences. — William Shakespeare`,
+        `You cannot believe now that you'll ever feel better. But this is not true. You are sure to be happy again. Knowing this, truly believing it, will make you less miserable now. — Abraham Lincoln`,
+        `Do not stand at my grave and cry, I am not there, I did not die. — Mary Frye`,
+        `To live is to suffer. To survive is to find meaning in the suffering. — Friedrich Nietzsche`,
+        `Of all sad words of tongue or pen, the saddest are these, 'It might have been. — John Greenleaf Whittier`,
+        `If you try to please audiences, uncritically accepting their tastes, it can only mean that you have no respect for them. — Andrei Tarkovsky`,
+        `In the end… We only regret the chances we didn’t take. — Lewis Carroll`,
+        `There’s no feeling more intense than starting over. Starting over is harder than starting up. — Bennett Foddy`,
+        `Imaginary mountains build themselves from our efforts to climb them, and it's our repeated attempts to reach the summit that turns those mountains into something real. — Bennett Foddy`,
+        `Be yourself. Everyone else is already taken. — Oscar Wilde`,
+        `Whether you think you can or you think you can’t, you’re right. — Henry Ford`,
+        `The only true wisdom is in knowing you know nothing. — Socrates`,
+        `Painting is silent poetry, and poetry is painting that speaks. — Plutarch`,
+        `Muddy water is best cleared by leaving it alone. — Alan Watts`,
+        `Do not go gentle into that good night. Old age should burn and rave at close of day. Rage, rage against the dying of the light. — Dylan Thomas`,
+        `You can be mad as a mad dog at the way things went. You could swear, and curse the fates. But when it comes to the end, you have to let go. — Benjamin Button`,
+        `It's a funny thing about comin' home. Looks the same, smells the same, feels the same. You'll realize what's changed is you. — Benjamin Button`,
+        `Do you consider your big toe to be your pointer toe or your thumb toe? — Tpebop`,
+    ],
 
-];
+    media: [ // Funny, light-hearted, or from movies/TV/celebrities. Some of the heavy stuff is also from media, but they belong in the heavy section.
+        `Don't hate the player. Hate the game. — Ice-T`,
+        `I came here to chew bubblegum and kick [butt], and I'm all out of bubblegum — Roddy Piper`,
+        `That rug really tied the room together. — The Dude`,
+        `If you don't know what you want, you end up with a lot you don't. — Tyler Durden`,
+        `Do. Or do not. There is no try. — Yoda`,
+        `Big Gulps, huh? Alright! Welp, see ya later! — Lloyd Christmas`,
+        `You are tearing me apart, Lisa! — Johnny (Tommy Wiseau)`,
+        `I'm Ron Burgundy? — Ron Burgundy`,
+        `You're out of your element, Donny! — Walter Sobchak`,
+        `I have had it with these [gosh darn] snakes on this [gosh darn] plane — Neville Flynn`,
+        `Welcome to CostCo. I love you. — Unknown (2505)`,
+        `Brawndo's got what plants crave. It's got electrolytes. — Secretary of State (2505)`,
+        `So you're telling me there's a chance! — Lloyd Christmas`,
+        `I am serious, and don't call me Shirley. — Steve McCroskey`,
+        `What is this, a center for ants? ... The center has to be at least three times bigger than this. — Derek Zoolander`,
+        `Did we just become best friends? YUP!! — Dale Doback, Brennan Huff`,
+        `I said "A" "L" "B" "U" .... .... "QUERQUE" — Weird Al`,
+        `Badgers? Badgers? We don't need no stinking badgers! — Raul Hernandez`,
+        `Time to deliver a pizza ball! — Eric Andre`,
+    ],
+
+    jokes: [
+        `When birds fly in V-formation, one side is usually longer. Know why? That side has more birds on it.`,
+        `I broke my leg in two places. My doctor told me to stop going to those places.`,
+        `Why do birds fly south in the winter? Because it's too far to walk.`,
+        `Orion's Belt is a massive waist of space.`,
+        `Do your shoes have holes in them? No? Then how did you get your feet in them?`,
+        `A magician was walking down the street. Then he turned into a grocery store.`,
+        `Why do scuba divers fall backward off the boat? If they fell forward, they'd still be in the boat.`,
+        `Did the old lady fall down the well because she didn't see that well, or that well because she didn't see the well?`,
+        `In the vacuum of space, no one can hear you get mad at your GeoGuessr game.`,
+    ],
+
+    funFacts: [
+        `Sloths can hold their breath longer than dolphins.`,
+        `Koalas have fingerprints so similar to humans that they can confuse crime scene investigators.`,
+        `The pistol shrimp snaps its claw so fast it creates a bubble hotter than the surface of the sun.`,
+        `Dogs' nose prints are as unique as human fingerprints.`,
+        `Sharks existed before trees.`,
+        `Jupiter has the shortest day of any planet in our solar system.`,
+        `There are more permutations of a deck of playing cards than stars in the obervable universe. Like, a lot more.`,
+        `Earth would turn into a black hole if condensed into a 0.87cm radius.`,
+        `Elephants have about 3 times as many neurons as humans.`,
+        `Scientists simulated a fruit fly brain fully. This has 140k neurons (humans have 86 billion)`,
+        `On average, Mercury is closer to Earth than Venus.`,
+        `The Jamaican flag is the only country flag that does not contain red, white, or blue.`,
+        `Nintendo was founded before the fall of the Ottoman Empire.`,
+        `The fax machine was invented before the telephone.`,
+        `The Titanic sank before the invention of sunscreen.`,
+        `The first transatlantic telephone call was the same year that Winnie-the-Pooh was published (1926)`,
+        `The first moon landing was 66 years after the first Wright brothers' flight of 12 seconds.`,
+        `A cheap Casio watch or an Arduino Uno have the computing power of the first lunar lander. $10-$20.`,
+        `The inventor of the glue used in Post-Its intended to make a very strong glue but accidentally made a very weak glue.`,
+        `Popsicles were invented by an 11-year-old.`,
+    ],
+
+};
+
+// Can be configured toward the top of the file. If you don't like jokes or something.
+const _QUOTES_FLAT = [];
+for (const [key, value] of Object.entries(SHOW_QUOTES)) {
+    if (key) {
+        _QUOTES_FLAT.push(...value);
+    }
+}
 
 const getRandomQuote = () => {
-    const ix = Math.floor(Math.random() * _QUOTES.length);
-    const quote = _QUOTES[ix];
+    if (!SHOW_QUOTES || !_QUOTES_FLAT.length) {
+        return 'Loading...';
+    }
+    const ix = Math.floor(Math.random() * _QUOTES_FLAT.length);
+    const quote = _QUOTES_FLAT[ix];
     return quote;
 };
 
@@ -1590,18 +1722,18 @@ let _CH_EA_AT_DE_TE_CT_IO_N = 'on your honor';
 
 window.addEventListener('load', () => {
     if (_CH_EA_AT_DE_TE_CT_IO_N || !_CH_EA_AT_DE_TE_CT_IO_N) {
-        // Yeah, yeah. If you made it this far in the code, you can c h eat if you really want. You'll get caught.
+        // Yeah, yeah. If you made it this far in the c ode, you can c h eat if you really want. You'll get caught.
     }
     clearCh_eatOverlay();
     const che_atOverlay = document.createElement('div'); // Opaque black div that covers everything while the page loads.
-    Object.assign(che_atOverlay.style, { // Intentionally not in CSS to make it harder for people to figure out.
+    Object.assign(che_atOverlay.style, { // Intentionally not in C SS to make it harder for people to figure out.
         height: '100vh',
         width: '100vw',
         background: 'black',
         'z-index': '99999999',
     });
     const quoteDiv = document.createElement('div');
-    const quote = SHOW_QUOTES ? getRandomQuote() : 'Loading...';
+    const quote = getRandomQuote();
     let parts;
     try {
         parts = splitQuote(quote);
@@ -1730,7 +1862,7 @@ const initModsCallback = () => {
         const google = getGoogle();
         google.maps.event.addListenerOnce(GOOGLE_MAP, 'idle', () => { // Actions on initial guess map load.
             initMods();
-            console.log('GeoGuessr mods initialized.');
+            console.log(`Tpebop's mods initialized.`);
         });
     };
 };
@@ -2175,12 +2307,6 @@ const style = `
         z-index: 99999999;
     }
 
-    #gg-big-canvas-2d {
-        -webkit-transform: scale(1, -1);
-        -moz-transform: scale(1, -1);
-        -o-transform: scale(1, -1);
-        transform: scale(1, -1);
-    }
 `;
 
 GM_addStyle(style);
