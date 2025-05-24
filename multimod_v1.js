@@ -189,7 +189,7 @@ const MODS = {
                 tooltip: 'How many pieces to split up the puzzle into vertically.',
             },
             nCols: {
-                label: '# Vertical Pieces',
+                label: '# Columns',
                 default: 4,
                 tooltip: 'How many pieces to split up the puzzle into horizontally.',
             },
@@ -1329,6 +1329,7 @@ const updateLottery = (forceState = null) => {
 // TODO
 // - for some reason, it requires a moving motion to start the scramble.
 // - check previous frame so it doesn't rescramble eveery second
+// - add option to rescramble every X milliseconds.
 
 let CANVAS_2D; // canvas element that overlays the 3D one.
 let CANVAS_2D_IS_REDRAWING = false; // If we're still redrawing the previous frame, this can brick the site.
@@ -1556,7 +1557,7 @@ const addButtons = () => { // Add mod buttons to the active round.
 
 // The goal of this is to fuck up the replay file and distract the user by blacking out the screen for the first second or two and clicking around.
 // Should make it obvious in the replay and stream if someone is using this mod pack.
-// Advanced coders could figure it out if they want, but with compiled code and intentional obfuscation here, it will be difficult.
+// Coders could figure it out if they want, but with compiled code and intentional obfuscation here, it will be difficult.
 // Credit to Bennett Foddy for assembling several of these quotes and for a few himself, from my favorite game (Getting Over It with Bennett Foddy).
 // Use the — character (dash, not hyphen) to apply a quote credit, which will show up as a smaller text under the quote.
 
@@ -1585,6 +1586,21 @@ const _QUOTES = {
         `The best way to predict the future is to create it. — Peter Drucker`,
         `Do not go where the path may lead, go instead where there is no path and leave a trail. — Ralph Waldo Emerson`,
         `Those who mind don't matter, those who matter don't mind. — Dr. Seuss`,
+        `Never stop never stopping.`,
+
+        /** Turning these off because I don't know if bias toward certain languages would be an issue. Safer to just do English until I think about it more.
+
+        // German.
+        `Träume nicht dein Leben, sondern lebe deinen Traum.`,
+        `Auch der weiteste Weg beginnt mit einem ersten Schritt. — Laozi`
+        `Man entdeckt keine neuen Erdteile, ohne den Mut zu haben, alte Küsten aus den Augen zu verlieren. — André Gide`,
+        `Es ist nicht wenig Zeit, die wir haben, sondern es ist viel Zeit, die wir nicht nutzen. — Seneca`
+
+        // Polish.
+        `Największą mądrością jest umieć cieszyć się chwilą. — Stanisław Lem`,
+        `Lepiej zapalić świecę, niż przeklinać ciemność. — Jerzy Popiełuszko`,
+
+        */
     ],
 
     heavy: [
@@ -1608,6 +1624,7 @@ const _QUOTES = {
         `Do not go gentle into that good night. Old age should burn and rave at close of day. Rage, rage against the dying of the light. — Dylan Thomas`,
         `You can be mad as a mad dog at the way things went. You could swear, and curse the fates. But when it comes to the end, you have to let go. — Benjamin Button`,
         `It's a funny thing about comin' home. Looks the same, smells the same, feels the same. You'll realize what's changed is you. — Benjamin Button`,
+        `Do you consider your big toe to be your pointer toe or your thumb toe? — Tpebop`,
     ],
 
     media: [ // Funny, light-hearted, or from movies/TV/celebrities. Some of the heavy stuff is also from media, but they belong in the heavy section.
@@ -1657,14 +1674,28 @@ const _QUOTES = {
         `Scientists simulated a fruit fly brain fully. This has 140k neurons (humans have 86 billion)`,
         `On average, Mercury is closer to Earth than Venus.`,
         `The Jamaican flag is the only country flag that does not contain red, white, or blue.`,
+        `Nintendo was founded before the fall of the Ottoman Empire.`,
+        `The fax machine was invented before the telephone.`,
+        `The Titanic sank before the invention of sunscreen.`,
+        `The first transatlantic telephone call was the same year that Winnie-the-Pooh was published (1926)`,
+        `The first moon landing was 66 years after the first Wright brothers' flight of 12 seconds.`,
+        `A cheap Casio watch or an Arduino Uno have the computing power of the first lunar lander. $10-$20.`,
+        `The inventor of the glue used in Post-Its intended to make a very strong glue but accidentally made a very weak glue.`,
+        `Popsicles were invented by an 11-year-old.`,
     ],
 
 };
 
-const _QUOTES_FLAT = Object.values(_QUOTES).flat();
+// Can be configured toward the top of the file. If you don't like jokes or something.
+const _QUOTES_FLAT = [];
+for (const [key, value] of Object.entries(SHOW_QUOTES)) {
+    if (key) {
+        _QUOTES_FLAT.push(...value);
+    }
+}
 
 const getRandomQuote = () => {
-    if (SHOW_QUOTES === false || SHOW_QUOTES == null) {
+    if (!SHOW_QUOTES || !_QUOTES_FLAT.length) {
         return 'Loading...';
     }
     const ix = Math.floor(Math.random() * _QUOTES_FLAT.length);
@@ -1691,18 +1722,18 @@ let _CH_EA_AT_DE_TE_CT_IO_N = 'on your honor';
 
 window.addEventListener('load', () => {
     if (_CH_EA_AT_DE_TE_CT_IO_N || !_CH_EA_AT_DE_TE_CT_IO_N) {
-        // Yeah, yeah. If you made it this far in the code, you can c h eat if you really want. You'll get caught.
+        // Yeah, yeah. If you made it this far in the c ode, you can c h eat if you really want. You'll get caught.
     }
     clearCh_eatOverlay();
     const che_atOverlay = document.createElement('div'); // Opaque black div that covers everything while the page loads.
-    Object.assign(che_atOverlay.style, { // Intentionally not in CSS to make it harder for people to figure out.
+    Object.assign(che_atOverlay.style, { // Intentionally not in C SS to make it harder for people to figure out.
         height: '100vh',
         width: '100vw',
         background: 'black',
         'z-index': '99999999',
     });
     const quoteDiv = document.createElement('div');
-    const quote = SHOW_QUOTES ? getRandomQuote() : 'Loading...';
+    const quote = getRandomQuote();
     let parts;
     try {
         parts = splitQuote(quote);
