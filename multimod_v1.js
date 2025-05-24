@@ -1328,7 +1328,7 @@ const updateLottery = (forceState = null) => {
 // Also, shit this was hard to figure out.
 
 // TODO
-// - for some reason, it requires a moving motion to start the scramble.
+// - block tiling until first render.
 // - check previous frame so it doesn't rescramble eveery second.
 // - add option to rescramble every X milliseconds.
 // - add option to make to actual puzzle.
@@ -1458,6 +1458,15 @@ const scatterCanvas2d = (nRows, nCols) => {
     };
 };
 
+let _PUZZLE_WIDTH;
+let _PUZZLE_HEIGHT;
+let _PUZZLE_TILE_WIDTH;
+let _PUZZLE_TILE_HEIGHT;
+let _PUZZLE_CURRENT_TILE;
+let _PUZZLE_CURRENT_DROP_TILE;
+let _PUZZLE_MOUSE_LOC = { x: 0, y: 0 };
+let _PUZZLE_IS_SOLVED = false;
+
 const updatePuzzle = (forceState = null) => {
     const mod = MODS.puzzle;
     const active = updateMod(mod, forceState);
@@ -1492,113 +1501,111 @@ const updatePuzzle = (forceState = null) => {
     const ctx = CANVAS_2D.getContext('2d');
 
     const img = new Image();
-    let puzzleWidth;
-    let puzzleHeight;
-    let tileWidth;
-    let tileHeight;
-    let currentTile;
-    let currentDropTile;
-    let mouse = { x: 0, y: 0 };
-
-    const onPuzzleClick = (evt) => {
-        if (evt.layerX || evt.layerX === 0) {
-            mouse.x = evt.layerX - CANVAS_2D.offsetLeft;
-            mouse.y = evt.layerY - CANVAS_2D;
-        } else if (evt.offsetX || evt.offsetX === 0) {
-            mouse.x = evt.offsetX - CANVAS_2D.offsetLeft;
-            mouse.y = evt.offsetY - CANVAS_2D.offsetTop;
+    const getClickedTile = () => {
+        const { x, y } = _PUZZLE_MOUSE_LOC;
+        if (x == null || y == null) {
+            return null;
         }
-        currentTile = checkTileClicked();
-        if (currentTile !== null) {
-            ctx.clearRect(
-                currentTile.xPos,
-                currentTile.yPos,
-                tileWidth,
-                tileHeight,
-            );
-            ctx.save();
-            ctx.globalAlpha = 0.9;
-            ctx.drawImage(
-                img,
-                currentTile.sx,
-                currentTile.sy,
-                tileWidth,
-                tileHeight,
-                mouse.x - tileWidth / 2,
-                mouse.y - tileHeight / 2,
-                tileWidth,
-                tileHeight,
-            );
-            ctx.restore();
-            document.onpointermove = updatePuzzle;
-            document.onpointerup = tileDropped;
-        }
-    }
+        for (const tile of tiles) {
+            const leftX = tile.sx;
+            const rightX = leftX + tile.imageData.width;
+            const topY = tile.sy;
+            const bottomY = topY + tile.imageData.height; // Greater than topY.
 
-    document.onpointerdown = onPuzzleClick; // TODO
-
-    const checkTileClicked = () => {
-        for (const tile of tiles) { // TODO: clean this logic up
-            if (
-                mouse.x < tile.xPos ||
-                mouse.x > tile.xPos + tileWidth ||
-                mouse.y < tile.yPos ||
-                mouse.y > tile.yPos + tileHeight
-            ) {
-                // Tile was not clicked.
-            } else {
+            if (x >= leftX && x <= rightX && y >= topY && y <= bottomY) {
                 return tile;
             }
         }
         return null;
     };
 
-    // CANVAS_2D.addEventListener('load', onImage, false); // TODO
-
-    const updatePuzzle = (e) => {
-        currentDropTile = null;
-        if (e.layerX || e.layerX == 0) {
-            mouse.x = e.layerX - CANVAS_2D.offsetLeft;
-            mouse.y = e.layerY - CANVAS_2D.offsetTop;
-        } else if (e.offsetX || e.offsetX == 0) {
-            mouse.x = e.offsetX - CANVAS_2D.offsetLeft;
-            mouse.y = e.offsetY - CANVAS_2D.offsetTop;
-        }
-        ctx.clearRect(0, 0, puzzleWidth, puzzleHeight);
+    const checkSolved = () => { // TODO: decide how to handle when puzzle is solved.
+        ctx.clearRect(0, 0, _PUZZLE_WIDTH, _PUZZLE_HEIGHT);
+        let gameWin = true;
         for (const tile of tiles) {
-            if (tile == currentTile) {
+            ctx.drawImage(
+                img,
+                tile.sx,
+                tile.sy,
+                _PUZZLE_TILE_WIDTH,
+                _PUZZLE_TILE_HEIGHT,
+                tile.sx,
+                tile.sy,
+                _PUZZLE_TILE_WIDTH,
+                _PUZZLE_TILE_HEIGHT,
+            );
+            ctx.strokeRect(tile.sx, tile.sy, _PUZZLE_TILE_WIDTH, _PUZZLE_TILE_HEIGHT);
+            if (tile.sx != tile.sx || tile.sy != tile.sy) {
+                gameWin = false;
+            }
+        }
+        if (gameWin) {
+            console.log('solved.'); // TODO
+        }
+    }
+
+    const tileDropped = (e) => {
+        /**
+        document.onpointermove = null;
+        document.onpointerup = null;
+        if (_PUZZLE_CURRENT_DROP_TILE !== null) {
+            let tmp = {
+                sx: _PUZZLE_CURRENT_TILE.sx, // TODO: what the fuck is going on here
+                sy: _PUZZLE_CURRENT_TILE.sy
+            };
+            _PUZZLE_CURRENT_TILE.sx = _PUZZLE_CURRENT_DROP_TILE.sy;
+            _PUZZLE_CURRENT_TILE.sy = _PUZZLE_CURRENT_DROP_TILE.sy;
+            _PUZZLE_CURRENT_DROP_TILE.sx = tmp.sx;
+            _PUZZLE_CURRENT_DROP_TILE.sy = tmp.sy;
+        }
+        */
+        checkSolved();
+    }
+
+    const updatePuzzle = (evt) => {
+        _PUZZLE_CURRENT_DROP_TILE = null;
+        if (evt.layerX || evt.layerX == 0) {
+            _PUZZLE_MOUSE_LOC.x = evt.layerX - CANVAS_2D.offsetLeft;
+            _PUZZLE_MOUSE_LOC.y = evt.layerY - CANVAS_2D.offsetTop;
+        } else if (evt.offsetX || evt.offsetX == 0) {
+            _PUZZLE_MOUSE_LOC.x = evt.offsetX - CANVAS_2D.offsetLeft;
+            _PUZZLE_MOUSE_LOC.y = evt.offsetY - CANVAS_2D.offsetTop;
+        }
+        ctx.clearRect(0, 0, _PUZZLE_WIDTH, _PUZZLE_HEIGHT);
+        for (const tile of tiles) {
+            if (tile == _PUZZLE_CURRENT_TILE) { // TODO: this can be calculated outside
                 continue;
             }
             ctx.drawImage(
                 img,
                 tile.sx,
                 tile.sy,
-                tileWidth,
-                tileHeight,
-                tile.xPos,
-                tile.yPos,
-                tileWidth,
-                tileHeight
+                _PUZZLE_TILE_WIDTH,
+                _PUZZLE_TILE_HEIGHT,
+                tile.sx,
+                tile.sy,
+                _PUZZLE_TILE_WIDTH,
+                _PUZZLE_TILE_HEIGHT
             );
-            ctx.strokeRect(tile.xPos, tile.yPos, tileWidth, tileHeight);
-            if (currentDropTile == null) {
+            ctx.strokeRect(tile.sx, tile.yPos, _PUZZLE_TILE_WIDTH, _PUZZLE_TILE_HEIGHT);
+            if (_PUZZLE_CURRENT_DROP_TILE == null) {
                 if ( // TODO: shares some logic from above
-                    mouse.x < tile.xPos ||
-                    mouse.x > tile.xPos + tileWidth ||
-                    mouse.y < tile.yPos ||
-                    mouse.y > tile.yPos + tileHeight
+                    _PUZZLE_MOUSE_LOC.x < tile.sx ||
+                    _PUZZLE_MOUSE_LOC.x > tile.sx + _PUZZLE_TILE_WIDTH ||
+                    _PUZZLE_MOUSE_LOC.y < tile.sy ||
+                    _PUZZLE_MOUSE_LOC.y > tile.sy + _PUZZLE_TILE_HEIGHT
                 ) {
                     //NOT OVER
                 } else {
-                    currentDropTile = tile;
+                    _PUZZLE_CURRENT_DROP_TILE = tile;
                     ctx.save();
                     ctx.globalAlpha = 0.4;
                     ctx.fillStyle = PUZZLE_HOVER_TINT;
                     ctx.fillRect(
-                        currentDropTile.xPos,
-                        currentDropTile.yPos,
-                        tileWidth,
-                        tileHeight
+                        _PUZZLE_CURRENT_DROP_TILE.sx,
+                        _PUZZLE_CURRENT_DROP_TILE.sy,
+                        _PUZZLE_TILE_WIDTH,
+                        _PUZZLE_TILE_HEIGHT
                     );
                     ctx.restore();
                 }
@@ -1608,73 +1615,72 @@ const updatePuzzle = (forceState = null) => {
         ctx.globalAlpha = 0.6;
         ctx.drawImage(
             img,
-            currentTile.sx,
-            currentTile.sy,
-            tileWidth,
-            tileHeight,
-            mouse.x - tileWidth / 2,
-            mouse.y - tileHeight / 2,
-            tileWidth,
-            tileHeight
+            _PUZZLE_CURRENT_TILE.sx,
+            _PUZZLE_CURRENT_TILE.sy,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT,
+            _PUZZLE_MOUSE_LOC .x - _PUZZLE_TILE_WIDTH / 2,
+            _PUZZLE_MOUSE_LOC .y - _PUZZLE_TILE_HEIGHT / 2,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT
         );
         ctx.restore();
         ctx.strokeRect(
-            mouse.x - tileWidth / 2,
-            mouse.y - tileHeight / 2,
-            tileWidth,
-            tileHeight
+            _PUZZLE_MOUSE_LOC.x - _PUZZLE_TILE_WIDTH / 2,
+            _PUZZLE_MOUSE_LOC.y - _PUZZLE_TILE_HEIGHT / 2,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT
         );
     };
 
+    const onPuzzleClick = (evt) => {
+        if (evt.layerX || evt.layerX === 0) {
+            _PUZZLE_MOUSE_LOC.x = evt.layerX - CANVAS_2D.offsetLeft;
+            _PUZZLE_MOUSE_LOC.y = evt.layerY - CANVAS_2D.offsetTop;
+        } else if (evt.offsetX || evt.offsetX === 0) {
+            _PUZZLE_MOUSE_LOC.x = evt.offsetX - CANVAS_2D.offsetLeft;
+            _PUZZLE_MOUSE_LOC.y = evt.offsetY - CANVAS_2D.offsetTop;
+        }
+        _PUZZLE_CURRENT_TILE = getClickedTile();
+        if (_PUZZLE_CURRENT_TILE) {
+            ctx.clearRect(
+                _PUZZLE_CURRENT_TILE.sx,
+                _PUZZLE_CURRENT_TILE.sy,
+                _PUZZLE_TILE_WIDTH,
+                _PUZZLE_TILE_HEIGHT,
+            );
+            ctx.save();
+            ctx.globalAlpha = 0.9;
+            ctx.drawImage(
+                img,
+                _PUZZLE_CURRENT_TILE.sx,
+                _PUZZLE_CURRENT_TILE.sy,
+                _PUZZLE_TILE_WIDTH,
+                _PUZZLE_TILE_HEIGHT,
+                _PUZZLE_MOUSE_LOC .x - _PUZZLE_TILE_WIDTH / 2,
+                _PUZZLE_MOUSE_LOC .y - _PUZZLE_TILE_HEIGHT / 2,
+                _PUZZLE_TILE_WIDTH,
+                _PUZZLE_TILE_HEIGHT,
+            );
+            ctx.restore();
+            document.onpointermove = updatePuzzle;
+            document.onpointerup = tileDropped;
+        }
+    }
+
+    document.onpointerdown = onPuzzleClick; // TODO: check if the mod is active.
+
+    // CANVAS_2D.addEventListener('load', onImage, false); // TODO: can maybe use this to make puzzle on first draw
+
     /** TODO
     const gameOver = () => {
+        _PUZZLE_IS_SOLVED = true;
         document.onpointerdown = null;
         document.onpointermove = null;
         document.onpointerup = null;
         initPuzzle();
     }
     */
-
-    const tileDropped = (e) => {
-        document.onpointermove = null;
-        document.onpointerup = null;
-        if (currentDropTile !== null) {
-            let tmp = {
-                xPos: c.xPos,
-                yPos: currentTile.yPos
-            };
-            currentTile.xPos = currentDropTile.xPos;
-            currentTile.yPos = currentDropTile.yPos;
-            currentDropTile.xPos = tmp.xPos;
-            currentDropTile.yPos = tmp.yPos;
-        }
-        resetPuzzleAndCheckWin();
-    }
-
-    const resetPuzzleAndCheckWin = () => {
-        ctx.clearRect(0, 0, puzzleWidth, puzzleHeight);
-        let gameWin = true;
-        for (const tile of tiles) {
-            ctx.drawImage(
-                img,
-                tile.sx,
-                tile.sy,
-                tileWidth,
-                tileHeight,
-                tile.xPos,
-                tile.yPos,
-                tileWidth,
-                tileHeight,
-            );
-            ctx.strokeRect(tile.xPos, tile.yPos, tileWidth, tileHeight);
-            if (tile.xPos != tile.sx || tile.yPos != tile.sy) {
-                gameWin = false;
-            }
-        }
-        if (gameWin) {
-            setTimeout(gameOver, 500);
-        }
-    }
 
     /** TODO
     const shuffleArray = (o) => {
