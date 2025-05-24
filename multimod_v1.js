@@ -1345,18 +1345,17 @@ let _PUZZLE_HEIGHT;
 let _PUZZLE_TILE_WIDTH;
 let _PUZZLE_TILE_HEIGHT;
 let _PUZZLE_CURRENT_TILE;
-let _PUZZLE_CURRENT_DROP_TILE;
+let _PUZZLE_CURRENT_DROP_TILE = {};
 let _PUZZLE_MOUSE_LOC = { x: 0, y: 0 };
 let _PUZZLE_TILES = [];
-let _PUZZLE_IS_SOLVED = false;
 let _PUZZLE_HOVER_TINT = '#009900'; // Used for drag and drop formatting.
+let _PUZZLE_IS_SOLVED = false; // TODO: what happens if it is solved on start?
 
 const clearCanvas2d = () => {
     if (CANVAS_2D && CANVAS_2D.parentElement) {
         CANVAS_2D.parentElement.removeChild(CANVAS_2D);
     }
     CANVAS_2D = undefined;
-    CANVAS_2D_IS_REDRAWING = false;
 };
 
 const getPixels2d = () => {
@@ -1372,7 +1371,7 @@ const getPixels2d = () => {
   Check if the start or end of the 3D image has changed (user changed view in any way).
   If so, we need to redraw the 2D canvas.
 */
-const shouldRedraw = () => {
+const shouldRedraw = () => { // TODO: revisit
     const pixels2d = getPixels2d();
     if (!pixels2d || !pixels2d.length) {
         return false;
@@ -1391,7 +1390,7 @@ const shouldRedraw = () => {
   Return true if the canvas was redrawn, else false.
 */
 const drawCanvas2d = () => {
-        if (CANVAS_2D_IS_REDRAWING) {
+    if (CANVAS_2D_IS_REDRAWING) {
         return false;
     }
 
@@ -1418,6 +1417,7 @@ const drawCanvas2d = () => {
     } catch (err) {
         console.log(err);
         clearCanvas2d();
+        CANVAS_2D_IS_REDRAWING = false;
         return false;
     }
 };
@@ -1427,10 +1427,6 @@ const drawCanvas2d = () => {
   This function assumes that the 2D canvas has already been filled.
 */
 const scatterCanvas2d = (nRows, nCols) => {
-    if (!CANVAS_2D) {
-        return;
-    }
-
     const ctx2d = CANVAS_2D.getContext('2d');
     const tileWidth = CANVAS_2D.width / nCols;
     const tileHeight = CANVAS_2D.height / nRows;
@@ -1447,17 +1443,20 @@ const scatterCanvas2d = (nRows, nCols) => {
     }
 
     // Scramble the tiles.
-    const locs = tiles.map(tile => [tile.sx, tile.sy]);
-    const shuffledLocs = shuffleArray(locs);
+    _PUZZLE_TILES = shuffleArray(tiles); // TODO: fuck up is here
     for (const [ix, tile] of Object.entries(tiles)) {
-        const [sx, sy] = shuffledLocs[Number(ix)];
+        const { sx, sy } = _PUZZLE_TILES[Number(ix)];
         Object.assign(tile, { sx, sy });
     }
 
-    // Remove the original pasted image and redraw as scrambled.
+    // Remove the original pasted image and redraw as scrambled tiles.
     ctx2d.clearRect(0, 0, CANVAS_2D.width, CANVAS_2D.height);
     for (const tile of _PUZZLE_TILES) {
         const { imageData, sx, sy } = tile;
+        if (!imageData) {
+            console.log('No image data laoded yet.'); // TODO: what the fuck is going on here?
+            return undefined;
+        }
         ctx2d.putImageData(imageData, sx, sy);
     }
 
@@ -1489,21 +1488,27 @@ const updatePuzzle = (forceState = null) => {
         const wasRedrawn = drawCanvas2d();
         if (wasRedrawn) {
             const scattered = scatterCanvas2d(nRows, nCols); // TODO: don't run on interval unless specified.
+            if (!scattered) {
+                return; // TODO: clear shit
+            }
             _PUZZLE_TILES = scattered.tiles;
             _PUZZLE_TILE_WIDTH = scattered.tileWidth;
             _PUZZLE_TILE_HEIGHT = scattered.tileHeight;
         }
     };
 
-    // Sometimes, the streetview is slow to load. The idle event will trigger before all tiles are rendered.
-    // So just retry and redraw the canvas on an interval. This will also take care of NM and NMPZ modes, though there will be lag.
-    makePuzzle();
+    drawCanvas2d();
+    setTimeout(makePuzzle, 1000); // TODO: I think this is where it's fucking up. Need to add blackout div or something. Half the squares are loaded blank and they load after map is shown due to delay. Listener to tile load or something.
 
     if (!CANVAS_2D) {
         console.error(`Canvas is not loaded yet. Can't initiate puzzle.`);
         updateMod(mod, false);
         return;
     }
+
+    // Sometimes, the streetview is slow to load. The idle event will trigger before all tiles are rendered.
+    // So just retry and redraw the canvas on an interval. This will also take care of NM and NMPZ modes, though there will be lag.
+    // CANVAS_2D.addEventListener('load', makePuzzle); // TODO: check for redraws, like user moving or panning.
 
     // ref: https://webdesign.tutsplus.com/create-an-html5-canvas-tile-swapping-puzzle--active-10747t
     const ctx = CANVAS_2D.getContext('2d');
@@ -1552,8 +1557,8 @@ const updatePuzzle = (forceState = null) => {
         }
     }
 
-    const tileDropped = (e) => {
-        document.onpointermove = null;
+    const tileDropped = (evt) => {
+        document.onpointermove = null; // TODO: revisit
         document.onpointerup = null;
         if (_PUZZLE_CURRENT_DROP_TILE !== null) {
             let tmp = {
@@ -1569,8 +1574,6 @@ const updatePuzzle = (forceState = null) => {
     }
 
     const updatePuzzleTiles = (evt) => {
-
-
         _PUZZLE_CURRENT_DROP_TILE = null;
         if (evt.layerX || evt.layerX == 0) {
             _PUZZLE_MOUSE_LOC.x = evt.layerX - CANVAS_2D.offsetLeft;
@@ -1642,6 +1645,9 @@ const updatePuzzle = (forceState = null) => {
     };
 
     const onPuzzleClick = (evt) => {
+        if (!CANVAS_2D) {
+            drawCanvas2d();
+        }
         if (evt.layerX || evt.layerX === 0) {
             _PUZZLE_MOUSE_LOC.x = evt.layerX - CANVAS_2D.offsetLeft;
             _PUZZLE_MOUSE_LOC.y = evt.layerY - CANVAS_2D.offsetTop;
@@ -1676,9 +1682,7 @@ const updatePuzzle = (forceState = null) => {
         }
     }
 
-    document.onpointerdown = onPuzzleClick; // TODO: check if the mod is active.
-
-    // CANVAS_2D.addEventListener('load', onImage, false); // TODO: can maybe use this to make puzzle on first draw
+    document.onpointerdown = onPuzzleClick; // TODO: should be canvas only.
 
     /** TODO
     const gameOver = () => {
@@ -1689,9 +1693,6 @@ const updatePuzzle = (forceState = null) => {
         initPuzzle();
     }
     */
-
-    // TODO: re-enable
-    // CANVAS_2D_REDRAW_INTERVAL = setInterval(makePuzzle, 1000);
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
