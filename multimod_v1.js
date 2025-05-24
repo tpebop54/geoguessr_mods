@@ -1339,7 +1339,17 @@ let CANVAS_3D_START; // Used to check if the 3D view has changed. We don't want 
 let CANVAS_3D_END; // Also used to check for 3D view changes.
 let CANVAS_2D_REDRAW_INTERVAL; // Interval for redrawing 3D canvas to 2D. Only redraws when first tile has changed.
 let CANVAS_3D_USER_LISTENERS; // Callback when the user moves, pans, or zooms.
-const PUZZLE_HOVER_TINT = '#009900'; // Used for drag and drop formatting.
+
+let _PUZZLE_WIDTH;
+let _PUZZLE_HEIGHT;
+let _PUZZLE_TILE_WIDTH;
+let _PUZZLE_TILE_HEIGHT;
+let _PUZZLE_CURRENT_TILE;
+let _PUZZLE_CURRENT_DROP_TILE;
+let _PUZZLE_MOUSE_LOC = { x: 0, y: 0 };
+let _PUZZLE_TILES = [];
+let _PUZZLE_IS_SOLVED = false;
+let _PUZZLE_HOVER_TINT = '#009900'; // Used for drag and drop formatting.
 
 const clearCanvas2d = () => {
     if (CANVAS_2D && CANVAS_2D.parentElement) {
@@ -1446,7 +1456,7 @@ const scatterCanvas2d = (nRows, nCols) => {
 
     // Remove the original pasted image and redraw as scrambled.
     ctx2d.clearRect(0, 0, CANVAS_2D.width, CANVAS_2D.height);
-    for (const tile of tiles) {
+    for (const tile of _PUZZLE_TILES) {
         const { imageData, sx, sy } = tile;
         ctx2d.putImageData(imageData, sx, sy);
     }
@@ -1458,15 +1468,6 @@ const scatterCanvas2d = (nRows, nCols) => {
     };
 };
 
-let _PUZZLE_WIDTH;
-let _PUZZLE_HEIGHT;
-let _PUZZLE_TILE_WIDTH;
-let _PUZZLE_TILE_HEIGHT;
-let _PUZZLE_CURRENT_TILE;
-let _PUZZLE_CURRENT_DROP_TILE;
-let _PUZZLE_MOUSE_LOC = { x: 0, y: 0 };
-let _PUZZLE_IS_SOLVED = false;
-
 const updatePuzzle = (forceState = null) => {
     const mod = MODS.puzzle;
     const active = updateMod(mod, forceState);
@@ -1474,7 +1475,7 @@ const updatePuzzle = (forceState = null) => {
     clearCanvas2d();
 
     if (!active) {
-        if (CANVAS_2D_REDRAW_INTERVAL) {
+        if (CANVAS_2D_REDRAW_INTERVAL) { // TODO: revisit.
             clearInterval(CANVAS_2D_REDRAW_INTERVAL);
             CANVAS_2D_REDRAW_INTERVAL = undefined;
         }
@@ -1483,19 +1484,26 @@ const updatePuzzle = (forceState = null) => {
 
     const nRows = getOption(mod, 'nRows');
     const nCols = getOption(mod, 'nCols');
-    let tiles;
 
     const makePuzzle = () => {
         const wasRedrawn = drawCanvas2d();
         if (wasRedrawn) {
             const scattered = scatterCanvas2d(nRows, nCols); // TODO: don't run on interval unless specified.
-            tiles = scattered.tiles;
+            _PUZZLE_TILES = scattered.tiles;
+            _PUZZLE_TILE_WIDTH = scattered.tileWidth;
+            _PUZZLE_TILE_HEIGHT = scattered.tileHeight;
         }
     };
 
     // Sometimes, the streetview is slow to load. The idle event will trigger before all tiles are rendered.
     // So just retry and redraw the canvas on an interval. This will also take care of NM and NMPZ modes, though there will be lag.
     makePuzzle();
+
+    if (!CANVAS_2D) {
+        console.error(`Canvas is not loaded yet. Can't initiate puzzle.`);
+        updateMod(mod, false);
+        return;
+    }
 
     // ref: https://webdesign.tutsplus.com/create-an-html5-canvas-tile-swapping-puzzle--active-10747t
     const ctx = CANVAS_2D.getContext('2d');
@@ -1506,7 +1514,7 @@ const updatePuzzle = (forceState = null) => {
         if (x == null || y == null) {
             return null;
         }
-        for (const tile of tiles) {
+        for (const tile of _PUZZLE_TILES) {
             const leftX = tile.sx;
             const rightX = leftX + tile.imageData.width;
             const topY = tile.sy;
@@ -1522,7 +1530,7 @@ const updatePuzzle = (forceState = null) => {
     const checkSolved = () => { // TODO: decide how to handle when puzzle is solved.
         ctx.clearRect(0, 0, _PUZZLE_WIDTH, _PUZZLE_HEIGHT);
         let gameWin = true;
-        for (const tile of tiles) {
+        for (const tile of _PUZZLE_TILES) {
             ctx.drawImage(
                 img,
                 tile.sx,
@@ -1545,7 +1553,6 @@ const updatePuzzle = (forceState = null) => {
     }
 
     const tileDropped = (e) => {
-        /**
         document.onpointermove = null;
         document.onpointerup = null;
         if (_PUZZLE_CURRENT_DROP_TILE !== null) {
@@ -1558,11 +1565,12 @@ const updatePuzzle = (forceState = null) => {
             _PUZZLE_CURRENT_DROP_TILE.sx = tmp.sx;
             _PUZZLE_CURRENT_DROP_TILE.sy = tmp.sy;
         }
-        */
         checkSolved();
     }
 
-    const updatePuzzle = (evt) => {
+    const updatePuzzleTiles = (evt) => {
+
+
         _PUZZLE_CURRENT_DROP_TILE = null;
         if (evt.layerX || evt.layerX == 0) {
             _PUZZLE_MOUSE_LOC.x = evt.layerX - CANVAS_2D.offsetLeft;
@@ -1572,7 +1580,7 @@ const updatePuzzle = (forceState = null) => {
             _PUZZLE_MOUSE_LOC.y = evt.offsetY - CANVAS_2D.offsetTop;
         }
         ctx.clearRect(0, 0, _PUZZLE_WIDTH, _PUZZLE_HEIGHT);
-        for (const tile of tiles) {
+        for (const tile of _PUZZLE_TILES) {
             if (tile == _PUZZLE_CURRENT_TILE) { // TODO: this can be calculated outside
                 continue;
             }
@@ -1600,7 +1608,7 @@ const updatePuzzle = (forceState = null) => {
                     _PUZZLE_CURRENT_DROP_TILE = tile;
                     ctx.save();
                     ctx.globalAlpha = 0.4;
-                    ctx.fillStyle = PUZZLE_HOVER_TINT;
+                    ctx.fillStyle = _PUZZLE_HOVER_TINT;
                     ctx.fillRect(
                         _PUZZLE_CURRENT_DROP_TILE.sx,
                         _PUZZLE_CURRENT_DROP_TILE.sy,
@@ -1663,7 +1671,7 @@ const updatePuzzle = (forceState = null) => {
                 _PUZZLE_TILE_HEIGHT,
             );
             ctx.restore();
-            document.onpointermove = updatePuzzle;
+            document.onpointermove = updatePuzzleTiles;
             document.onpointerup = tileDropped;
         }
     }
@@ -1679,17 +1687,6 @@ const updatePuzzle = (forceState = null) => {
         document.onpointermove = null;
         document.onpointerup = null;
         initPuzzle();
-    }
-    */
-
-    /** TODO
-    const shuffleArray = (o) => {
-        for (
-            var j, x, i = o.length;
-            i;
-            j = parseInt(Math.random() * i), x = o[--i], o[i] = o[j], o[j] = x
-        );
-        return o;
     }
     */
 
@@ -1773,8 +1770,8 @@ const addButtons = () => { // Add mod buttons to the active round.
 // C hee tah blockers.
 // ===============================================================================================================================
 
-// The goal of this is to fuck up the replay file and distract the user by blacking out the screen for the first second or two and clicking around.
-// Should make it obvious in the replay and stream if someone is using this mod pack.
+// The goal of this is to fuck up the r eplay file and distract the user by blacking out the screen for the first second or two and clicking around.
+// Should make it obvious in the repl ay and stream if someone is using this mod pack.
 // Coders could figure it out if they want, but with compiled code and intentional obfuscation here, it will be difficult.
 // Credit to Bennett Foddy for assembling several of these quotes and for a few himself, from my favorite game (Getting Over It with Bennett Foddy).
 // Use the — character (dash, not hyphen) to apply a quote credit, which will show up as a smaller text under the quote.
@@ -1806,7 +1803,7 @@ const _QUOTES = {
         `Those who mind don't matter, those who matter don't mind. — Dr. Seuss`,
         `Never stop never stopping.`,
 
-        /** Turning these off because I don't know if bias toward certain languages would be an issue, and I can't do every language. Safer to just do English until I think about it more.
+        /** Turning these off for now because I don't know if bias toward certain languages would be an issue, and I can't do every language. Safer to just do English until I think about it more.
 
         // German.
         `Träume nicht dein Leben, sondern lebe deinen Traum.`,
@@ -2008,9 +2005,9 @@ window.addEventListener('load', () => {
 /**
   Click around the map *after* it is loaded and idle, and the screen is blacked out.
   This will be a callback in the google maps section of this script.
-  This will completely mess up the replay file. We have 1 second to do this.
-  Always end with a click at { lat: 0, lng: 0 }. This will be extremely obvious in replays, both for streaming and the actual replay files.
-  This function is sloppy, but it doesn't really matter as long as we screw up the replay.
+  This will completely mess up the repl ay file. We have 1 second to do this.
+  Always end with a click at { lat: 0, lng: 0 }. This will be extremely obvious in r eplays, both for streaming and the actual re play files.
+  This function is sloppy, but it doesn't really matter as long as we screw up the repl ay.
 */
 const clickGarbage = (nMilliseconds = 900) => {
     const nClicks = 20; // Approximately...
