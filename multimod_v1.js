@@ -10,6 +10,7 @@
 // @grant        GM_addStyle
 // @grant        GM_openInTab
 // @grant        GM.xmlHttpRequest
+// @grant        GM_xmlhttpRequest
 
 // ==/UserScript==
 
@@ -1336,25 +1337,20 @@ const updateLottery = (forceState = null) => {
 // MOD: Puzzle.
 // ===============================================================================================================================
 
-// Unfortunately, we can't use the 3D canvas, so we recreate it as a 2D canvas to make the puzzle.
-// This may make this mod unusable with some others. I haven't tested out every combination.
-// This requires Google API to generate static tiles. Google blocks calls to render the webgl canvas as a 2d canvas.
-//   This doesn't happen every time for whatever reason, but the tool is unusable if it works like a quarter of the time.
-// Therefore, if you want to use this, you have to enter your Google Maps API key at the top (see notes at the top).
-// Also, shit this was hard to figure out.
+/**
+  Unfortunately, we can't use the 3D canvas, so we recreate it as a 2D canvas to make the puzzle.
+  This may make this mod unusable with some others. I haven't tested out every combination.
+  This requires a GOOGLE_MAPS_API_KEY at the top to generate static tiles. Google blocks calls to render the webgl canvas as a 2d canvas.
+  Also, shit this was hard to figure out.
+*/
 
 // TODO
 // - block tiling until first render.
-// - check previous frame so it doesn't rescramble eveery second.
-// - add option to rescramble every X milliseconds.
 // - add option to make to actual puzzle.
+// - maybe disable moving and panning. Need to update note at top if so.
 
 let CANVAS_2D; // canvas element that overlays the 3D one.
 let CANVAS_2D_IS_REDRAWING = false; // If we're still redrawing the previous frame, this can brick the site.
-let CANVAS_3D_START; // Used to check if the 3D view has changed. We don't want to constantly redraw the canvas for no reason.
-let CANVAS_3D_END; // Also used to check for 3D view changes.
-let CANVAS_2D_REDRAW_INTERVAL; // Interval for redrawing 3D canvas to 2D. Only redraws when first tile has changed.
-let CANVAS_3D_USER_LISTENERS; // Callback when the user moves, pans, or zooms.
 
 let _PUZZLE_WIDTH;
 let _PUZZLE_HEIGHT;
@@ -1367,6 +1363,8 @@ let _PUZZLE_TILES = [];
 let _PUZZLE_HOVER_TINT = '#009900'; // Used for drag and drop formatting.
 let _PUZZLE_IS_SOLVED = false; // TODO: what happens if it is solved on start?
 
+let _STREETVIEW_LISTENER; // Listener to trigger redraw on moving, panning, or zooming. TODO: will this trigger too many redraws?
+
 const clearCanvas2d = () => {
     if (CANVAS_2D && CANVAS_2D.parentElement) {
         CANVAS_2D.parentElement.removeChild(CANVAS_2D);
@@ -1375,71 +1373,79 @@ const clearCanvas2d = () => {
 };
 
 /**
-const shouldRedraw = () => { // TODO: revisit
-    const pixels2d = getPixels2d();
-    if (!pixels2d || !pixels2d.length) {
-        return false;
-    }
-    const uniqueStart = new Set(CANVAS_3D_START); // Technically could be the exact same Set of pixels, but it's unlikely.
-    const uniqueEnd = new Set(CANVAS_3D_END);
-    if (uniqueStart.size === 1 && uniqueStart.has(0) && uniqueEnd.size === 1 && uniqueEnd.has(0)) {
-        return true; // Map tiles have not loaded yet.
-    }
-    return false; // 3D canvas has not changed since the last 2D canvas redraw.
-};
-*/
-
-/**
   Redraw the 3D canvas as a 2D canvas so we can mess around with it.
-  We have to extract the image data from the 3D canvas, essentially a screenshot.
+  We have to extract the image data from the 3D view using Google Maps API. They make it impossible to extract directly from that canvas.
   Return true if the canvas was redrawn, else false.
 */
-const drawCanvas2d = () => {
-    if (CANVAS_2D_IS_REDRAWING) {
-        return false;
-    }
-    const redraw = () => { // Paste the 3D canvas onto 2D so we can mess with it.
-        try {
-            CANVAS_2D_IS_REDRAWING = true;
+async function drawCanvas2d() {
+    CANVAS_2D_IS_REDRAWING = true;
 
-            const canvas3d = getBigMapCanvas();
-            const gl = canvas3d.getContext('webgl', { preserveDrawingBuffer: true });
-            gl.viewport(0, 0, canvas3d.width, canvas3d.height);
-            // gl.clearColor(0, 0, 0, 1); // Draw something.
-            // gl.clear(gl.COLOR_BUFFER_BIT);
-            gl.finish();
-
-            clearCanvas2d();
-            CANVAS_2D = document.createElement('canvas');
-            CANVAS_2D.id = 'gg-big-canvas-2d';
-            CANVAS_2D.width = canvas3d.width;
-            CANVAS_2D.height = canvas3d.height;
-            const ctx2d = CANVAS_2D.getContext('2d');
-
-            ctx2d.drawImage(canvas3d, 0, 0);
-            Object.assign(CANVAS_2D.style, {
-                'pointer-events': 'none',
-            });
-
-            // Put 2D canvas on top of 3D and allow pointer events to the 3D.
-            const mapParent = canvas3d.parentElement.parentElement;
-            mapParent.insertBefore(CANVAS_2D, mapParent.firstChild);
-            CANVAS_2D_IS_REDRAWING = false;
-            return true; // canvas was redrawn; need to perform additional functions.
-        } catch (err) {
-            console.log(err);
-            clearCanvas2d();
-            CANVAS_2D_IS_REDRAWING = false;
-            return false;
+    try {
+        const loc = GOOGLE_STREETVIEW.getPosition();
+        if (!loc) {
+            console.error('Panorama position not available.');
+            return;
         }
-    };
-    redraw(); // TODO: maybe canvas3d.onload = redraw;
-};
+        const lat = loc.lat();
+        const lng = loc.lng();
 
-/**
-  Scatter the canvas into tiles and redraw it.
-  This function assumes that the 2D canvas has already been filled.
-*/
+        const size = 640; // max size for Street View Static API.
+        const headings = [0, 90, 180, 270];
+        const pitch = 0; // TODO: should this pull from the current 3d view?
+
+        clearCanvas2d();
+        const canvas3d = getBigMapCanvas();
+        CANVAS_2D = document.createElement('canvas');
+        CANVAS_2D.id = 'gg-big-canvas-2d';
+        CANVAS_2D.width = canvas3d.width;
+        CANVAS_2D.height = canvas3d.height;
+
+        const ctx = CANVAS_2D.getContext('2d');
+
+        const loadImage = (src) => new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous'; // Needed to draw onto canvas.
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = src;
+        });
+
+        const fetchTile = async (heading) => {
+            const url = `https://maps.googleapis.com/maps/api/streetview?size=${size}x${size}` +
+                  `&location=${lat},${lng}` +
+                  `&heading=${heading}` +
+                  `&pitch=${pitch}` +
+                  `&fov=90` +
+                  `&key=${GOOGLE_MAPS_API_KEY}`;
+            return await loadImage(url);
+        };
+
+        const images = await Promise.all(headings.map(fetchTile));
+
+        // Draw 2x2 grid. Sadly, we're limited to a square image with a maximum resolution. Google made it impossible to clone the 3D canvas.
+        ctx.clearRect(0, 0, CANVAS_2D.width, CANVAS_2D.height);
+        ctx.drawImage(images[0], 0, 0, size, size); // Top left.
+        ctx.drawImage(images[1], size, 0, size, size); // Top right.
+        ctx.drawImage(images[2], 0, size, size, size); // Bottom left.
+        ctx.drawImage(images[3], size, size, size, size); // Bottom right.
+
+        if (!_STREETVIEW_LISTENER) {
+            _STREETVIEW_LISTENER = GOOGLE_STREETVIEW.addListener('position_changed', () => {
+                drawCanvas2d(_STREETVIEW_LISTENER, GOOGLE_MAPS_API_KEY);
+            });
+        }
+
+        // Put 2D canvas on top of 3D and allow pointer events to the 3D.
+        const mapParent = canvas3d.parentElement.parentElement;
+        mapParent.insertBefore(CANVAS_2D, mapParent.firstChild);
+        CANVAS_2D_IS_REDRAWING = false;
+    } catch (err) {
+        console.error(err);
+        CANVAS_2D_IS_REDRAWING = false;
+        clearCanvas2d();
+    }
+}
+
 const scatterCanvas2d = (nRows, nCols) => {
     const ctx2d = CANVAS_2D.getContext('2d');
     const tileWidth = CANVAS_2D.width / nCols;
@@ -1481,16 +1487,16 @@ const scatterCanvas2d = (nRows, nCols) => {
     };
 };
 
-const updatePuzzle = (forceState = null) => {
+async function updatePuzzle(forceState = null) {
     const mod = MODS.puzzle;
     const active = updateMod(mod, forceState);
 
     clearCanvas2d();
 
     if (!active) {
-        if (CANVAS_2D_REDRAW_INTERVAL) { // TODO: revisit.
-            clearInterval(CANVAS_2D_REDRAW_INTERVAL);
-            CANVAS_2D_REDRAW_INTERVAL = undefined;
+        if (_STREETVIEW_LISTENER) {
+            GOOGLE_STREETVIEW.removeListener(_STREETVIEW_LISTENER);
+            _STREETVIEW_LISTENER = undefined;
         }
         return;
     }
@@ -1498,25 +1504,18 @@ const updatePuzzle = (forceState = null) => {
     const nRows = getOption(mod, 'nRows');
     const nCols = getOption(mod, 'nCols');
 
-    const makePuzzle = () => {
-        const wasRedrawn = drawCanvas2d();
-        if (wasRedrawn) {
-            const scattered = scatterCanvas2d(nRows, nCols); // TODO: don't run on interval unless specified.
-            if (!scattered) {
-                return; // TODO: clear shit
-            }
-            _PUZZLE_TILES = scattered.tiles;
-            _PUZZLE_TILE_WIDTH = scattered.tileWidth;
-            _PUZZLE_TILE_HEIGHT = scattered.tileHeight;
+    async function makePuzzle() {
+        await drawCanvas2d();
+        const scattered = scatterCanvas2d(nRows, nCols);
+        if (!scattered) {
+            return;
         }
+        _PUZZLE_TILES = scattered.tiles;
+        _PUZZLE_TILE_WIDTH = scattered.tileWidth;
+        _PUZZLE_TILE_HEIGHT = scattered.tileHeight;
     };
 
-    // Sometimes, the streetview is slow to load. The idle event will trigger before all tiles are rendered.
-    // So just retry and redraw the canvas on an interval. This will also take care of NM and NMPZ modes, though there will be lag.
-    // CANVAS_2D.addEventListener('load', makePuzzle); // TODO: check for redraws, like user moving or panning.
-
-    drawCanvas2d();
-    setTimeout(makePuzzle, 1000); // TODO: What the fuck
+    await drawCanvas2d();
 
     if (!CANVAS_2D) {
         console.error(`Canvas is not loaded yet. Can't initiate puzzle.`);
@@ -1524,9 +1523,13 @@ const updatePuzzle = (forceState = null) => {
         return;
     }
 
+    // TODO: needed?
+    CANVAS_2D.addEventListener('load', makePuzzle);
+
     // ref: https://webdesign.tutsplus.com/create-an-html5-canvas-tile-swapping-puzzle--active-10747t
     const ctx = CANVAS_2D.getContext('2d');
 
+/**
     const img = new Image();
     const getClickedTile = () => {
         const { x, y } = _PUZZLE_MOUSE_LOC;
@@ -1698,15 +1701,13 @@ const updatePuzzle = (forceState = null) => {
 
     document.onpointerdown = onPuzzleClick; // TODO: should be canvas only.
 
-    /** TODO
     const gameOver = () => {
         _PUZZLE_IS_SOLVED = true;
         document.onpointerdown = null;
         document.onpointermove = null;
         document.onpointerup = null;
-        initPuzzle();
     }
-    */
+*/
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
