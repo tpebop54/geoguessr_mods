@@ -1371,26 +1371,6 @@ let _STREETVIEW_LISTENER; // Listener to trigger redraw on moving, panning, or z
 let _CANVAS_2D_MOUSEMOVE; // Track all mouse movements on 2D canvas.
 let _CANVAS_2D_MOUSE_LOC = { x: 0, y: 0 };
 
-const getCurrentMouseTile = () => { // Tile that the mouse is currently over. Doesn't matter if user is dragging a tile or not.
-    if (!_CANVAS_2D_MOUSE_LOC || !_PUZZLE_TILES) {
-        return null;
-    }
-    const { x, y } = _CANVAS_2D_MOUSE_LOC;
-    if (x == null || y == null) {
-        return null;
-    }
-    for (const tile of _PUZZLE_TILES) {
-        const leftX = tile.sx;
-        const rightX = leftX + tile.imageData.width;
-        const topY = tile.sy;
-        const bottomY = topY + tile.imageData.height;
-        if (x >= leftX && x <= rightX && y >= topY && y <= bottomY) {
-            return tile;
-        }
-    }
-    return null;
-};
-
 const addCanvas2dMousemove = () => {
     if (_CANVAS_2D_MOUSEMOVE) {
         return;
@@ -1594,39 +1574,19 @@ const scatterCanvas2d = (nRows, nCols) => {
     };
 };
 
-const onPuzzleClick = (evt) => {
-    if (!CANVAS_2D) {
-        drawCanvas2d(); // TODO: this is sloppy
+const pasteToDraggingImage = () => { // Used for showing the tile image while dragging.
+    if (!_PUZZLE_DRAGGING_CANVAS) {
+        _PUZZLE_DRAGGING_CANVAS = document.createElement('canvas');
     }
-    const ctx = CANVAS_2D.getContext('2d');
-
-    _PUZZLE_CURRENT_DRAG_TILE = getCurrentMouseTile(); // TODO
-    pasteToDraggingImage();
-
-    if (_PUZZLE_CURRENT_DRAG_TILE) {
-        ctx.clearRect(
-            _PUZZLE_CURRENT_DRAG_TILE.sx,
-            _PUZZLE_CURRENT_DRAG_TILE.sy,
-            _PUZZLE_TILE_WIDTH,
-            _PUZZLE_TILE_HEIGHT,
-        );
-        ctx.save();
-        ctx.globalAlpha = 0.9;
-        ctx.drawImage(
-            _PUZZLE_DRAGGING_IMG,
-            _PUZZLE_CURRENT_DRAG_TILE.sx,
-            _PUZZLE_CURRENT_DRAG_TILE.sy,
-            _PUZZLE_TILE_WIDTH,
-            _PUZZLE_TILE_HEIGHT,
-            _CANVAS_2D_MOUSE_LOC .x - _PUZZLE_TILE_WIDTH / 2,
-            _CANVAS_2D_MOUSE_LOC .y - _PUZZLE_TILE_HEIGHT / 2,
-            _PUZZLE_TILE_WIDTH,
-            _PUZZLE_TILE_HEIGHT,
-        );
-        ctx.restore();
-        document.onpointermove = updatePuzzleTiles; // TODO: these should be on the canvas, not the document.
-        document.onpointerup = onDropTile;
+    if (!_PUZZLE_DRAGGING_IMG) {
+        _PUZZLE_DRAGGING_IMG = document.createElement('img');
     }
+    const ctx2d = _PUZZLE_DRAGGING_CANVAS.getContext('2d');
+    const imageData = _PUZZLE_CURRENT_DRAG_TILE.imageData;
+    _PUZZLE_DRAGGING_CANVAS.width = imageData.width;
+    _PUZZLE_DRAGGING_CANVAS.height = imageData.height;
+    ctx2d.putImageData(imageData, 0, 0);
+    _PUZZLE_DRAGGING_IMG.src = _PUZZLE_DRAGGING_CANVAS.toDataURL();
 };
 
 const updatePuzzleTiles = () => {
@@ -1653,15 +1613,9 @@ const updatePuzzleTiles = () => {
             _PUZZLE_TILE_WIDTH,
             _PUZZLE_TILE_HEIGHT
         );
-        ctx.strokeRect(tile.sx, tile.yPos, _PUZZLE_TILE_WIDTH, _PUZZLE_TILE_HEIGHT);
-        if (_PUZZLE_CURRENT_DROP_TILE == null) {
-            if ( // TODO: shares some logic from above
-                _CANVAS_2D_MOUSE_LOC.x < tile.sx ||
-                _CANVAS_2D_MOUSE_LOC.x > tile.sx + _PUZZLE_TILE_WIDTH ||
-                _CANVAS_2D_MOUSE_LOC.y < tile.sy ||
-                _CANVAS_2D_MOUSE_LOC.y > tile.sy + _PUZZLE_TILE_HEIGHT
-            ) {
-            } else {
+        // ctx.strokeRect(tile.sx, tile.yPos, _PUZZLE_TILE_WIDTH, _PUZZLE_TILE_HEIGHT); // TODO: remove?
+        _PUZZLE_CURRENT_DROP_TILE = getCurrentMouseTile();
+        if (_PUZZLE_CURRENT_DROP_TILE && _PUZZLE_CURRENT_DROP_TILE !== _PUZZLE_CURRENT_DRAG_TILE) {
                 _PUZZLE_CURRENT_DROP_TILE = tile;
                 ctx.save();
                 ctx.globalAlpha = 0.4;
@@ -1673,7 +1627,6 @@ const updatePuzzleTiles = () => {
                     _PUZZLE_TILE_HEIGHT
                 );
                 ctx.restore();
-            }
         }
     }
     ctx.save();
@@ -1692,37 +1645,77 @@ const updatePuzzleTiles = () => {
     ctx.restore();
 };
 
-const onDropTile = (evt) => {
-    if (!_PUZZLE_CURRENT_DROP_TILE) {
-        console.error('No drop tile found.');
+const onDropTile = (evt) => { // When mouse is released, drop the dragged tile at the location, and swap them.
+    if (!_PUZZLE_CURRENT_DRAG_TILE || !_PUZZLE_CURRENT_DROP_TILE) {
+        console.error('Drag or drop tile is missing.');
     }
-    if (_PUZZLE_CURRENT_DROP_TILE !== null) {
-        let tmp = {
-            sx: _PUZZLE_CURRENT_DRAG_TILE.sx,
-            sy: _PUZZLE_CURRENT_DRAG_TILE.sy
-        };
-        _PUZZLE_CURRENT_DRAG_TILE.sx = _PUZZLE_CURRENT_DROP_TILE.sy;
-        _PUZZLE_CURRENT_DRAG_TILE.sy = _PUZZLE_CURRENT_DROP_TILE.sy;
-        _PUZZLE_CURRENT_DROP_TILE.sx = tmp.sx;
-        _PUZZLE_CURRENT_DROP_TILE.sy = tmp.sy;
-    }
+    const tmp = {
+        sx: _PUZZLE_CURRENT_DRAG_TILE.sx,
+        sy: _PUZZLE_CURRENT_DRAG_TILE.sy
+    };
+    _PUZZLE_CURRENT_DRAG_TILE.sx = _PUZZLE_CURRENT_DROP_TILE.sy;
+    _PUZZLE_CURRENT_DRAG_TILE.sy = _PUZZLE_CURRENT_DROP_TILE.sy;
+    _PUZZLE_CURRENT_DROP_TILE.sx = tmp.sx;
+    _PUZZLE_CURRENT_DROP_TILE.sy = tmp.sy;
+
+    _PUZZLE_CURRENT_DROP_TILE = undefined;
     // checkSolved(); // TODO
     console.log('tile dropped');
-}
+};
 
-const pasteToDraggingImage = () => { // Used for showing the tile image while dragging.
-    if (!_PUZZLE_DRAGGING_CANVAS) {
-        _PUZZLE_DRAGGING_CANVAS = document.createElement('canvas');
+const getCurrentMouseTile = () => { // Tile that the mouse is currently over. Doesn't matter if user is dragging a tile or not.
+    if (!_CANVAS_2D_MOUSE_LOC || !_PUZZLE_TILES) {
+        return null;
     }
-    if (!_PUZZLE_DRAGGING_IMG) {
-        _PUZZLE_DRAGGING_IMG = document.createElement('img');
+    const { x, y } = _CANVAS_2D_MOUSE_LOC;
+    if (x == null || y == null) {
+        return null;
     }
-    const ctx2d = _PUZZLE_DRAGGING_CANVAS.getContext('2d');
-    const imageData = _PUZZLE_CURRENT_DRAG_TILE.imageData;
-    _PUZZLE_DRAGGING_CANVAS.width = imageData.width;
-    _PUZZLE_DRAGGING_CANVAS.height = imageData.height;
-    ctx2d.putImageData(imageData, 0, 0);
-    _PUZZLE_DRAGGING_IMG.src = _PUZZLE_DRAGGING_CANVAS.toDataURL();
+    for (const tile of _PUZZLE_TILES) {
+        const leftX = tile.sx;
+        const rightX = leftX + tile.imageData.width;
+        const topY = tile.sy;
+        const bottomY = topY + tile.imageData.height;
+        if (x >= leftX && x <= rightX && y >= topY && y <= bottomY) {
+            return tile;
+        }
+    }
+    return null;
+};
+
+const onPuzzleClick = () => {
+    if (!CANVAS_2D) {
+        drawCanvas2d(); // TODO: this is sloppy
+    }
+    const ctx = CANVAS_2D.getContext('2d');
+
+    _PUZZLE_CURRENT_DRAG_TILE = getCurrentMouseTile();
+    pasteToDraggingImage();
+
+    if (_PUZZLE_CURRENT_DRAG_TILE) {
+        ctx.clearRect(
+            _PUZZLE_CURRENT_DRAG_TILE.sx,
+            _PUZZLE_CURRENT_DRAG_TILE.sy,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT,
+        );
+        ctx.save();
+        ctx.globalAlpha = 0.9;
+        ctx.drawImage(
+            _PUZZLE_DRAGGING_IMG,
+            _PUZZLE_CURRENT_DRAG_TILE.sx,
+            _PUZZLE_CURRENT_DRAG_TILE.sy,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT,
+            _CANVAS_2D_MOUSE_LOC .x - _PUZZLE_TILE_WIDTH / 2,
+            _CANVAS_2D_MOUSE_LOC .y - _PUZZLE_TILE_HEIGHT / 2,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT,
+        );
+        ctx.restore();
+        document.onpointermove = updatePuzzleTiles; // TODO: these should be on the canvas, not the document.
+        document.onpointerup = onDropTile;
+    }
 };
 
 async function updatePuzzle(forceState = null) {
