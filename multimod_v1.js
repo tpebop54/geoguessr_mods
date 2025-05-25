@@ -1341,6 +1341,7 @@ const updateLottery = (forceState = null) => {
   Unfortunately, we can't use the 3D canvas, so we recreate it as a 2D canvas to make the puzzle.
   This may make this mod unusable with some others. I haven't tested out every combination.
   This requires a GOOGLE_MAPS_API_KEY at the top to generate static tiles. Google blocks calls to render the webgl canvas as a 2d canvas.
+  Ref: // ref: https://webdesign.tutsplus.com/create-an-html5-canvas-tile-swapping-puzzle--active-10747t
   Also, shit this was hard to figure out.
 */
 
@@ -1359,7 +1360,7 @@ let _PUZZLE_WIDTH;
 let _PUZZLE_HEIGHT;
 let _PUZZLE_TILE_WIDTH;
 let _PUZZLE_TILE_HEIGHT;
-let _PUZZLE_CURRENT_DRAG_TILE;
+let _PUZZLE_DRAGGING_TILE;
 let _PUZZLE_CURRENT_DROP_TILE;
 let _PUZZLE_TILES = [];
 let _PUZZLE_HOVER_TINT = '#009900'; // Used for drag and drop formatting.
@@ -1375,14 +1376,9 @@ const addCanvas2dMousemove = () => {
     if (_CANVAS_2D_MOUSEMOVE) {
         return;
     }
-    _CANVAS_2D_MOUSEMOVE = CANVAS_2D.addEventListener('mousemove', (evt) => { // TODO: does this need both options?
-        if (evt.layerX || evt.layerX == 0) {
-            _CANVAS_2D_MOUSE_LOC.x = evt.layerX - CANVAS_2D.offsetLeft;
-            _CANVAS_2D_MOUSE_LOC.y = evt.layerY - CANVAS_2D.offsetTop;
-        } else if (evt.offsetX || evt.offsetX == 0) {
-            _CANVAS_2D_MOUSE_LOC.x = evt.offsetX - CANVAS_2D.offsetLeft;
-            _CANVAS_2D_MOUSE_LOC.y = evt.offsetY - CANVAS_2D.offsetTop;
-        }
+    _CANVAS_2D_MOUSEMOVE = CANVAS_2D.addEventListener('mousemove', (evt) => {
+        _CANVAS_2D_MOUSE_LOC.x = evt.offsetX - CANVAS_2D.offsetLeft;
+        _CANVAS_2D_MOUSE_LOC.y = evt.offsetY - CANVAS_2D.offsetTop;
     });
 };
 
@@ -1415,27 +1411,6 @@ async function drawCanvas2d() {
     CANVAS_2D_IS_REDRAWING = true;
 
     try {
-        function fetchImageBlob(url) {
-            return new Promise((resolve, reject) => {
-                GM_xmlhttpRequest({
-                    method: 'GET',
-                    url: url,
-                    responseType: 'blob',
-                    onload: function(response) {
-                        const blobUrl = URL.createObjectURL(response.response);
-                        const img = new Image();
-                        img.onload = () => {
-                            URL.revokeObjectURL(blobUrl);
-                            resolve(img);
-                        };
-                        img.onerror = reject;
-                        img.src = blobUrl;
-                    },
-                    onerror: reject
-                });
-            });
-        }
-
         const loc = GOOGLE_STREETVIEW.getPosition();
         const lat = loc.lat();
         const lng = loc.lng();
@@ -1478,14 +1453,35 @@ async function drawCanvas2d() {
             }
         ];
 
+        const fetchImageBlob = (url) => {
+            return new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({ // Requires GM_ or else it will hit a 403.
+                    method: 'GET',
+                    url: url,
+                    responseType: 'blob',
+                    onload: function(response) {
+                        const blobUrl = URL.createObjectURL(response.response);
+                        const img = new Image();
+                        img.onload = () => {
+                            URL.revokeObjectURL(blobUrl);
+                            resolve(img);
+                        };
+                        img.onerror = reject;
+                        img.src = blobUrl;
+                    },
+                    onerror: reject
+                });
+            });
+        };
+
         const fetchTile = async (tileHeading, tilePitch, tileZoom) => {
             const url = `https://maps.googleapis.com/maps/api/streetview?size=${size}x${size}` +
-                  `&location=${lat},${lng}` +
-                  `&heading=${tileHeading}` +
-                  `&pitch=${tilePitch}` +
-                  `&zoom-${tileZoom}` +
-                  `&fov=90` +
-                  `&key=${GOOGLE_MAPS_API_KEY}`;
+                `&location=${lat},${lng}` +
+                `&heading=${tileHeading}` +
+                `&pitch=${tilePitch}` +
+                `&zoom-${tileZoom}` +
+                `&fov=90` +
+                `&key=${GOOGLE_MAPS_API_KEY}`;
             return await fetchImageBlob(url);
         };
 
@@ -1575,6 +1571,9 @@ const scatterCanvas2d = (nRows, nCols) => {
 };
 
 const pasteToDraggingImage = () => { // Used for showing the tile image while dragging.
+    if (!_PUZZLE_DRAGGING_TILE) {
+        return;
+    }
     if (!_PUZZLE_DRAGGING_CANVAS) {
         _PUZZLE_DRAGGING_CANVAS = document.createElement('canvas');
     }
@@ -1582,7 +1581,7 @@ const pasteToDraggingImage = () => { // Used for showing the tile image while dr
         _PUZZLE_DRAGGING_IMG = document.createElement('img');
     }
     const ctx2d = _PUZZLE_DRAGGING_CANVAS.getContext('2d');
-    const imageData = _PUZZLE_CURRENT_DRAG_TILE.imageData;
+    const imageData = _PUZZLE_DRAGGING_TILE.imageData;
     _PUZZLE_DRAGGING_CANVAS.width = imageData.width;
     _PUZZLE_DRAGGING_CANVAS.height = imageData.height;
     ctx2d.putImageData(imageData, 0, 0);
@@ -1590,16 +1589,16 @@ const pasteToDraggingImage = () => { // Used for showing the tile image while dr
 };
 
 const updatePuzzleTiles = () => {
-    if (!CANVAS_2D || !_PUZZLE_CURRENT_DRAG_TILE) {
+    if (!CANVAS_2D || !_PUZZLE_DRAGGING_TILE) {
         return; // User has not clicked yet. Mouse movements are tracked after first click.
     }
     const ctx = CANVAS_2D.getContext('2d');
 
     _PUZZLE_CURRENT_DROP_TILE = null;
-    ctx.clearRect(0, 0, _PUZZLE_WIDTH, _PUZZLE_HEIGHT);
+    ctx.clearRect(0, 0, _PUZZLE_WIDTH, _PUZZLE_HEIGHT); // TODO: remove?
     pasteToDraggingImage();
     for (const tile of _PUZZLE_TILES) {
-        if (tile == _PUZZLE_CURRENT_DRAG_TILE) {
+        if (tile === _PUZZLE_DRAGGING_TILE) {
             continue;
         }
         ctx.drawImage(
@@ -1613,52 +1612,56 @@ const updatePuzzleTiles = () => {
             _PUZZLE_TILE_WIDTH,
             _PUZZLE_TILE_HEIGHT
         );
-        // ctx.strokeRect(tile.sx, tile.yPos, _PUZZLE_TILE_WIDTH, _PUZZLE_TILE_HEIGHT); // TODO: remove?
         _PUZZLE_CURRENT_DROP_TILE = getCurrentMouseTile();
-        if (_PUZZLE_CURRENT_DROP_TILE && _PUZZLE_CURRENT_DROP_TILE !== _PUZZLE_CURRENT_DRAG_TILE) {
-                _PUZZLE_CURRENT_DROP_TILE = tile;
-                ctx.save();
-                ctx.globalAlpha = 0.4;
-                ctx.fillStyle = _PUZZLE_HOVER_TINT;
-                ctx.fillRect(
-                    _PUZZLE_CURRENT_DROP_TILE.sx,
-                    _PUZZLE_CURRENT_DROP_TILE.sy,
-                    _PUZZLE_TILE_WIDTH,
-                    _PUZZLE_TILE_HEIGHT
-                );
-                ctx.restore();
+        if (!_PUZZLE_CURRENT_DROP_TILE) {
+            return;
         }
+        ctx.save();
+        ctx.globalAlpha = 0.4;
+        ctx.fillStyle = _PUZZLE_HOVER_TINT;
+        ctx.fillRect(
+            _PUZZLE_CURRENT_DROP_TILE.sx,
+            _PUZZLE_CURRENT_DROP_TILE.sy,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT
+        );
+        ctx.restore();
     }
     ctx.save();
     ctx.globalAlpha = 0.6;
     ctx.drawImage(
         _PUZZLE_DRAGGING_IMG,
-        _PUZZLE_CURRENT_DRAG_TILE.sx,
-        _PUZZLE_CURRENT_DRAG_TILE.sy,
+        _PUZZLE_DRAGGING_TILE.sx,
+        _PUZZLE_DRAGGING_TILE.sy,
         _PUZZLE_TILE_WIDTH,
         _PUZZLE_TILE_HEIGHT,
         _CANVAS_2D_MOUSE_LOC .x - _PUZZLE_TILE_WIDTH / 2,
         _CANVAS_2D_MOUSE_LOC .y - _PUZZLE_TILE_HEIGHT / 2,
         _PUZZLE_TILE_WIDTH,
-        _PUZZLE_TILE_HEIGHT
+        _PUZZLE_TILE_HEIGHT,
     );
     ctx.restore();
 };
 
 const onDropTile = (evt) => { // When mouse is released, drop the dragged tile at the location, and swap them.
-    if (!_PUZZLE_CURRENT_DRAG_TILE || !_PUZZLE_CURRENT_DROP_TILE) {
+    if (!_PUZZLE_DRAGGING_TILE || !_PUZZLE_CURRENT_DROP_TILE) {
         console.error('Drag or drop tile is missing.');
+        _PUZZLE_DRAGGING_TILE = null;
+        _PUZZLE_CURRENT_DROP_TILE = null;
+        return;
     }
     const tmp = {
-        sx: _PUZZLE_CURRENT_DRAG_TILE.sx,
-        sy: _PUZZLE_CURRENT_DRAG_TILE.sy
+        sx: _PUZZLE_DRAGGING_TILE.sx,
+        sy: _PUZZLE_DRAGGING_TILE.sy
     };
-    _PUZZLE_CURRENT_DRAG_TILE.sx = _PUZZLE_CURRENT_DROP_TILE.sy;
-    _PUZZLE_CURRENT_DRAG_TILE.sy = _PUZZLE_CURRENT_DROP_TILE.sy;
+    _PUZZLE_DRAGGING_TILE.sx = _PUZZLE_CURRENT_DROP_TILE.sy;
+    _PUZZLE_DRAGGING_TILE.sy = _PUZZLE_CURRENT_DROP_TILE.sy;
     _PUZZLE_CURRENT_DROP_TILE.sx = tmp.sx;
     _PUZZLE_CURRENT_DROP_TILE.sy = tmp.sy;
 
+    _PUZZLE_DRAGGING_TILE = undefined;
     _PUZZLE_CURRENT_DROP_TILE = undefined;
+
     // checkSolved(); // TODO
     console.log('tile dropped');
 };
@@ -1689,13 +1692,17 @@ const onPuzzleClick = () => {
     }
     const ctx = CANVAS_2D.getContext('2d');
 
-    _PUZZLE_CURRENT_DRAG_TILE = getCurrentMouseTile();
+    _PUZZLE_DRAGGING_TILE = getCurrentMouseTile();
+    if (!_PUZZLE_DRAGGING_TILE) {
+        console.error('Failed to get drag tile.'); // TODO
+        return;
+    }
     pasteToDraggingImage();
 
-    if (_PUZZLE_CURRENT_DRAG_TILE) {
+    if (_PUZZLE_DRAGGING_TILE) {
         ctx.clearRect(
-            _PUZZLE_CURRENT_DRAG_TILE.sx,
-            _PUZZLE_CURRENT_DRAG_TILE.sy,
+            _PUZZLE_DRAGGING_TILE.sx,
+            _PUZZLE_DRAGGING_TILE.sy,
             _PUZZLE_TILE_WIDTH,
             _PUZZLE_TILE_HEIGHT,
         );
@@ -1703,8 +1710,8 @@ const onPuzzleClick = () => {
         ctx.globalAlpha = 0.9;
         ctx.drawImage(
             _PUZZLE_DRAGGING_IMG,
-            _PUZZLE_CURRENT_DRAG_TILE.sx,
-            _PUZZLE_CURRENT_DRAG_TILE.sy,
+            _PUZZLE_DRAGGING_TILE.sx,
+            _PUZZLE_DRAGGING_TILE.sy,
             _PUZZLE_TILE_WIDTH,
             _PUZZLE_TILE_HEIGHT,
             _CANVAS_2D_MOUSE_LOC .x - _PUZZLE_TILE_WIDTH / 2,
@@ -1757,42 +1764,19 @@ async function updatePuzzle(forceState = null) {
 
     _STREETVIEW_LISTENER = CANVAS_2D.addEventListener('load', makePuzzle);
 
-    // ref: https://webdesign.tutsplus.com/create-an-html5-canvas-tile-swapping-puzzle--active-10747t
     const ctx = CANVAS_2D.getContext('2d');
 
     const checkSolved = () => { // TODO: decide how to handle when puzzle is solved.
-        ctx.clearRect(0, 0, _PUZZLE_WIDTH, _PUZZLE_HEIGHT);
-        let gameWin = true;
-        for (const tile of _PUZZLE_TILES) {
-            ctx.drawImage(
-                _PUZZLE_DRAGGING_IMG,
-                tile.sx,
-                tile.sy,
-                _PUZZLE_TILE_WIDTH,
-                _PUZZLE_TILE_HEIGHT,
-                tile.sx,
-                tile.sy,
-                _PUZZLE_TILE_WIDTH,
-                _PUZZLE_TILE_HEIGHT,
-            );
-            ctx.strokeRect(tile.sx, tile.sy, _PUZZLE_TILE_WIDTH, _PUZZLE_TILE_HEIGHT);
-            if (tile.sx != tile.sx || tile.sy != tile.sy) {
-                gameWin = false;
-            }
-        }
-        if (gameWin) {
-            console.log('solved.'); // TODO
+        const solved = false;
+        if (solved) {
+            document.onpointerdown = null;
+            document.onpointermove = null;
+            document.onpointerup = null;
         }
     }
 
     document.onpointerdown = onPuzzleClick; // TODO: should be canvas only.
 
-    const gameOver = () => { // TODO: decide what to do here.
-        _PUZZLE_IS_SOLVED = true;
-        document.onpointerdown = null;
-        document.onpointermove = null;
-        document.onpointerup = null;
-    }
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
