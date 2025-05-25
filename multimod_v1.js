@@ -1382,27 +1382,6 @@ async function drawCanvas2d() {
     CANVAS_2D_IS_REDRAWING = true;
 
     try {
-        const loc = GOOGLE_STREETVIEW.getPosition();
-        if (!loc) {
-            console.error('Panorama position not available.');
-            return;
-        }
-        const lat = loc.lat();
-        const lng = loc.lng();
-
-        const size = 640; // max size for Street View Static API.
-        const headings = [0, 90, 180, 270];
-        const pitch = 0; // TODO: should this pull from the current 3d view?
-
-        clearCanvas2d();
-        const canvas3d = getBigMapCanvas();
-        CANVAS_2D = document.createElement('canvas');
-        CANVAS_2D.id = 'gg-big-canvas-2d';
-        CANVAS_2D.width = canvas3d.width;
-        CANVAS_2D.height = canvas3d.height;
-
-        const ctx = CANVAS_2D.getContext('2d');
-
         function fetchImageBlob(url) {
             return new Promise((resolve, reject) => {
                 GM_xmlhttpRequest({
@@ -1413,7 +1392,7 @@ async function drawCanvas2d() {
                         const blobUrl = URL.createObjectURL(response.response);
                         const img = new Image();
                         img.onload = () => {
-                            URL.revokeObjectURL(blobUrl); // cleanup
+                            URL.revokeObjectURL(blobUrl);
                             resolve(img);
                         };
                         img.onerror = reject;
@@ -1424,24 +1403,57 @@ async function drawCanvas2d() {
             });
         }
 
-        const fetchTile = async (heading) => {
+        // TODO: does this need more info from GOOGLE_STREETVIEW?
+        const loc = GOOGLE_STREETVIEW.getPosition();
+        const lat = loc.lat();
+        const lng = loc.lng();
+        const size = 640; // max size for Street View Static API.
+        // const headings = [0, 90, 180, 270]; // TODO: this just takes a 360, doesn't work for loading the view as a puzzle.
+        const { heading, pitch, zoom } = GOOGLE_STREETVIEW.getPov();
+
+        const fetchTile = async (tileHeading, tilePitch, tileZoom) => {
             const url = `https://maps.googleapis.com/maps/api/streetview?size=${size}x${size}` +
                   `&location=${lat},${lng}` +
-                  `&heading=${heading}` +
-                  `&pitch=${pitch}` +
+                  `&heading=${tileHeading}` +
+                  `&pitch=${tilePitch}` +
+                  `&zoom-${tileZoom}` +
                   `&fov=90` +
                   `&key=${GOOGLE_MAPS_API_KEY}`;
+            console.log(url);
             return await fetchImageBlob(url);
         };
 
-        const images = await Promise.all(headings.map(fetchTile));
+        // TODO: figure this out.
+        const tilesToFetch = [
+            [heading, pitch, zoom],
+        ];
+
+//         const images = await Promise.all(tilesToFetch.map(fetchTile));
+        const tilePromises = [];
+        for (const tileToFetch of tilesToFetch) {
+            tilePromises.push(fetchTile(tileToFetch[0], tileToFetch[1], tileToFetch[2]));
+        }
+        const images = await Promise.all(tilePromises);
+
+        clearCanvas2d();
+        const canvas3d = getBigMapCanvas();
+        CANVAS_2D = document.createElement('canvas');
+        CANVAS_2D.id = 'gg-big-canvas-2d';
+        CANVAS_2D.width = canvas3d.width;
+        CANVAS_2D.height = canvas3d.height;
 
         // Draw 2x2 grid. Sadly, we're limited to a square image with a maximum resolution. Google made it impossible to clone the 3D canvas.
+        const ctx = CANVAS_2D.getContext('2d');
         ctx.clearRect(0, 0, CANVAS_2D.width, CANVAS_2D.height);
+
+        ctx.drawImage(images[0], 0, 0, size, size); // Top left.
+
+        /** TODO: figure out how to stitch shit together.
         ctx.drawImage(images[0], 0, 0, size, size); // Top left.
         ctx.drawImage(images[1], size, 0, size, size); // Top right.
         ctx.drawImage(images[2], 0, size, size, size); // Bottom left.
         ctx.drawImage(images[3], size, size, size, size); // Bottom right.
+        */
 
         if (!_STREETVIEW_LISTENER) {
             _STREETVIEW_LISTENER = GOOGLE_STREETVIEW.addListener('position_changed', () => {
