@@ -258,7 +258,7 @@ const loadState = () => { // Load state from local storage if it exists, else us
     try {
         storedState = JSON.parse(stateStr);
     } catch (err) {
-        console.log(err);
+        console.error(err);
     }
     if (!storedState || typeof storedState !== 'object') {
         console.log('Refreshing stored state');
@@ -554,7 +554,7 @@ const disableMods = (mods) => {
         try {
             updateMod(mod, false);
         } catch (err) {
-            console.log(err);
+            console.error(err);
         }
     }
 };
@@ -821,7 +821,7 @@ const getRandomLoc = (minLat = null, maxLat = null, minLng = null, maxLng = null
 
 const clickAt = (lat, lng) => { // Trigger actual click on guessMap at { lat, lng }.
     if (!GOOGLE_MAP) {
-        console.log('Map not loaded yet for click event.');
+        console.error('Map not loaded yet for click event.');
         return;
     }
     const google = getGoogle();
@@ -1419,7 +1419,7 @@ async function drawCanvas2d() {
                   `&zoom-${tileZoom}` +
                   `&fov=90` +
                   `&key=${GOOGLE_MAPS_API_KEY}`;
-            console.log(url);
+            console.log(url); // TODO: remove
             return await fetchImageBlob(url);
         };
 
@@ -1455,6 +1455,7 @@ async function drawCanvas2d() {
         ctx.drawImage(images[3], size, size, size, size); // Bottom right.
         */
 
+        // TODO: needs zoom and pan.
         if (!_STREETVIEW_LISTENER) {
             _STREETVIEW_LISTENER = GOOGLE_STREETVIEW.addListener('position_changed', () => {
                 drawCanvas2d(_STREETVIEW_LISTENER, GOOGLE_MAPS_API_KEY);
@@ -1500,7 +1501,7 @@ const scatterCanvas2d = (nRows, nCols) => {
     for (const tile of _PUZZLE_TILES) {
         const { imageData, sx, sy } = tile;
         if (!imageData) {
-            console.log('No image data loaded yet.');
+            console.error('No image data loaded yet.');
             return undefined;
         }
         ctx2d.putImageData(imageData, sx, sy);
@@ -1521,7 +1522,8 @@ async function updatePuzzle(forceState = null) {
 
     if (!active) {
         if (_STREETVIEW_LISTENER) {
-            GOOGLE_STREETVIEW.removeListener(_STREETVIEW_LISTENER);
+            const google = getGoogle();
+            google.maps.event.clearListeners(_STREETVIEW_LISTENER, 'position_changed'); // TODO: other listeners
             _STREETVIEW_LISTENER = undefined;
         }
         return;
@@ -1541,7 +1543,7 @@ async function updatePuzzle(forceState = null) {
         _PUZZLE_TILE_HEIGHT = scattered.tileHeight;
     };
 
-    await drawCanvas2d();
+    await makePuzzle();
 
     if (!CANVAS_2D) {
         console.error(`Canvas is not loaded yet. Can't initiate puzzle.`);
@@ -1549,13 +1551,11 @@ async function updatePuzzle(forceState = null) {
         return;
     }
 
-    // TODO: needed?
-    CANVAS_2D.addEventListener('load', makePuzzle);
+    CANVAS_2D.addEventListener('load', makePuzzle); // TODO: needed?
 
     // ref: https://webdesign.tutsplus.com/create-an-html5-canvas-tile-swapping-puzzle--active-10747t
     const ctx = CANVAS_2D.getContext('2d');
 
-/**
     const img = new Image();
     const getClickedTile = () => {
         const { x, y } = _PUZZLE_MOUSE_LOC;
@@ -1727,13 +1727,12 @@ async function updatePuzzle(forceState = null) {
 
     document.onpointerdown = onPuzzleClick; // TODO: should be canvas only.
 
-    const gameOver = () => {
+    const gameOver = () => { // TODO: decide what to do here.
         _PUZZLE_IS_SOLVED = true;
         document.onpointerdown = null;
         document.onpointermove = null;
         document.onpointerup = null;
     }
-*/
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
