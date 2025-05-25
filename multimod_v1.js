@@ -1348,6 +1348,7 @@ const updateLottery = (forceState = null) => {
 // - block tiling until first render.
 // - add option to make to actual puzzle.
 // - maybe disable moving and panning. Need to update note at top if so.
+// - Can maybe pull code from https://github.com/tpebop54/scratch/blob/main/cheat_investigation.js#L74
 
 let CANVAS_2D; // canvas element that overlays the 3D one.
 let CANVAS_2D_IS_REDRAWING = false; // If we're still redrawing the previous frame, this can brick the site.
@@ -1402,13 +1403,26 @@ async function drawCanvas2d() {
 
         const ctx = CANVAS_2D.getContext('2d');
 
-        const loadImage = (src) => new Promise((resolve, reject) => {
-            const img = new Image();
-            img.crossOrigin = 'anonymous'; // Needed to draw onto canvas.
-            img.onload = () => resolve(img);
-            img.onerror = reject;
-            img.src = src;
-        });
+        function fetchImageBlob(url) {
+            return new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url: url,
+                    responseType: 'blob',
+                    onload: function(response) {
+                        const blobUrl = URL.createObjectURL(response.response);
+                        const img = new Image();
+                        img.onload = () => {
+                            URL.revokeObjectURL(blobUrl); // cleanup
+                            resolve(img);
+                        };
+                        img.onerror = reject;
+                        img.src = blobUrl;
+                    },
+                    onerror: reject
+                });
+            });
+        }
 
         const fetchTile = async (heading) => {
             const url = `https://maps.googleapis.com/maps/api/streetview?size=${size}x${size}` +
@@ -1417,7 +1431,7 @@ async function drawCanvas2d() {
                   `&pitch=${pitch}` +
                   `&fov=90` +
                   `&key=${GOOGLE_MAPS_API_KEY}`;
-            return await loadImage(url);
+            return await fetchImageBlob(url);
         };
 
         const images = await Promise.all(headings.map(fetchTile));
@@ -1457,7 +1471,7 @@ const scatterCanvas2d = (nRows, nCols) => {
         for (let col = 0; col < nCols; col++) {
             const sx = col * tileWidth;
             const sy = row * tileHeight;
-            const tile = ctx2d.getImageData(sx, sy, tileWidth, tileHeight); // TODO: returning fucked up data
+            const tile = ctx2d.getImageData(sx, sy, tileWidth, tileHeight);
             tiles.push({ imageData: tile, sx, sy, originalRow: row, originalCol: col });
         }
     }
@@ -1474,7 +1488,7 @@ const scatterCanvas2d = (nRows, nCols) => {
     for (const tile of _PUZZLE_TILES) {
         const { imageData, sx, sy } = tile;
         if (!imageData) {
-            console.log('No image data loaded yet.'); // TODO: what the fuck is going on here?
+            console.log('No image data loaded yet.');
             return undefined;
         }
         ctx2d.putImageData(imageData, sx, sy);
