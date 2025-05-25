@@ -1348,7 +1348,6 @@ const updateLottery = (forceState = null) => {
 // - block tiling until first render.
 // - add option to make to actual puzzle.
 // - maybe disable moving and panning. Need to update note at top if so.
-// - Can maybe pull code from https://github.com/tpebop54/scratch/blob/main/cheat_investigation.js#L74
 
 // https://developers.google.com/maps/documentation/tile/streetview#street_view_image_tiles
 // https://developers.google.com/maps/documentation/javascript/coordinates#tile-coordinates
@@ -1414,6 +1413,15 @@ const clearCanvas2d = () => {
     }
     if (CANVAS_2D && CANVAS_2D.parentElement) {
         CANVAS_2D.parentElement.removeChild(CANVAS_2D);
+        CANVAS_2D = undefined;
+    }
+    if (_PUZZLE_DRAGGING_IMG) {
+        _PUZZLE_DRAGGING_IMG.parentElement.removeChild(_PUZZLE_DRAGGING_IMG);
+        _PUZZLE_DRAGGING_IMG = undefined;
+    }
+    if (_PUZZLE_DRAGGING_CANVAS) {
+        _PUZZLE_DRAGGING_CANVAS.parentElement.removeChild(_PUZZLE_DRAGGING_CANVAS);
+        _PUZZLE_DRAGGING_CANVAS = undefined;
     }
     CANVAS_2D = undefined;
 };
@@ -1461,7 +1469,7 @@ async function drawCanvas2d() {
         const centerHeading = center.heading;
         const centerPitch = center.pitch;
         const zoom = center.zoom;
-        const fov = 360 / Math.pow(2, zoom);
+        const fov = 360 / Math.pow(2, zoom); // TODO: is this correct?
         const size = 640; // max size for Street View Static API.
         const offsetHeading = fov / 4; // How much to offset each quadrant from center.
         const offsetPitch = fov / 4; // How much to offset pitch up/down.
@@ -1498,7 +1506,6 @@ async function drawCanvas2d() {
                   `&zoom-${tileZoom}` +
                   `&fov=90` +
                   `&key=${GOOGLE_MAPS_API_KEY}`;
-            console.log(url); // TODO: remove
             return await fetchImageBlob(url);
         };
 
@@ -1560,8 +1567,8 @@ const scatterCanvas2d = (nRows, nCols) => {
         }
     }
 
-    // Scramble the tiles.
-    // TODO: something is still messed up with the scaling here.
+    // Scramble the tiles and draw on the 2D canvas.
+    // TODO: something is still messed up with the scaling here. Some tiles are showing parts of other tiles. Might be related to FOV.
     _PUZZLE_TILES = shuffleArray(tiles);
     const locations = Object.values(_PUZZLE_TILES).map(tile => { return { sx: tile.sx, sy: tile.sy } });
     for (const tile of tiles) {
@@ -1586,6 +1593,122 @@ const scatterCanvas2d = (nRows, nCols) => {
         tiles,
     };
 };
+
+const onPuzzleClick = (evt) => {
+    if (!CANVAS_2D) {
+        drawCanvas2d(); // TODO: this is sloppy
+    }
+    const ctx = CANVAS_2D.getContext('2d');
+
+    _PUZZLE_CURRENT_DRAG_TILE = getCurrentMouseTile(); // TODO
+    pasteToDraggingImage();
+
+    if (_PUZZLE_CURRENT_DRAG_TILE) {
+        ctx.clearRect(
+            _PUZZLE_CURRENT_DRAG_TILE.sx,
+            _PUZZLE_CURRENT_DRAG_TILE.sy,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT,
+        );
+        ctx.save();
+        ctx.globalAlpha = 0.9;
+        ctx.drawImage(
+            _PUZZLE_DRAGGING_IMG,
+            _PUZZLE_CURRENT_DRAG_TILE.sx,
+            _PUZZLE_CURRENT_DRAG_TILE.sy,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT,
+            _CANVAS_2D_MOUSE_LOC .x - _PUZZLE_TILE_WIDTH / 2,
+            _CANVAS_2D_MOUSE_LOC .y - _PUZZLE_TILE_HEIGHT / 2,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT,
+        );
+        ctx.restore();
+        document.onpointermove = updatePuzzleTiles; // TODO: these should be on the canvas, not the document.
+        document.onpointerup = onDropTile;
+    }
+};
+
+const updatePuzzleTiles = () => {
+    if (!CANVAS_2D || !_PUZZLE_CURRENT_DRAG_TILE) {
+        return; // User has not clicked yet. Mouse movements are tracked after first click.
+    }
+    const ctx = CANVAS_2D.getContext('2d');
+
+    _PUZZLE_CURRENT_DROP_TILE = null;
+    ctx.clearRect(0, 0, _PUZZLE_WIDTH, _PUZZLE_HEIGHT);
+    pasteToDraggingImage();
+    for (const tile of _PUZZLE_TILES) {
+        if (tile == _PUZZLE_CURRENT_DRAG_TILE) {
+            continue;
+        }
+        ctx.drawImage(
+            _PUZZLE_DRAGGING_IMG,
+            tile.sx,
+            tile.sy,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT,
+            tile.sx,
+            tile.sy,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT
+        );
+        ctx.strokeRect(tile.sx, tile.yPos, _PUZZLE_TILE_WIDTH, _PUZZLE_TILE_HEIGHT);
+        if (_PUZZLE_CURRENT_DROP_TILE == null) {
+            if ( // TODO: shares some logic from above
+                _CANVAS_2D_MOUSE_LOC.x < tile.sx ||
+                _CANVAS_2D_MOUSE_LOC.x > tile.sx + _PUZZLE_TILE_WIDTH ||
+                _CANVAS_2D_MOUSE_LOC.y < tile.sy ||
+                _CANVAS_2D_MOUSE_LOC.y > tile.sy + _PUZZLE_TILE_HEIGHT
+            ) {
+            } else {
+                _PUZZLE_CURRENT_DROP_TILE = tile;
+                ctx.save();
+                ctx.globalAlpha = 0.4;
+                ctx.fillStyle = _PUZZLE_HOVER_TINT;
+                ctx.fillRect(
+                    _PUZZLE_CURRENT_DROP_TILE.sx,
+                    _PUZZLE_CURRENT_DROP_TILE.sy,
+                    _PUZZLE_TILE_WIDTH,
+                    _PUZZLE_TILE_HEIGHT
+                );
+                ctx.restore();
+            }
+        }
+    }
+    ctx.save();
+    ctx.globalAlpha = 0.6;
+    ctx.drawImage(
+        _PUZZLE_DRAGGING_IMG,
+        _PUZZLE_CURRENT_DRAG_TILE.sx,
+        _PUZZLE_CURRENT_DRAG_TILE.sy,
+        _PUZZLE_TILE_WIDTH,
+        _PUZZLE_TILE_HEIGHT,
+        _CANVAS_2D_MOUSE_LOC .x - _PUZZLE_TILE_WIDTH / 2,
+        _CANVAS_2D_MOUSE_LOC .y - _PUZZLE_TILE_HEIGHT / 2,
+        _PUZZLE_TILE_WIDTH,
+        _PUZZLE_TILE_HEIGHT
+    );
+    ctx.restore();
+};
+
+const onDropTile = (evt) => {
+    if (!_PUZZLE_CURRENT_DROP_TILE) {
+        console.error('No drop tile found.');
+    }
+    if (_PUZZLE_CURRENT_DROP_TILE !== null) {
+        let tmp = {
+            sx: _PUZZLE_CURRENT_DRAG_TILE.sx,
+            sy: _PUZZLE_CURRENT_DRAG_TILE.sy
+        };
+        _PUZZLE_CURRENT_DRAG_TILE.sx = _PUZZLE_CURRENT_DROP_TILE.sy;
+        _PUZZLE_CURRENT_DRAG_TILE.sy = _PUZZLE_CURRENT_DROP_TILE.sy;
+        _PUZZLE_CURRENT_DROP_TILE.sx = tmp.sx;
+        _PUZZLE_CURRENT_DROP_TILE.sy = tmp.sy;
+    }
+    // checkSolved(); // TODO
+    console.log('tile dropped');
+}
 
 const pasteToDraggingImage = () => { // Used for showing the tile image while dragging.
     if (!_PUZZLE_DRAGGING_CANVAS) {
@@ -1666,119 +1789,6 @@ async function updatePuzzle(forceState = null) {
         }
         if (gameWin) {
             console.log('solved.'); // TODO
-        }
-    }
-
-    const onDropTile = (evt) => {
-        if (!_PUZZLE_CURRENT_DROP_TILE) {
-            console.error('No drop tile found.');
-        }
-        if (_PUZZLE_CURRENT_DROP_TILE !== null) {
-            let tmp = {
-                sx: _PUZZLE_CURRENT_DRAG_TILE.sx,
-                sy: _PUZZLE_CURRENT_DRAG_TILE.sy
-            };
-            _PUZZLE_CURRENT_DRAG_TILE.sx = _PUZZLE_CURRENT_DROP_TILE.sy;
-            _PUZZLE_CURRENT_DRAG_TILE.sy = _PUZZLE_CURRENT_DROP_TILE.sy;
-            _PUZZLE_CURRENT_DROP_TILE.sx = tmp.sx;
-            _PUZZLE_CURRENT_DROP_TILE.sy = tmp.sy;
-        }
-        // checkSolved(); // TODO
-        console.log('tile dropped');
-    }
-
-    const updatePuzzleTiles = (evt) => {
-        if (!_PUZZLE_CURRENT_DRAG_TILE) {
-            return; // User has not clicked yet. Mouse movements are tracked after first click.
-        }
-        _PUZZLE_CURRENT_DROP_TILE = null;
-        ctx.clearRect(0, 0, _PUZZLE_WIDTH, _PUZZLE_HEIGHT);
-        pasteToDraggingImage();
-        for (const tile of _PUZZLE_TILES) {
-            if (tile == _PUZZLE_CURRENT_DRAG_TILE) { // TODO: this can be calculated outside
-                continue;
-            }
-            ctx.drawImage(
-                _PUZZLE_DRAGGING_IMG,
-                tile.sx,
-                tile.sy,
-                _PUZZLE_TILE_WIDTH,
-                _PUZZLE_TILE_HEIGHT,
-                tile.sx,
-                tile.sy,
-                _PUZZLE_TILE_WIDTH,
-                _PUZZLE_TILE_HEIGHT
-            );
-            ctx.strokeRect(tile.sx, tile.yPos, _PUZZLE_TILE_WIDTH, _PUZZLE_TILE_HEIGHT);
-            if (_PUZZLE_CURRENT_DROP_TILE == null) {
-                if ( // TODO: shares some logic from above
-                    _CANVAS_2D_MOUSE_LOC.x < tile.sx ||
-                    _CANVAS_2D_MOUSE_LOC.x > tile.sx + _PUZZLE_TILE_WIDTH ||
-                    _CANVAS_2D_MOUSE_LOC.y < tile.sy ||
-                    _CANVAS_2D_MOUSE_LOC.y > tile.sy + _PUZZLE_TILE_HEIGHT
-                ) {
-                } else {
-                    _PUZZLE_CURRENT_DROP_TILE = tile;
-                    ctx.save();
-                    ctx.globalAlpha = 0.4;
-                    ctx.fillStyle = _PUZZLE_HOVER_TINT;
-                    ctx.fillRect(
-                        _PUZZLE_CURRENT_DROP_TILE.sx,
-                        _PUZZLE_CURRENT_DROP_TILE.sy,
-                        _PUZZLE_TILE_WIDTH,
-                        _PUZZLE_TILE_HEIGHT
-                    );
-                    ctx.restore();
-                }
-            }
-        }
-        ctx.save();
-        ctx.globalAlpha = 0.6;
-        ctx.drawImage(
-            _PUZZLE_DRAGGING_IMG,
-            _PUZZLE_CURRENT_DRAG_TILE.sx,
-            _PUZZLE_CURRENT_DRAG_TILE.sy,
-            _PUZZLE_TILE_WIDTH,
-            _PUZZLE_TILE_HEIGHT,
-            _CANVAS_2D_MOUSE_LOC .x - _PUZZLE_TILE_WIDTH / 2,
-            _CANVAS_2D_MOUSE_LOC .y - _PUZZLE_TILE_HEIGHT / 2,
-            _PUZZLE_TILE_WIDTH,
-            _PUZZLE_TILE_HEIGHT
-        );
-        ctx.restore();
-    };
-
-    const onPuzzleClick = (evt) => {
-        if (!CANVAS_2D) {
-            drawCanvas2d();
-        }
-
-        _PUZZLE_CURRENT_DRAG_TILE = getCurrentMouseTile(); // TODO
-        pasteToDraggingImage();
-
-        if (_PUZZLE_CURRENT_DRAG_TILE) {
-            ctx.clearRect(
-                _PUZZLE_CURRENT_DRAG_TILE.sx,
-                _PUZZLE_CURRENT_DRAG_TILE.sy,
-                _PUZZLE_TILE_WIDTH,
-                _PUZZLE_TILE_HEIGHT,
-            );
-            ctx.save();
-            ctx.globalAlpha = 0.9;
-            ctx.drawImage(
-                _PUZZLE_DRAGGING_IMG,
-                _PUZZLE_CURRENT_DRAG_TILE.sx,
-                _PUZZLE_CURRENT_DRAG_TILE.sy,
-                _PUZZLE_TILE_WIDTH,
-                _PUZZLE_TILE_HEIGHT,
-                _CANVAS_2D_MOUSE_LOC .x - _PUZZLE_TILE_WIDTH / 2,
-                _CANVAS_2D_MOUSE_LOC .y - _PUZZLE_TILE_HEIGHT / 2,
-                _PUZZLE_TILE_WIDTH,
-                _PUZZLE_TILE_HEIGHT,
-            );
-            ctx.restore();
-            document.onpointermove = updatePuzzleTiles;
-            document.onpointerup = onDropTile;
         }
     }
 
