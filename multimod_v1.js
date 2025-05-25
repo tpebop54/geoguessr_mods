@@ -10,6 +10,7 @@
 // @grant        GM_addStyle
 // @grant        GM_openInTab
 // @grant        GM.xmlHttpRequest
+// @grant        GM_xmlhttpRequest
 
 // ==/UserScript==
 
@@ -29,6 +30,19 @@
     - MODS is a global variable that the script will modify. The saved state will override certain parts of it on each page load.
     - Past that, you're on your own. Use this for good.
 */
+
+/** Google stuff
+    - THIS IS OPTIONAL! Some mods use it but most do not.
+    - The Google Maps API key allows for some specific functionality. It's complicated, but read through the code if you want.
+    - You need to make your own API key if you want to use certain tools. https://developers.google.com/maps/documentation/javascript/get-api-key
+    - This will require payment info via Google, but you will NOT be charged unless you exceed 10,000 API calls in a month, which is very unlikely.
+    - You should restrict your API key to your personal computer(s). Look up how to do this, but at a minimum, do not show your key publicly.
+    - Unless you are using specific mods intensely, you are not going to be anywhere near this limit. You can also check your usage on the Google Cloud Console.
+        For example, the puzzle mod will make 4 API calls per movement. If you make 49 movements per round, which I don't know why you would do, that's 200 API calls, so 50 rounds will hit your API limit.
+        It is possible to hit your limit, so keep an eye on https://console.cloud.google.com/apis/dashboard. If you are approaching 10k requests, stop using those mods unless you want to start paying.
+        You can also swap in a different API key if you want. Google doesn't care about 10k requests, they care about 10M.
+*/
+const GOOGLE_MAPS_API_KEY = 'AIzaSyDUXpYTJjKCXy256sIdBQQMr2LvVj5d8Nk'; // Put yours here if you know what you're doing. This is restricted to Tpebop's computers, so you need your own.
 
 // Mods available in this script.
 // ===============================================================================================================================
@@ -178,20 +192,20 @@ const MODS = {
     },
 
     puzzle: {
-        show: true,
+        show: !!GOOGLE_MAPS_API_KEY,
         key: 'puzzle',
         name: 'Puzzle',
-        tooltip: 'Split up the large map into pieces and rearrange them randomly',
+        tooltip: 'Split up the large map into tiles and rearrange them randomly',
         options: {
             nRows: {
                 label: '# Rows',
                 default: 4,
-                tooltip: 'How many pieces to split up the puzzle into vertically.',
+                tooltip: 'How many tiles to split up the puzzle into vertically.',
             },
             nCols: {
                 label: '# Columns',
                 default: 4,
-                tooltip: 'How many pieces to split up the puzzle into horizontally.',
+                tooltip: 'How many tiles to split up the puzzle into horizontally.',
             },
         },
     },
@@ -244,7 +258,7 @@ const loadState = () => { // Load state from local storage if it exists, else us
     try {
         storedState = JSON.parse(stateStr);
     } catch (err) {
-        console.log(err);
+        console.error(err);
     }
     if (!storedState || typeof storedState !== 'object') {
         console.log('Refreshing stored state');
@@ -540,7 +554,7 @@ const disableMods = (mods) => {
         try {
             updateMod(mod, false);
         } catch (err) {
-            console.log(err);
+            console.error(err);
         }
     }
 };
@@ -807,7 +821,7 @@ const getRandomLoc = (minLat = null, maxLat = null, minLng = null, maxLng = null
 
 const clickAt = (lat, lng) => { // Trigger actual click on guessMap at { lat, lng }.
     if (!GOOGLE_MAP) {
-        console.log('Map not loaded yet for click event.');
+        console.error('Map not loaded yet for click event.');
         return;
     }
     const google = getGoogle();
@@ -1323,142 +1337,221 @@ const updateLottery = (forceState = null) => {
 // MOD: Puzzle.
 // ===============================================================================================================================
 
-// Unfortunately, we can't use the 3D canvas, so we recreate it as a 2D canvas to make the puzzle.
-// This may make this mod unusable with some others. I haven't tested out every combination.
+/**
+  Unfortunately, we can't use the 3D canvas, so we recreate it as a 2D canvas to make the puzzle.
+  This may make this mod unusable with some others. I haven't tested out every combination.
+  This requires a GOOGLE_MAPS_API_KEY at the top to generate static tiles. Google blocks calls to render the webgl canvas as a 2d canvas.
+  Also, shit this was hard to figure out.
+*/
 
 // TODO
-// - for some reason, it requires a moving motion to start the scramble.
-// - check previous frame so it doesn't rescramble eveery second
-// - add option to rescramble every X milliseconds.
+// - block tiling until first render.
+// - add option to make to actual puzzle.
+// - maybe disable moving and panning. Need to update note at top if so.
+// - Can maybe pull code from https://github.com/tpebop54/scratch/blob/main/cheat_investigation.js#L74
+
+// https://developers.google.com/maps/documentation/tile/streetview#street_view_image_tiles
+// https://developers.google.com/maps/documentation/javascript/coordinates#tile-coordinates
 
 let CANVAS_2D; // canvas element that overlays the 3D one.
 let CANVAS_2D_IS_REDRAWING = false; // If we're still redrawing the previous frame, this can brick the site.
-let CANVAS_3D_START; // Used to check if the 3D view has changed. We don't want to constantly redraw the canvas for no reason.
-let CANVAS_3D_END; // Also used to check for 3D view changes.
-let CANVAS_2D_REDRAW_INTERVAL; // Interval for redrawing 3D canvas to 2D. Only redraws when first tile has changed.
-let CANVAS_3D_USER_LISTENERS; // Callback when the user moves, pans, or zooms.
+
+let _PUZZLE_WIDTH;
+let _PUZZLE_HEIGHT;
+let _PUZZLE_TILE_WIDTH;
+let _PUZZLE_TILE_HEIGHT;
+let _PUZZLE_CURRENT_TILE;
+let _PUZZLE_CURRENT_DROP_TILE = {};
+let _PUZZLE_MOUSE_LOC = { x: 0, y: 0 };
+let _PUZZLE_TILES = [];
+let _PUZZLE_HOVER_TINT = '#009900'; // Used for drag and drop formatting.
+let _PUZZLE_IS_SOLVED = false; // TODO: what happens if it is solved on start?
+
+let _STREETVIEW_LISTENER; // Listener to trigger redraw on moving, panning, or zooming. TODO: will this trigger too many redraws?
 
 const clearCanvas2d = () => {
     if (CANVAS_2D && CANVAS_2D.parentElement) {
         CANVAS_2D.parentElement.removeChild(CANVAS_2D);
     }
     CANVAS_2D = undefined;
-    CANVAS_2D_IS_REDRAWING = false;
-};
-
-const getPixels2d = () => {
-    if (!CANVAS_2D) {
-        return undefined;
-    }
-    const ctx = CANVAS_2D.getContext('2d');
-    const imageData = ctx.getImageData(0, 0 , CANVAS_2D.width, CANVAS_2D.height);
-    return imageData.data;
-};
-
-/**
-  Check if the start or end of the 3D image has changed (user changed view in any way).
-  If so, we need to redraw the 2D canvas.
-*/
-const shouldRedraw = () => {
-    const pixels2d = getPixels2d();
-    if (!pixels2d || !pixels2d.length) {
-        return false;
-    }
-    const uniqueStart = new Set(CANVAS_3D_START); // Technically could be the exact same Set of pixels, but it's unlikely.
-    const uniqueEnd = new Set(CANVAS_3D_END);
-    if (uniqueStart.size === 1 && uniqueStart.has(0) && uniqueEnd.size === 1 && uniqueEnd.has(0)) {
-        return true; // Map tiles have not loaded yet.
-    }
-    return false; // 3D canvas has not changed since the last 2D canvas redraw.
 };
 
 /**
   Redraw the 3D canvas as a 2D canvas so we can mess around with it.
-  We have to extract the image data from the 3D canvas, essentially a screenshot.
+  We have to extract the image data from the 3D view using Google Maps API. They make it impossible to extract directly from that canvas.
   Return true if the canvas was redrawn, else false.
 */
-const drawCanvas2d = () => {
-        if (CANVAS_2D_IS_REDRAWING) {
-        return false;
-    }
-
+async function drawCanvas2d() {
     CANVAS_2D_IS_REDRAWING = true;
 
-    //Paste the 3D canvas onto 2D so we can mess with it easier.
     try {
+        function fetchImageBlob(url) {
+            return new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url: url,
+                    responseType: 'blob',
+                    onload: function(response) {
+                        const blobUrl = URL.createObjectURL(response.response);
+                        const img = new Image();
+                        img.onload = () => {
+                            URL.revokeObjectURL(blobUrl);
+                            resolve(img);
+                        };
+                        img.onerror = reject;
+                        img.src = blobUrl;
+                    },
+                    onerror: reject
+                });
+            });
+        }
+
+        const loc = GOOGLE_STREETVIEW.getPosition();
+        const lat = loc.lat();
+        const lng = loc.lng();
+
+        // We are going to take the original heading and pitch, and generate 4 images from it.
+        // Would be nice to do this in one go, but the max resolution for free accounts is 640x640.
+        // We then stitch those together on a 2D canvas, then we can mess with it.
+        // ref: https://developers.google.com/maps/documentation/javascript/streetview
+        const center = GOOGLE_STREETVIEW.getPov();
+        const centerHeading = center.heading;
+        const centerPitch = center.pitch;
+        const zoom = center.zoom;
+        const fov = 360 / Math.pow(2, zoom);
+        const size = 640; // max size for Street View Static API.
+        const offsetHeading = fov / 4; // How much to offset each quadrant from center.
+        const offsetPitch = fov / 4; // How much to offset pitch up/down.
+
+        // Define the 4 quadrants relative to current view.
+        const quadrants = [
+            {
+                name: 'top-left',
+                heading: centerHeading - offsetHeading,
+                pitch: centerPitch + offsetPitch
+            },
+            {
+                name: 'top-right',
+                heading: centerHeading + offsetHeading,
+                pitch: centerPitch + offsetPitch
+            },
+            {
+                name: 'bottom-left',
+                heading: centerHeading - offsetHeading,
+                pitch: centerPitch - offsetPitch
+            },
+            {
+                name: 'bottom-right',
+                heading: centerHeading + offsetHeading,
+                pitch: centerPitch - offsetPitch
+            }
+        ];
+
+        const fetchTile = async (tileHeading, tilePitch, tileZoom) => {
+            const url = `https://maps.googleapis.com/maps/api/streetview?size=${size}x${size}` +
+                  `&location=${lat},${lng}` +
+                  `&heading=${tileHeading}` +
+                  `&pitch=${tilePitch}` +
+                  `&zoom-${tileZoom}` +
+                  `&fov=90` +
+                  `&key=${GOOGLE_MAPS_API_KEY}`;
+            console.log(url); // TODO: remove
+            return await fetchImageBlob(url);
+        };
+
+        const tilesToFetch = quadrants.map(quadrant => [quadrant.heading, quadrant.pitch, zoom]);
+        const tilePromises = [];
+        for (const tileToFetch of tilesToFetch) {
+            tilePromises.push(fetchTile(tileToFetch[0], tileToFetch[1], tileToFetch[2]));
+        }
+        const images = await Promise.all(tilePromises);
+
         clearCanvas2d();
         const canvas3d = getBigMapCanvas();
         CANVAS_2D = document.createElement('canvas');
         CANVAS_2D.id = 'gg-big-canvas-2d';
         CANVAS_2D.width = canvas3d.width;
         CANVAS_2D.height = canvas3d.height;
-        const ctx2d = CANVAS_2D.getContext('2d');
-        ctx2d.drawImage(canvas3d, 0, 0);
-        Object.assign(CANVAS_2D.style, {
-            'pointer-events': 'none',
-        });
+
+        // Draw 2x2 grid. Sadly, we're limited to a square image with a maximum resolution. Google made it impossible to clone the 3D canvas.
+        const ctx = CANVAS_2D.getContext('2d');
+        ctx.clearRect(0, 0, CANVAS_2D.width, CANVAS_2D.height);
+
+        ctx.drawImage(images[0], 0, 0, size, size); // Top left.
+        ctx.drawImage(images[1], size, 0, size, size); // Top right.
+        ctx.drawImage(images[2], 0, size, size, size); // Bottom left.
+        ctx.drawImage(images[3], size, size, size, size); // Bottom right.
+
+        // TODO: needs zoom and pan.
+        if (!_STREETVIEW_LISTENER) {
+            _STREETVIEW_LISTENER = GOOGLE_STREETVIEW.addListener('position_changed', () => {
+                drawCanvas2d(_STREETVIEW_LISTENER, GOOGLE_MAPS_API_KEY);
+            });
+        }
+
         // Put 2D canvas on top of 3D and allow pointer events to the 3D.
         const mapParent = canvas3d.parentElement.parentElement;
         mapParent.insertBefore(CANVAS_2D, mapParent.firstChild);
         CANVAS_2D_IS_REDRAWING = false;
-        return true; // canvas was redrawn; need to perform additional functions.
     } catch (err) {
-        console.log(err);
+        console.error(err);
+        CANVAS_2D_IS_REDRAWING = false;
         clearCanvas2d();
-        return false;
     }
-};
+}
 
-/**
-  Scatter the canvas into tiles and redraw it.
-  This function assumes that the 2D canvas has already been filled.
-*/
 const scatterCanvas2d = (nRows, nCols) => {
-    if (!CANVAS_2D) {
-        return;
-    }
-
     const ctx2d = CANVAS_2D.getContext('2d');
-    const pieceHeight = CANVAS_2D.height / nRows;
-    const pieceWidth = CANVAS_2D.width / nCols;
+    const tileWidth = CANVAS_2D.width / nCols;
+    const tileHeight = CANVAS_2D.height / nRows;
 
     // Split 2D image into tiles.
     const tiles = [];
     for (let row = 0; row < nRows; row++) {
         for (let col = 0; col < nCols; col++) {
-            const sx = col * pieceWidth;
-            const sy = row * pieceHeight;
-            const tile = ctx2d.getImageData(sx, sy, pieceWidth, pieceHeight);
+            const sx = col * tileWidth;
+            const sy = row * tileHeight;
+            const tile = ctx2d.getImageData(sx, sy, tileWidth, tileHeight);
             tiles.push({ imageData: tile, sx, sy, originalRow: row, originalCol: col });
         }
     }
 
     // Scramble the tiles.
-    const locs = tiles.map(tile => [tile.sx, tile.sy]);
-    const shuffledLocs = shuffleArray(locs);
+    _PUZZLE_TILES = shuffleArray(tiles);
     for (const [ix, tile] of Object.entries(tiles)) {
-        const [sx, sy] = shuffledLocs[Number(ix)];
+        const { sx, sy } = _PUZZLE_TILES[Number(ix)];
         Object.assign(tile, { sx, sy });
     }
 
-    // Remove the original pasted image and redraw as scrambled.
+    // Remove the original pasted image and redraw as scrambled tiles.
     ctx2d.clearRect(0, 0, CANVAS_2D.width, CANVAS_2D.height);
-    for (const tile of tiles) {
+    for (const tile of _PUZZLE_TILES) {
         const { imageData, sx, sy } = tile;
+        if (!imageData) {
+            console.error('No image data loaded yet.');
+            return undefined;
+        }
         ctx2d.putImageData(imageData, sx, sy);
     }
+
+    return {
+        tileWidth,
+        tileHeight,
+        tiles,
+    };
 };
 
-const updatePuzzle = (forceState = null) => {
+async function updatePuzzle(forceState = null) {
     const mod = MODS.puzzle;
     const active = updateMod(mod, forceState);
 
     clearCanvas2d();
 
     if (!active) {
-        if (CANVAS_2D_REDRAW_INTERVAL) {
-            clearInterval(CANVAS_2D_REDRAW_INTERVAL);
-            CANVAS_2D_REDRAW_INTERVAL = undefined;
+        if (_STREETVIEW_LISTENER) {
+            const google = getGoogle();
+            google.maps.event.clearListeners(_STREETVIEW_LISTENER, 'position_changed'); // TODO: other listeners
+            _STREETVIEW_LISTENER = undefined;
         }
         return;
     }
@@ -1466,17 +1559,207 @@ const updatePuzzle = (forceState = null) => {
     const nRows = getOption(mod, 'nRows');
     const nCols = getOption(mod, 'nCols');
 
-    const makePuzzle = () => {
-        const wasRedrawn = drawCanvas2d();
-        if (wasRedrawn) {
-            scatterCanvas2d(nRows, nCols);
+    async function makePuzzle() {
+        await drawCanvas2d();
+        const scattered = scatterCanvas2d(nRows, nCols);
+        if (!scattered) {
+            return;
         }
+        _PUZZLE_TILES = scattered.tiles;
+        _PUZZLE_TILE_WIDTH = scattered.tileWidth;
+        _PUZZLE_TILE_HEIGHT = scattered.tileHeight;
     };
 
-    // Sometimes, the streetview is slow to load. The idle event will trigger before all tiles are rendered.
-    // So just retry and redraw the canvas on an interval. This will also take care of NM and NMPZ modes, though there will be lag.
-    makePuzzle();
-    CANVAS_2D_REDRAW_INTERVAL = setInterval(makePuzzle, 1000);
+    await makePuzzle();
+
+    if (!CANVAS_2D) {
+        console.error(`Canvas is not loaded yet. Can't initiate puzzle.`);
+        updateMod(mod, false);
+        return;
+    }
+
+    CANVAS_2D.addEventListener('load', makePuzzle); // TODO: needed?
+
+    // ref: https://webdesign.tutsplus.com/create-an-html5-canvas-tile-swapping-puzzle--active-10747t
+    const ctx = CANVAS_2D.getContext('2d');
+
+    const img = new Image();
+    const getClickedTile = () => {
+        const { x, y } = _PUZZLE_MOUSE_LOC;
+        if (x == null || y == null) {
+            return null;
+        }
+        for (const tile of _PUZZLE_TILES) {
+            const leftX = tile.sx;
+            const rightX = leftX + tile.imageData.width;
+            const topY = tile.sy;
+            const bottomY = topY + tile.imageData.height; // Greater than topY.
+
+            if (x >= leftX && x <= rightX && y >= topY && y <= bottomY) {
+                return tile;
+            }
+        }
+        return null;
+    };
+
+    const checkSolved = () => { // TODO: decide how to handle when puzzle is solved.
+        ctx.clearRect(0, 0, _PUZZLE_WIDTH, _PUZZLE_HEIGHT);
+        let gameWin = true;
+        for (const tile of _PUZZLE_TILES) {
+            ctx.drawImage(
+                img,
+                tile.sx,
+                tile.sy,
+                _PUZZLE_TILE_WIDTH,
+                _PUZZLE_TILE_HEIGHT,
+                tile.sx,
+                tile.sy,
+                _PUZZLE_TILE_WIDTH,
+                _PUZZLE_TILE_HEIGHT,
+            );
+            ctx.strokeRect(tile.sx, tile.sy, _PUZZLE_TILE_WIDTH, _PUZZLE_TILE_HEIGHT);
+            if (tile.sx != tile.sx || tile.sy != tile.sy) {
+                gameWin = false;
+            }
+        }
+        if (gameWin) {
+            console.log('solved.'); // TODO
+        }
+    }
+
+    const tileDropped = (evt) => {
+        document.onpointermove = null; // TODO: revisit
+        document.onpointerup = null;
+        if (_PUZZLE_CURRENT_DROP_TILE !== null) {
+            let tmp = {
+                sx: _PUZZLE_CURRENT_TILE.sx, // TODO: what the fuck is going on here
+                sy: _PUZZLE_CURRENT_TILE.sy
+            };
+            _PUZZLE_CURRENT_TILE.sx = _PUZZLE_CURRENT_DROP_TILE.sy;
+            _PUZZLE_CURRENT_TILE.sy = _PUZZLE_CURRENT_DROP_TILE.sy;
+            _PUZZLE_CURRENT_DROP_TILE.sx = tmp.sx;
+            _PUZZLE_CURRENT_DROP_TILE.sy = tmp.sy;
+        }
+        checkSolved();
+    }
+
+    const updatePuzzleTiles = (evt) => {
+        _PUZZLE_CURRENT_DROP_TILE = null;
+        if (evt.layerX || evt.layerX == 0) {
+            _PUZZLE_MOUSE_LOC.x = evt.layerX - CANVAS_2D.offsetLeft;
+            _PUZZLE_MOUSE_LOC.y = evt.layerY - CANVAS_2D.offsetTop;
+        } else if (evt.offsetX || evt.offsetX == 0) {
+            _PUZZLE_MOUSE_LOC.x = evt.offsetX - CANVAS_2D.offsetLeft;
+            _PUZZLE_MOUSE_LOC.y = evt.offsetY - CANVAS_2D.offsetTop;
+        }
+        ctx.clearRect(0, 0, _PUZZLE_WIDTH, _PUZZLE_HEIGHT);
+        for (const tile of _PUZZLE_TILES) {
+            if (tile == _PUZZLE_CURRENT_TILE) { // TODO: this can be calculated outside
+                continue;
+            }
+            ctx.drawImage(
+                img,
+                tile.sx,
+                tile.sy,
+                _PUZZLE_TILE_WIDTH,
+                _PUZZLE_TILE_HEIGHT,
+                tile.sx,
+                tile.sy,
+                _PUZZLE_TILE_WIDTH,
+                _PUZZLE_TILE_HEIGHT
+            );
+            ctx.strokeRect(tile.sx, tile.yPos, _PUZZLE_TILE_WIDTH, _PUZZLE_TILE_HEIGHT);
+            if (_PUZZLE_CURRENT_DROP_TILE == null) {
+                if ( // TODO: shares some logic from above
+                    _PUZZLE_MOUSE_LOC.x < tile.sx ||
+                    _PUZZLE_MOUSE_LOC.x > tile.sx + _PUZZLE_TILE_WIDTH ||
+                    _PUZZLE_MOUSE_LOC.y < tile.sy ||
+                    _PUZZLE_MOUSE_LOC.y > tile.sy + _PUZZLE_TILE_HEIGHT
+                ) {
+                    //NOT OVER
+                } else {
+                    _PUZZLE_CURRENT_DROP_TILE = tile;
+                    ctx.save();
+                    ctx.globalAlpha = 0.4;
+                    ctx.fillStyle = _PUZZLE_HOVER_TINT;
+                    ctx.fillRect(
+                        _PUZZLE_CURRENT_DROP_TILE.sx,
+                        _PUZZLE_CURRENT_DROP_TILE.sy,
+                        _PUZZLE_TILE_WIDTH,
+                        _PUZZLE_TILE_HEIGHT
+                    );
+                    ctx.restore();
+                }
+            }
+        }
+        ctx.save();
+        ctx.globalAlpha = 0.6;
+        ctx.drawImage(
+            img,
+            _PUZZLE_CURRENT_TILE.sx,
+            _PUZZLE_CURRENT_TILE.sy,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT,
+            _PUZZLE_MOUSE_LOC .x - _PUZZLE_TILE_WIDTH / 2,
+            _PUZZLE_MOUSE_LOC .y - _PUZZLE_TILE_HEIGHT / 2,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT
+        );
+        ctx.restore();
+        ctx.strokeRect(
+            _PUZZLE_MOUSE_LOC.x - _PUZZLE_TILE_WIDTH / 2,
+            _PUZZLE_MOUSE_LOC.y - _PUZZLE_TILE_HEIGHT / 2,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT
+        );
+    };
+
+    const onPuzzleClick = (evt) => {
+        if (!CANVAS_2D) {
+            drawCanvas2d();
+        }
+        if (evt.layerX || evt.layerX === 0) {
+            _PUZZLE_MOUSE_LOC.x = evt.layerX - CANVAS_2D.offsetLeft;
+            _PUZZLE_MOUSE_LOC.y = evt.layerY - CANVAS_2D.offsetTop;
+        } else if (evt.offsetX || evt.offsetX === 0) {
+            _PUZZLE_MOUSE_LOC.x = evt.offsetX - CANVAS_2D.offsetLeft;
+            _PUZZLE_MOUSE_LOC.y = evt.offsetY - CANVAS_2D.offsetTop;
+        }
+        _PUZZLE_CURRENT_TILE = getClickedTile();
+        if (_PUZZLE_CURRENT_TILE) {
+            ctx.clearRect(
+                _PUZZLE_CURRENT_TILE.sx,
+                _PUZZLE_CURRENT_TILE.sy,
+                _PUZZLE_TILE_WIDTH,
+                _PUZZLE_TILE_HEIGHT,
+            );
+            ctx.save();
+            ctx.globalAlpha = 0.9;
+            ctx.drawImage(
+                img,
+                _PUZZLE_CURRENT_TILE.sx,
+                _PUZZLE_CURRENT_TILE.sy,
+                _PUZZLE_TILE_WIDTH,
+                _PUZZLE_TILE_HEIGHT,
+                _PUZZLE_MOUSE_LOC .x - _PUZZLE_TILE_WIDTH / 2,
+                _PUZZLE_MOUSE_LOC .y - _PUZZLE_TILE_HEIGHT / 2,
+                _PUZZLE_TILE_WIDTH,
+                _PUZZLE_TILE_HEIGHT,
+            );
+            ctx.restore();
+            document.onpointermove = updatePuzzleTiles;
+            document.onpointerup = tileDropped;
+        }
+    }
+
+    document.onpointerdown = onPuzzleClick; // TODO: should be canvas only.
+
+    const gameOver = () => { // TODO: decide what to do here.
+        _PUZZLE_IS_SOLVED = true;
+        document.onpointerdown = null;
+        document.onpointermove = null;
+        document.onpointerup = null;
+    }
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -1555,8 +1838,8 @@ const addButtons = () => { // Add mod buttons to the active round.
 // C hee tah blockers.
 // ===============================================================================================================================
 
-// The goal of this is to fuck up the replay file and distract the user by blacking out the screen for the first second or two and clicking around.
-// Should make it obvious in the replay and stream if someone is using this mod pack.
+// The goal of this is to fuck up the r eplay file and distract the user by blacking out the screen for the first second or two and clicking around.
+// Should make it obvious in the repl ay and stream if someone is using this mod pack.
 // Coders could figure it out if they want, but with compiled code and intentional obfuscation here, it will be difficult.
 // Credit to Bennett Foddy for assembling several of these quotes and for a few himself, from my favorite game (Getting Over It with Bennett Foddy).
 // Use the — character (dash, not hyphen) to apply a quote credit, which will show up as a smaller text under the quote.
@@ -1588,7 +1871,7 @@ const _QUOTES = {
         `Those who mind don't matter, those who matter don't mind. — Dr. Seuss`,
         `Never stop never stopping.`,
 
-        /** Turning these off because I don't know if bias toward certain languages would be an issue. Safer to just do English until I think about it more.
+        /** Turning these off for now because I don't know if bias toward certain languages would be an issue, and I can't do every language. Safer to just do English until I think about it more.
 
         // German.
         `Träume nicht dein Leben, sondern lebe deinen Traum.`,
@@ -1689,8 +1972,12 @@ const _QUOTES = {
 // Can be configured toward the top of the file. If you don't like jokes or something.
 const _QUOTES_FLAT = [];
 for (const [key, value] of Object.entries(SHOW_QUOTES)) {
-    if (key) {
-        _QUOTES_FLAT.push(...value);
+    if (value) {
+        const quotesThisCategory = _QUOTES[key];
+        if (!quotesThisCategory) {
+            continue;
+        }
+        _QUOTES_FLAT.push(...quotesThisCategory);
     }
 }
 
@@ -1786,9 +2073,9 @@ window.addEventListener('load', () => {
 /**
   Click around the map *after* it is loaded and idle, and the screen is blacked out.
   This will be a callback in the google maps section of this script.
-  This will completely mess up the replay file. We have 1 second to do this.
-  Always end with a click at { lat: 0, lng: 0 }. This will be extremely obvious in replays, both for streaming and the actual replay files.
-  This function is sloppy, but it doesn't really matter as long as we screw up the replay.
+  This will completely mess up the repl ay file. We have 1 second to do this.
+  Always end with a click at { lat: 0, lng: 0 }. This will be extremely obvious in r eplays, both for streaming and the actual re play files.
+  This function is sloppy, but it doesn't really matter as long as we screw up the repl ay.
 */
 const clickGarbage = (nMilliseconds = 900) => {
     const nClicks = 20; // Approximately...
@@ -1994,7 +2281,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
                     setTimeout(clearCh_eatOverlay, 1000);
                     clickGarbage(900);
 				});
-
                 google.maps.event.addListener(this, 'dragstart', () => {
 					IS_DRAGGING = true;
 				});
