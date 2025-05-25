@@ -1350,6 +1350,9 @@ const updateLottery = (forceState = null) => {
 // - maybe disable moving and panning. Need to update note at top if so.
 // - Can maybe pull code from https://github.com/tpebop54/scratch/blob/main/cheat_investigation.js#L74
 
+// https://developers.google.com/maps/documentation/tile/streetview#street_view_image_tiles
+// https://developers.google.com/maps/documentation/javascript/coordinates#tile-coordinates
+
 let CANVAS_2D; // canvas element that overlays the 3D one.
 let CANVAS_2D_IS_REDRAWING = false; // If we're still redrawing the previous frame, this can brick the site.
 
@@ -1403,13 +1406,46 @@ async function drawCanvas2d() {
             });
         }
 
-        // TODO: does this need more info from GOOGLE_STREETVIEW?
         const loc = GOOGLE_STREETVIEW.getPosition();
         const lat = loc.lat();
         const lng = loc.lng();
+
+        // We are going to take the original heading and pitch, and generate 4 images from it.
+        // Would be nice to do this in one go, but the max resolution for free accounts is 640x640.
+        // We then stitch those together on a 2D canvas, then we can mess with it.
+        // ref: https://developers.google.com/maps/documentation/javascript/streetview
+        const center = GOOGLE_STREETVIEW.getPov();
+        const centerHeading = center.heading;
+        const centerPitch = center.pitch;
+        const zoom = center.zoom;
+        const fov = 360 / Math.pow(2, zoom);
         const size = 640; // max size for Street View Static API.
-        // const headings = [0, 90, 180, 270]; // TODO: this just takes a 360, doesn't work for loading the view as a puzzle.
-        const { heading, pitch, zoom } = GOOGLE_STREETVIEW.getPov();
+        const offsetHeading = fov / 4; // How much to offset each quadrant from center.
+        const offsetPitch = fov / 4; // How much to offset pitch up/down.
+
+        // Define the 4 quadrants relative to current view.
+        const quadrants = [
+            {
+                name: 'top-left',
+                heading: centerHeading - offsetHeading,
+                pitch: centerPitch + offsetPitch
+            },
+            {
+                name: 'top-right',
+                heading: centerHeading + offsetHeading,
+                pitch: centerPitch + offsetPitch
+            },
+            {
+                name: 'bottom-left',
+                heading: centerHeading - offsetHeading,
+                pitch: centerPitch - offsetPitch
+            },
+            {
+                name: 'bottom-right',
+                heading: centerHeading + offsetHeading,
+                pitch: centerPitch - offsetPitch
+            }
+        ];
 
         const fetchTile = async (tileHeading, tilePitch, tileZoom) => {
             const url = `https://maps.googleapis.com/maps/api/streetview?size=${size}x${size}` +
@@ -1423,12 +1459,7 @@ async function drawCanvas2d() {
             return await fetchImageBlob(url);
         };
 
-        // TODO: figure this out.
-        const tilesToFetch = [
-            [heading, pitch, zoom],
-        ];
-
-//         const images = await Promise.all(tilesToFetch.map(fetchTile));
+        const tilesToFetch = quadrants.map(quadrant => [quadrant.heading, quadrant.pitch, zoom]);
         const tilePromises = [];
         for (const tileToFetch of tilesToFetch) {
             tilePromises.push(fetchTile(tileToFetch[0], tileToFetch[1], tileToFetch[2]));
@@ -1442,18 +1473,20 @@ async function drawCanvas2d() {
         CANVAS_2D.width = canvas3d.width;
         CANVAS_2D.height = canvas3d.height;
 
-        // Draw 2x2 grid. Sadly, we're limited to a square image with a maximum resolution. Google made it impossible to clone the 3D canvas.
+        // TODO: move back down below.
+        // Put 2D canvas on top of 3D and allow pointer events to the 3D.
+        const mapParent = canvas3d.parentElement.parentElement;
+        mapParent.insertBefore(CANVAS_2D, mapParent.firstChild);
+        CANVAS_2D_IS_REDRAWING = false;
+
+        // Draw 2x2 grid. Sadly, we're limited to a square image with a maximum resolution. Google made it impossible to clone the 3D canvas with CORS restrictions.
+        // TODO: need to rescale to window size, whichever dimension is the limiting one.
         const ctx = CANVAS_2D.getContext('2d');
         ctx.clearRect(0, 0, CANVAS_2D.width, CANVAS_2D.height);
-
-        ctx.drawImage(images[0], 0, 0, size, size); // Top left.
-
-        /** TODO: figure out how to stitch shit together.
         ctx.drawImage(images[0], 0, 0, size, size); // Top left.
         ctx.drawImage(images[1], size, 0, size, size); // Top right.
         ctx.drawImage(images[2], 0, size, size, size); // Bottom left.
         ctx.drawImage(images[3], size, size, size, size); // Bottom right.
-        */
 
         // TODO: needs zoom and pan.
         if (!_STREETVIEW_LISTENER) {
@@ -1461,11 +1494,6 @@ async function drawCanvas2d() {
                 drawCanvas2d(_STREETVIEW_LISTENER, GOOGLE_MAPS_API_KEY);
             });
         }
-
-        // Put 2D canvas on top of 3D and allow pointer events to the 3D.
-        const mapParent = canvas3d.parentElement.parentElement;
-        mapParent.insertBefore(CANVAS_2D, mapParent.firstChild);
-        CANVAS_2D_IS_REDRAWING = false;
     } catch (err) {
         console.error(err);
         CANVAS_2D_IS_REDRAWING = false;
@@ -1491,9 +1519,10 @@ const scatterCanvas2d = (nRows, nCols) => {
 
     // Scramble the tiles.
     _PUZZLE_TILES = shuffleArray(tiles);
-    for (const [ix, tile] of Object.entries(tiles)) {
-        const { sx, sy } = _PUZZLE_TILES[Number(ix)];
-        Object.assign(tile, { sx, sy });
+    const locations = Object.values(_PUZZLE_TILES).map(tile => { return { sx: tile.sx, sy: tile.sy } });
+    for (const tile of tiles) {
+        const newLoc = locations.pop();
+        Object.assign(tile, newLoc);
     }
 
     // Remove the original pasted image and redraw as scrambled tiles.
@@ -2254,7 +2283,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
                     setTimeout(clearCh_eatOverlay, 1000);
                     clickGarbage(900);
 				});
-
                 google.maps.event.addListener(this, 'dragstart', () => {
 					IS_DRAGGING = true;
 				});
