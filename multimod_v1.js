@@ -212,14 +212,32 @@ const MODS = {
     // Miscellaneous display options that don't deserve a full button.
     displayOptions: {
         show: true,
-        key: 'display-options',
-        name: 'Display Options',
+        key: 'display-preferences',
+        name: 'Display Preferences',
         tooltip: 'Various display options for page elements, colors, etc. Does not mess with gameplay.',
         options: {
             tidy: {
                 label: 'Tidy mode',
                 default: false,
                 tooltip: 'Hides annoying page elements.',
+            },
+            blur: {
+                label: 'Blur (px)',
+                default: 0,
+                tooltip: 'Blur radius in pixels of main view.',
+            },
+            colorMode: {
+                label: 'Color Mode',
+                default: 'normal',
+                tooltip: 'Select color mode for the main view.',
+                options: [
+                    'normal',
+                    'grayscale',
+                    'deuteranopia',
+                    'tritanopia',
+                    'dog',
+                    'sea-lion',
+                ],
             },
         },
     },
@@ -391,7 +409,11 @@ const getAllGmnoPrints = () => {
 };
 
 const getAllGoogleMapsHotlinks = () => {
-    document.querySelectorAll('a[aria-label^="Open this area in Google Maps"]')
+    return document.querySelectorAll('a[aria-label^="Open this area in Google Maps"]')
+};
+
+const getGuessButton = () => {
+    return document.querySelector(`button[class^="button_button__"]`);
 };
 
 const getModDiv = () => {
@@ -404,6 +426,10 @@ const getOptionMenu = () => {
 
 const getButtonID = (mod) => {
     return `gg-opt-${mod.key}`;
+};
+
+const getDropdownID = (mod, key) => { // Dropdown element for mod+option.
+    return `${getButtonID(mod)}-${key}`;
 };
 
 const getButtonText = (mod) => {
@@ -455,6 +481,13 @@ const setOption = (mod, key, value, save = true) => {
     }
 };
 
+const isArrayOption = (mod, key) => {
+    if (!mod.options ||!mod.options[key]) {
+        return false;
+    }
+    return Array.isArray(mod.options[key].options);
+};
+
 const makeOptionMenu = (mod) => {
     if (document.getElementById('gg-option-menu')) {
         return;
@@ -486,7 +519,18 @@ const makeOptionMenu = (mod) => {
         const defaultVal = getDefaultOption(mod, key);
         let input;
         let type;
-        if (typeof defaultVal === 'number') {
+        if (isArrayOption(mod, key)) {
+            type = Array; // It's a string, but differentiate it here.
+            input = document.createElement('select');
+            input.id = getDropdownID(mod, key);
+            for (const option of mod.options[key].options) {
+                const optionElement = document.createElement('option');
+                optionElement.value = option;
+                optionElement.textContent = option;
+                input.appendChild(optionElement);
+            }
+            Object.assign(input, { value, className: 'gg-option-input' });
+        } else if (typeof defaultVal === 'number') {
             type = Number;
             input = document.createElement('input');
             Object.assign(input, { type: 'number', value, className: 'gg-option-input' });
@@ -520,6 +564,10 @@ const makeOptionMenu = (mod) => {
     const onApply = () => {
         for (const [key, type, input] of inputs) {
             let value;
+            if (type === Array) {
+                const dropdown = document.querySelector(getDropdownID(mod, key));
+                value = dropdown.value;
+            }
             if (type === Boolean) {
                 value = !!input.checked;
             } else {
@@ -1843,9 +1891,13 @@ const updateDisplayOptions = (forceState = null) => {
         getGameReactionsDiv(),
         getAllGmnoPrints(),
         getAllGoogleMapsHotlinks(),
+        getGuessButton(),
     ];
     for (const searchResult of toToggle) {
-        if (!searchResult) {
+        if (!searchResult) { // Not found at all.
+            continue;
+        }
+        if (searchResult.length !== null && searchResult.length === 0) { // querySelectorAll returned empty.
             continue;
         }
         const divs = searchResult.length ? searchResult : [searchResult]; // Node or NodeList.
@@ -2551,9 +2603,9 @@ const style = `
         border-radius: 5px;
         font-size: 14px;
         cursor: pointer;
-        opacity: 0.75;
+        opacity: 0.9;
         transition: opacity 0.2s;
-        padding: 3px 10px;
+        padding: 4px 10px;
     }
 
     .gg-mod-button:hover {
@@ -2605,7 +2657,8 @@ const style = `
     }
 
     .gg-option-input {
-        width: 70px;
+        min-width: 70px;
+        max-width: 120px;
         height: 25px;
         border-radius: 20px;
         margin: 5px 0;
@@ -2746,3 +2799,10 @@ const style = `
 GM_addStyle(style);
 
 // -------------------------------------------------------------------------------------------------------------------------------
+
+
+/**
+  TPEBOP'S NOTES
+  - Look into https://gitlab.com/nonreviad/extenssr/-/tree/main/src?ref_type=heads this is some legit stuff and can be a Chrome extension.
+  - https://openuserjs.org/scripts/drparse/GeoFilter/source for messing around with colors and crap.
+*/
