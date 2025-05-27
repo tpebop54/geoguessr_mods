@@ -224,7 +224,7 @@ const MODS = {
             blur: {
                 label: 'Blur (px)',
                 default: 0,
-                tooltip: 'Blur radius in pixels of main view.',
+                tooltip: 'Blur radius in pixels of main view. Lea',
             },
             colorMode: {
                 label: 'Color Mode',
@@ -1881,21 +1881,6 @@ async function updatePuzzle(forceState = null) {
 // MOD: Display options
 // ===============================================================================================================================
 
-// TODO
-// - colorMode
-
-const FILTER_OPTIONS = { // Available filter options for big map.
-    blur: undefined,
-    brightness: undefined,
-    contrast: undefined,
-    saturate: undefined,
-    grayscale: undefined,
-    sepia: undefined,
-    'hue-rotate': undefined,
-    invert: undefined,
-    opacity: undefined,
-};
-
 const _updateTidy = (mod) => {
     const showTidy = getOption(mod, 'tidy');
 
@@ -1926,14 +1911,44 @@ const _updateTidy = (mod) => {
     };
 };
 
+const _BASE_COLOR_FILTER = Object.freeze({ // Available filter options for big map. Copy and update this Object to make new modes.
+    blur: undefined,
+    brightness: undefined,
+    contrast: undefined,
+    saturate: undefined,
+    grayscale: undefined,
+    sepia: undefined,
+    'hue-rotate': undefined,
+    invert: undefined,
+    opacity: undefined,
+});
+
+const _COLOR_FILTERS = {
+    grayscale: {
+        grayscale: '100%',
+    },
+};
+
 const getFilterStr = (mod) => { // Get string that can be applied to streetview canvas filters.
-    const filters = {};
-
-    const blur = getOption(mod, 'blur') || 0;
-    filters.blur = `${blur}px`;
-
+    const activeFilter = Object.assign({}, _BASE_COLOR_FILTER); // The actual styling that will be applied to the canvas.
+    const activeColorMode = getOption(mod, 'colorMode');
+    const enabledFilter = _COLOR_FILTERS[activeColorMode] || {};
+    if (activeColorMode) {
+        Object.assign(activeFilter, enabledFilter);
+    }
+    /**
+      If blur is defined and not 0, apply it on top of the other visual mods, even if they have blur defined.
+      Might want to revisit this logic later. For now, the other ones don't implement blur. Maybe set to -1 or something.
+    */
+    const blurNumber = getOption(mod, 'blur');
+    if (blurNumber > 0) {
+        activeFilter.blur = `${blurNumber}px`;
+    }
     let filterStr = '';
-    for (const [key, value] of Object.entries(filters)) {
+    for (const [key, value] of Object.entries(activeFilter)) {
+        if (value == null) {
+            continue
+        }
         filterStr += `${key}(${value})` ; // Requires units in value.
     }
     filterStr = filterStr.trim();
@@ -2571,8 +2586,13 @@ GeoGuessrEventFramework.init().then(GEF => {
 
 loadState();
 
-const observer = new MutationObserver(() => {
-	addButtons(); // TODO: this gets called way too much.
+const observer = new MutationObserver(() => { // TODO: this gets called way too much.
+	addButtons();
+    // I think this is an anti-c h eat method from Geoguessr. It's annoying, so it's gone.
+    const reactionsDiv = getGameReactionsDiv();
+    if (reactionsDiv) {
+        reactionsDiv.parentElement.removeChild(reactionsDiv);
+    }
 });
 
 observer.observe(document.querySelector('#__next'), { subtree: true, childList: true });
@@ -2846,4 +2866,5 @@ GM_addStyle(style);
   TPEBOP'S NOTES
   - Look into https://gitlab.com/nonreviad/extenssr/-/tree/main/src?ref_type=heads this is some legit stuff and can be a Chrome extension.
   - https://openuserjs.org/scripts/drparse/GeoFilter/source for messing around with colors and crap.
+  - Figure out if it's detecting scripts; it's randomly triggering emotes.
 */
