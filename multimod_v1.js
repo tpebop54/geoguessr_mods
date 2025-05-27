@@ -565,7 +565,7 @@ const makeOptionMenu = (mod) => {
         for (const [key, type, input] of inputs) {
             let value;
             if (type === Array) {
-                const dropdown = document.querySelector(getDropdownID(mod, key));
+                const dropdown = document.querySelector(`#${getDropdownID(mod, key)}`);
                 value = dropdown.value;
             }
             if (type === Boolean) {
