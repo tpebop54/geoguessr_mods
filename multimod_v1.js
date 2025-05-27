@@ -370,6 +370,30 @@ const getBigMapCanvas = () => {
     return container.querySelector('.widget-scene-canvas');
 };
 
+const getGameControlsDiv = () => {
+    return document.querySelector(`aside[class^="game_controls__"]`);
+};
+
+const getZoomControlsDiv = () => {
+    return document.querySelector(`div[class^="guess-map_zoomControls__"]`);
+};
+
+const getGameStatusDiv = () => {
+    return document.querySelector(`div[class^="game_status__"]`);
+};
+
+const getGameReactionsDiv = () => {
+    return document.querySelector(`div[class^="game-reactions_root__"]`);
+};
+
+const getAllGmnoPrints = () => {
+    return document.querySelectorAll('div[class^="gmnoprint"]');
+};
+
+const getAllGoogleMapsHotlinks = () => {
+    document.querySelectorAll('a[aria-label^="Open this area in Google Maps"]')
+};
+
 const getModDiv = () => {
     return document.getElementById('gg-mods-container');
 };
@@ -1806,12 +1830,33 @@ async function updatePuzzle(forceState = null) {
 // MOD: Display options
 // ===============================================================================================================================
 
-// TODO:
-// - save toggle state of menu
-
 const updateDisplayOptions = (forceState = null) => {
     const mod = MODS.displayOptions;
     const active = updateMod(mod, forceState);
+
+    const showTidy = getOption(mod, 'tidy');
+
+    const toToggle = [
+        getGameControlsDiv(),
+        getZoomControlsDiv(),
+        getGameStatusDiv(),
+        getGameReactionsDiv(),
+        getAllGmnoPrints(),
+        getAllGoogleMapsHotlinks(),
+    ];
+    for (const searchResult of toToggle) {
+        if (!searchResult) {
+            continue;
+        }
+        const divs = searchResult.length ? searchResult : [searchResult]; // Node or NodeList.
+        for (const div of divs) {
+            if (showTidy) {
+                div.classList.add('hidden');
+            } else {
+                div.classList.remove('hidden');
+            }
+        }
+    };
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
