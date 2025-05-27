@@ -224,19 +224,22 @@ const MODS = {
             blur: {
                 label: 'Blur (px)',
                 default: 0,
-                tooltip: 'Blur radius in pixels of main view. Lea',
+                tooltip: 'Blur radius in pixels of main view.',
             },
             colorMode: {
                 label: 'Color Mode',
                 default: 'normal',
                 tooltip: 'Select color mode for the main view.',
-                options: [
+                options: [ // Must update along with _COLOR_FILTERS.
                     'normal',
                     'grayscale',
                     'deuteranopia',
                     'tritanopia',
                     'dog',
-                    'sea-lion',
+                    'cat',
+                    'sea lion',
+                    'ant',
+                    'octopus',
                 ],
             },
         },
@@ -1903,6 +1906,9 @@ const _updateTidy = (mod) => {
         const divs = searchResult.length ? searchResult : [searchResult]; // Node or NodeList.
         for (const div of divs) {
             if (showTidy) {
+                if (div.classList.toString().includes('sv-links-control')) { // Don't hide the moving arrows.
+                    continue;
+                }
                 div.classList.add('hidden');
             } else {
                 div.classList.remove('hidden');
@@ -1921,12 +1927,68 @@ const _BASE_COLOR_FILTER = Object.freeze({ // Available filter options for big m
     'hue-rotate': undefined,
     invert: undefined,
     opacity: undefined,
+    'drop-shadow': undefined,
 });
 
 const _COLOR_FILTERS = {
     grayscale: {
         grayscale: '100%',
     },
+    deuteranopia: {
+        'hue-rotate': '-20deg',
+        saturate: '60%',
+        contrast: '120%',
+        sepia: '12%',
+        brightness: '105%',
+    },
+    tritanopia: {
+        'hue-rotate': '35deg',
+        saturate: '50%',
+        contrast: '135%',
+        sepia: '20%',
+        brightness: '115%',
+    },
+    dog: {
+        'hue-rotate': '62deg',
+        saturate: '38%',
+        contrast: '88%',
+        sepia: '22%',
+        brightness: '94%',
+        blur: '0.5px',
+    },
+    cat: {
+        'hue-rotate': '50deg',
+        saturate: '25%',
+        contrast: '75%',
+        sepia: '22%',
+        brightness: '150%',
+        sepia: '15%',
+        blur: '0.3px',
+    },
+    'sea lion': {
+        'hue-rotate': '200deg',
+        saturate: '10%',
+        contrast: '115%',
+        sepia: '40%',
+        brightness: '80%',
+        blur: '1px',
+    },
+    ant: {
+        'hue-rotate': '-40deg',
+        saturate: '250%',
+        contrast: '180%',
+        brightness: '130%',
+        blur: '0.8px',
+        invert: '20%',
+    },
+    octopus: {
+        saturate: '0%',
+        contrast: '250%',
+        brightness: '85%',
+        blur: '0.1px',
+        'drop-shadow': '0 0 3px rgba(255,255,255,0.4)',
+    }
+
 };
 
 const getFilterStr = (mod) => { // Get string that can be applied to streetview canvas filters.
@@ -1961,8 +2023,11 @@ const updateDisplayOptions = (forceState = null) => {
 
     _updateTidy(mod);
 
+    let filterStr = '';
+    if (active) {
+        filterStr = getFilterStr(mod);
+    }
     const canvas3d = getBigMapCanvas();
-    const filterStr = getFilterStr(mod);
     canvas3d.style.filter = filterStr;
 };
 
