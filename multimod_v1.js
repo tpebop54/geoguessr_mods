@@ -14,7 +14,6 @@
 
 // ==/UserScript==
 
-
 /**
   USER NOTES
     - When loading, you may occasionally have to refresh the page once or twice.
@@ -192,7 +191,7 @@ const MODS = {
     },
 
     puzzle: {
-        show: !!GOOGLE_MAPS_API_KEY,
+        show: !!GOOGLE_MAPS_API_KEY && false, // Not quite working yet :(
         key: 'puzzle',
         name: 'Puzzle',
         tooltip: 'Split up the large map into tiles and rearrange them randomly',
@@ -206,6 +205,21 @@ const MODS = {
                 label: '# Columns',
                 default: 4,
                 tooltip: 'How many tiles to split up the puzzle into horizontally.',
+            },
+        },
+    },
+
+    // Miscellaneous display options that don't deserve a full button.
+    displayOptions: {
+        show: true,
+        key: 'display-options',
+        name: 'Display Options',
+        tooltip: 'Various display options for page elements, colors, etc. Does not mess with gameplay.',
+        options: {
+            tidy: {
+                label: 'Tidy mode',
+                default: false,
+                tooltip: 'Hides annoying page elements.',
             },
         },
     },
@@ -357,7 +371,7 @@ const getBigMapCanvas = () => {
 };
 
 const getModDiv = () => {
-    return document.getElementById('gg-mod-container');
+    return document.getElementById('gg-mods-container');
 };
 
 const getOptionMenu = () => {
@@ -1570,6 +1584,7 @@ const scatterCanvas2d = (nRows, nCols) => {
     };
 };
 
+// TODO: something is fucked up here
 const pasteToDraggingImage = () => { // Used for showing the tile image while dragging.
     if (!_PUZZLE_DRAGGING_TILE) {
         return;
@@ -1588,6 +1603,7 @@ const pasteToDraggingImage = () => { // Used for showing the tile image while dr
     _PUZZLE_DRAGGING_IMG.src = _PUZZLE_DRAGGING_CANVAS.toDataURL();
 };
 
+// TODO: something is fucked up here
 const updatePuzzleTiles = () => {
     if (!CANVAS_2D || !_PUZZLE_DRAGGING_TILE) {
         return; // User has not clicked yet. Mouse movements are tracked after first click.
@@ -1643,6 +1659,7 @@ const updatePuzzleTiles = () => {
     ctx.restore();
 };
 
+// TODO: something is fucked up here
 const onDropTile = (evt) => { // When mouse is released, drop the dragged tile at the location, and swap them.
     if (!_PUZZLE_DRAGGING_TILE || !_PUZZLE_CURRENT_DROP_TILE) {
         console.error('Drag or drop tile is missing.');
@@ -1686,6 +1703,7 @@ const getCurrentMouseTile = () => { // Tile that the mouse is currently over. Do
     return null;
 };
 
+// TODO: something is fucked up here. Deletes the tile
 const onPuzzleClick = () => {
     if (!CANVAS_2D) {
         drawCanvas2d(); // TODO: this is sloppy
@@ -1725,6 +1743,7 @@ const onPuzzleClick = () => {
     }
 };
 
+// TODO: something is fucked up here
 async function updatePuzzle(forceState = null) {
     const mod = MODS.puzzle;
     const active = updateMod(mod, forceState);
@@ -1783,6 +1802,23 @@ async function updatePuzzle(forceState = null) {
 
 
 
+
+// MOD: Display options
+// ===============================================================================================================================
+
+// TODO:
+// - save toggle state of menu
+
+const updateDisplayOptions = (forceState = null) => {
+    const mod = MODS.displayOptions;
+    const active = updateMod(mod, forceState);
+};
+
+// -------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
 // Add bindings and start the script.
 // ===============================================================================================================================
 
@@ -1798,9 +1834,9 @@ const _BINDINGS = [
     [MODS.inFrame, updateInFrame],
     [MODS.lottery, updateLottery],
     [MODS.puzzle, updatePuzzle],
+    [MODS.displayOptions, updateDisplayOptions],
 ];
 
-// TODO
 const closePopup = (evt) => { // Always close the popup menu when disabling a mod.
 
 };
@@ -1824,31 +1860,59 @@ const bindButtons = () => {
     }
 };
 
-const addButtons = () => { // Add mod buttons to the active round.
-	const container = getBigMapContainer();
-	if (!container || getModDiv()) {
+const addButtons = () => { // Add mod buttons to the active round, with a little button to toggle them.
+	const bigMapContainer = getBigMapContainer();
+    const modContainer = getModDiv(); // Includes header and buttons.
+	if (!bigMapContainer || modContainer) { // Page not loaded, or modContainer is already rendered.
         return;
     }
 
-    const buttonClass = 'gg-mod';
-    const element = document.createElement('div');
-    element.id = 'gg-mod-container';
+    const modsContainer = document.createElement('div'); // Header and buttons.
+    modsContainer.id = 'gg-mods-container';
 
-    let innerHTML = `<div id="tpebops-mods-header" class="gg-title">TPEBOP'S MODS</div>`;
+    const headerContainer = document.createElement('div'); // Header and button toggle.
+    headerContainer.id = 'gg-mods-header-container';
+    const headerText = document.createElement('div');
+    headerText.id = 'gg-mods-header';
+    headerText.textContent = `TPEBOP'S MODS`;
+    const modMenuToggle = document.createElement('button');
+    modMenuToggle.id = 'gg-mods-container-toggle';
+    modMenuToggle.textContent = '▼'; // TODO: load from localStorage.
+    headerContainer.appendChild(headerText);
+    headerContainer.appendChild(modMenuToggle);
+
+    const buttonContainer = document.createElement('div'); // Mod buttons.
+    buttonContainer.id = 'gg-mods-button-container';
+
     for (const mod of Object.values(MODS)) {
         if (!mod.show) {
             continue;
         }
-        innerHTML = innerHTML + `\n<div class="${buttonClass}" id="${getButtonID(mod)}" title="${mod.tooltip}">${getButtonText(mod)}</div>`;
+        const modButton = document.createElement('div');
+        modButton.id = getButtonID(mod);
+        modButton.classList.add('gg-mod-button');
+        modButton.title = mod.tooltip;
+        modButton.textContent = getButtonText(mod);
+        buttonContainer.appendChild(modButton);
     }
-	element.innerHTML = innerHTML;
 
-	container.appendChild(element);
+    modsContainer.appendChild(headerContainer);
+    modsContainer.appendChild(buttonContainer);
+	bigMapContainer.appendChild(modsContainer);
 	bindButtons();
+
+    modMenuToggle.addEventListener('click', function() {
+        if (buttonContainer.classList.contains('hidden')) {
+            buttonContainer.classList.remove('hidden');
+            modMenuToggle.textContent = '▼';
+        } else {
+            buttonContainer.classList.add('hidden');
+            modMenuToggle.textContent = '▶';
+        }
+    });
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
-
 
 
 
@@ -2397,35 +2461,57 @@ const style = `
         overflow: hidden;
     }
 
-    #gg-mod-container {
-        position: absolute;
-        top: 2.5rem;
-        left: 1rem;
-        z-index: 9;	display: flex;
-        flex-direction: column;
-        gap: 5px;
+    .hidden {
+        display: none !important;
     }
 
-    .gg-title {
-        font-size: 15px;
+    #gg-mods-container {
+        position: absolute;
+        top: 40px;
+        left: 20px;
+        z-index: 9;	display: flex;
+        flex-direction: column;
+        min-width: 175px;
+    }
+
+    #gg-mods-header-container {
+        display: flex;
+        align-items: center;
+        font-size: 18px;
+        justify-content: space-between;
+    }
+
+    #gg-mods-header {
         font-weight: bold;
         text-shadow: ${headerShadow};
         position: relative;
-        z-index: 1;
-        padding-top: 15px;
     }
 
-    .gg-mod {
+    #gg-mods-container-toggle {
+        padding: 0;
+        font-size: 16px;
+        cursor: pointer;
+        text-shadow: ${headerShadow};
+    }
+
+    #gg-mods-button-container {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-top: 10px;
+    }
+
+    .gg-mod-button {
         background: var(--ds-color-purple-100);
-        padding: 6px 10px;
         border-radius: 5px;
-        font-size: 12px;
+        font-size: 14px;
         cursor: pointer;
         opacity: 0.75;
         transition: opacity 0.2s;
+        padding: 3px 10px;
     }
 
-    .gg-mod:hover {
+    .gg-mod-button:hover {
         opacity: 1;
     }
 
