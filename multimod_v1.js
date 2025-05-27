@@ -467,6 +467,9 @@ const getDefaultOption = (mod, key) => {
 const getOption = (mod, key) => {
     const options = mod.options || {};
     const value = (options[key] || {}).value;
+    if (Array.isArray(value)) {
+        return value[0]; // May add support for multiselect at some point, but not yet.
+    }
     if (value == null) {
         return getDefaultOption(mod, key);
     }
@@ -1878,10 +1881,22 @@ async function updatePuzzle(forceState = null) {
 // MOD: Display options
 // ===============================================================================================================================
 
-const updateDisplayOptions = (forceState = null) => {
-    const mod = MODS.displayOptions;
-    const active = updateMod(mod, forceState);
+// TODO
+// - colorMode
 
+const FILTER_OPTIONS = { // Available filter options for big map.
+    blur: undefined,
+    brightness: undefined,
+    contrast: undefined,
+    saturate: undefined,
+    grayscale: undefined,
+    sepia: undefined,
+    'hue-rotate': undefined,
+    invert: undefined,
+    opacity: undefined,
+};
+
+const _updateTidy = (mod) => {
     const showTidy = getOption(mod, 'tidy');
 
     const toToggle = [
@@ -1909,6 +1924,31 @@ const updateDisplayOptions = (forceState = null) => {
             }
         }
     };
+};
+
+const getFilterStr = (mod) => { // Get string that can be applied to streetview canvas filters.
+    const filters = {};
+
+    const blur = getOption(mod, 'blur') || 0;
+    filters.blur = `${blur}px`;
+
+    let filterStr = '';
+    for (const [key, value] of Object.entries(filters)) {
+        filterStr += `${key}(${value})` ; // Requires units in value.
+    }
+    filterStr = filterStr.trim();
+    return filterStr;
+};
+
+const updateDisplayOptions = (forceState = null) => {
+    const mod = MODS.displayOptions;
+    const active = updateMod(mod, forceState);
+
+    _updateTidy(mod);
+
+    const canvas3d = getBigMapCanvas();
+    const filterStr = getFilterStr(mod);
+    canvas3d.style.filter = filterStr;
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -2658,10 +2698,11 @@ const style = `
 
     .gg-option-input {
         min-width: 70px;
-        max-width: 120px;
+        max-width: 100px;
         height: 25px;
         border-radius: 20px;
         margin: 5px 0;
+        border: none;
     }
 
     .gg-option-button {
