@@ -19,12 +19,12 @@
     - When loading, you may occasionally have to refresh the page once or twice.
     - You can disable the quotes if you want via the SHOW_QUOTES variable. Blackout screen is non-negotiable.
     - If things go super bad, press "Alt Shift ." (period is actually a > with Shift active). This will disable all mods and refresh the page.
+    - If you want to toggle a mod, change 'show' to true or false for it in MODS.
 /*
 
 /**
   DEV NOTES
     - Shout-out to miraclewhips for geoguessr-event-framework and some essential functions in this script.
-    - If you want to disable a mod, change 'show' to false for it in MODS.
     - Keep same configuration for all mods. Must add to _BINDINGS at the bottom of the file for any new mods.
     - MODS is a global variable that the script will modify. The saved state will override certain parts of it on each page load.
     - Past that, you're on your own. Use this for good.
@@ -233,6 +233,7 @@ const MODS = {
                 options: [ // Must update along with _COLOR_FILTERS.
                     'normal',
                     'grayscale',
+                    'black and white',
                     'deuteranopia',
                     'tritanopia',
                     'dog',
@@ -243,6 +244,23 @@ const MODS = {
                 ],
             },
         },
+    },
+
+    userChallenges: {
+        show: true,
+        key: 'user-challenges',
+        name: 'User Challenges',
+        tooltip: 'User challenges that a player must complete before making a guess.',
+        options: {}, // If you want to configure what categories or specific challenges are shown, go to _CHALLENGE_OPTIONS.
+    },
+
+    scratch: {
+        show: false, // Used for dev work.
+        key: 'scratch',
+        name: 'Show Scratch',
+        tooltip: 'For dev.',
+        scoreMode: false,
+        options: {},
     },
 
 };
@@ -1934,6 +1952,12 @@ const _COLOR_FILTERS = {
     grayscale: {
         grayscale: '100%',
     },
+    'black and white': { // TODO: does this need to be configurable based on the image?
+        grayscale: '100%',
+        contrast: '1000%',
+        threshold: '128',
+        brightness: '1.5',
+    },
     deuteranopia: {
         'hue-rotate': '-20deg',
         saturate: '60%',
@@ -1987,8 +2011,7 @@ const _COLOR_FILTERS = {
         brightness: '85%',
         blur: '0.1px',
         'drop-shadow': '0 0 3px rgba(255,255,255,0.4)',
-    }
-
+    },
 };
 
 const getFilterStr = (mod) => { // Get string that can be applied to streetview canvas filters.
@@ -2011,7 +2034,7 @@ const getFilterStr = (mod) => { // Get string that can be applied to streetview 
         if (value == null) {
             continue
         }
-        filterStr += `${key}(${value})` ; // Requires units in value.
+        filterStr += `${key}(${value}) ` ; // Requires units in value.
     }
     filterStr = filterStr.trim();
     return filterStr;
@@ -2036,6 +2059,94 @@ const updateDisplayOptions = (forceState = null) => {
 
 
 
+// MOD: User challenges.
+// ===============================================================================================================================
+
+// TODO:
+// - user must click a button that says they did the thing before it shows them the map.
+// - Need to separate stuff like solving equations from clicking on a border. Require a different message per category, e.g. I have done this thing
+// - Option to not have repeats per round. Need at least 5 things per thing.
+// - Option to sync randomzation to other user.
+// - Maybe use API key to detect if they violated a condition.
+// - Click on a city, river, whatever that starts with whatever or contains the letter whatever. Weight the letters?
+// - Weight the enabled challenges somehow?
+
+// Ideas that need more consideration
+// - figure out how to say X in Y language
+// - generate math equation
+
+// Here, you can disable categories. Copy the keys from _USER_CHALLENGES and set to false if you don't want them. All are enabled by default.
+const _ENABLED_CHALLENGES = {
+    indoor: true,
+};
+
+const _USER_CHALLENGES = {
+    getUpAndDoStuff: [
+        'Drink a small glass of water',
+        'Put on sunglasses',
+        'Go outside and come back inside',
+        'Find a rock and show it to the camera',
+        'Find leaf or blade of grass and show it to the camera',
+        'Put on sunglasses for this round',
+        'Find a spoon and show it to the camera',
+        'Find a fork and show it to the camera',
+        'Put on a different shirt',
+        'Find us a fruit or vegetable and show it to the camera',
+        'Either change your shoes, or put on shoes',
+        'Find a toothbrush and show it to the camera',
+    ],
+    doAtDesk: [
+        'Tell us a joke',
+        'Tell us a fun fact',
+
+    ],
+    mapChoices: [
+        'Click on water',
+        'Click on a border',
+        'Click on a country that is smaller than the actual country',
+        'Click on a country that is larger than the actual country',
+        'Click on the equator or the prime meridan',
+        'Click on the wrong country',
+    ],
+};
+
+const updateUserChallenges = (forceState = null) => {
+    const mod = MODS.userChallenges;
+    const active = updateMod(mod, forceState);
+
+    function getRandomIndex(arrayLength) {
+        const seed = Math.floor(Date.now() / 30000);
+        return Math.floor(((1664525 * seed + 1013904223) % 4294967296) / 4294967296 * arrayLength);
+    }
+
+    // Example usage:
+    const myArray = ['apple', 'banana', 'cherry', 'date', 'elderberry'];
+    const index = getRandomIndex(myArray.length);
+    console.log(`Selected: ${myArray[index]}`);
+
+    console.log('yo');
+};
+
+// -------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+// MOD: Scratch and test work.
+// ===============================================================================================================================
+
+const updateScratch = (forceState = null) => {
+    const mod = MODS.scratch;
+    const active = updateMod(mod, forceState);
+
+    console.log('yo');
+};
+
+// -------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
 // Add bindings and start the script.
 // ===============================================================================================================================
 
@@ -2052,6 +2163,8 @@ const _BINDINGS = [
     [MODS.lottery, updateLottery],
     [MODS.puzzle, updatePuzzle],
     [MODS.displayOptions, updateDisplayOptions],
+    [MODS.userChallenges, updateUserChallenges],
+    [MODS.scratch, updateScratch],
 ];
 
 const closePopup = (evt) => { // Always close the popup menu when disabling a mod.
@@ -2263,6 +2376,7 @@ const _QUOTES = {
         `A cheap Casio watch or an Arduino Uno have the computing power of the first lunar lander. $10-$20.`,
         `The inventor of the glue used in Post-Its intended to make a very strong glue but accidentally made a very weak glue.`,
         `Popsicles were invented by an 11-year-old.`,
+        `The plural of octopus has three accepted versions- octopuses, octopi, octopodes.`,
     ],
 
 };
