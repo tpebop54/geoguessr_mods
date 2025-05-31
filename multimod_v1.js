@@ -226,7 +226,7 @@ const MODS = {
                 tooltip: 'How many columns of titles for you to select from.',
             },
             nClicks: {
-                label: '',
+                label: 'Max. clicks',
                 default: 8,
                 tooltip: 'How many tiles you are allowed to reveal for a given round.',
             },
@@ -1923,14 +1923,97 @@ async function updatePuzzle(forceState = null) {
 
 
 
-// MOD: Display tiles.
+// MOD: Tile reveal.
 // ===============================================================================================================================
+
+let TILE_COUNT_DISPLAY; // Div for showing the number of remaining tiles.
+let TILE_COUNT; // How many remaining tiles the user has.
+let OVERLAY_TILES; // Opaque black tiles to overlay.
+
+const removeTileCount = () => {
+    if (TILE_COUNT_DISPLAY) {
+        TILE_COUNT_DISPLAY.parentElement.removeChild(TILE_COUNT_DISPLAY);
+        TILE_COUNT_DISPLAY = undefined;
+    }
+};
+
+const getTileCount = () => { // Number of remaining clicks the user has.
+    TILE_COUNT = Math.round(Number(TILE_COUNT));
+    if (isNaN(TILE_COUNT)) {
+        TILE_COUNT = 0; // Don't let decimals or weird values mess up the logic here. -1 means infinite.
+    }
+    return TILE_COUNT;
+};
+
+const makeTileCounter = () => { // Make the tile count display overlay.
+    removeTileCount();
+
+    const container = document.createElement('div'); // Label and counter side by side.
+    container.id = 'gg-tile-count';
+    const counterLabel = document.createElement('div'); // Text label.
+    counterLabel.textContent = 'Tiles remaining:';
+    const counter = document.createElement('div'); // How many tiles you have left, will update each click.
+    counter.id = 'gg-tile-count-counter';
+    counter.innerText = getTileCount();
+    container.appendChild(counterLabel);
+    container.appendChild(counter);
+    document.body.appendChild(container);
+
+    TILE_COUNT_DISPLAY = container;
+};
+
+const removeTiles = () => {
+    const tileOverlay = document.getElementById('gg-tile-overlay');
+    if (tileOverlay) {
+        tileOverlay.parentElement.removeChild(tileOverlay);
+    }
+};
+
+const onClickTile = (evt) => {
+    TILE_COUNT = getTileCount();
+    if (TILE_COUNT > 0) {
+        TILE_COUNT -= 1;
+        const counter = document.getElementById('gg-tile-count-counter');
+        counter.innerText = TILE_COUNT;
+        const tile = evt.target;
+        tile.classList.add('removed');
+    }
+};
+
+const makeTiles = (nRows, nCols) => {
+    removeTiles();
+
+    const tileOverlay = document.createElement('div');
+    tileOverlay.id = 'gg-tile-overlay';
+    tileOverlay.style.gridTemplateRows = `repeat(${nRows}, 1fr)`;
+    tileOverlay.style.gridTemplateColumns = `repeat(${nCols}, 1fr)`;
+
+    for (let i = 0; i < nRows * nCols; i++) {
+        const tile = document.createElement('div');
+        tile.className = 'gg-tile-block';
+        tile.addEventListener('click', (evt) => {
+            onClickTile(evt);
+        });
+        tileOverlay.appendChild(tile);
+    }
+
+    const bigMapCanvas = getBigMapCanvas();
+    bigMapCanvas.parentElement.insertBefore(tileOverlay, bigMapCanvas.parentElement.firstChild);
+};
+
 
 const updateTileReveal = (forceState = null) => {
     const mod = MODS.tileReveal;
     const active = updateMod(mod, forceState);
 
-    console.log('yo');
+    if (active) {
+        const nRows = getOption(mod, 'nRows');
+        const nCols = getOption(mod, 'nCols');
+        makeTiles(nRows, nCols);
+        makeTileCounter();
+    } else {
+        removeTileCount();
+    }
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -3031,6 +3114,9 @@ const style = `
     }
 
     #gg-lottery {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
         position: absolute;
         top: 13%;
         left: 50%;
@@ -3038,9 +3124,6 @@ const style = `
         color: white;
         text-shadow: ${bodyShadow};
         transform: translate(-50%, -50%);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
         background-color: rgba(0, 100, 0, 0.8);
         padding: 0.5em;
         border-radius: 10px;
@@ -3073,6 +3156,57 @@ const style = `
         position: absolute;
         pointer-events: none;
         z-index: 99999999;
+    }
+
+    /* TODO: can this be merged with the lottery CSS? */
+    #gg-tile-count {
+        display: flex;
+        justify-content: space-between;
+        position: absolute;
+        top: 13%;
+        left: 50%;
+        font-size: 30px;
+        color: white;
+        text-shadow: ${bodyShadow};
+        transform: translate(-50%, -50%);
+        align-items: center;
+        background-color: rgba(0, 100, 0, 0.8);
+        padding: 0.5em;
+        border-radius: 10px;
+        z-index: 9999;
+    }
+
+    #gg-tile-count-counter {
+        padding-left: 0.5em;
+    }
+
+    #gg-tile-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: transparent;
+        display: grid;
+        z-index: 1000;
+        pointer-events: all;
+    }
+
+    .gg-tile-block {
+        background: black;
+        border: 1px solid #333;
+        cursor: pointer;
+        transition: opacity 0.3s ease;
+    }
+
+    .gg-tile-block:hover {
+        background: #222;
+    }
+
+    .gg-tile-block.removed {
+        pointer-events: none;
+        background: transparent !important;
+        border: none;
     }
 
 `;
