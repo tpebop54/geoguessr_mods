@@ -227,7 +227,7 @@ const MODS = {
             },
             nClicks: {
                 label: 'Max. clicks',
-                default: 8,
+                default: 4,
                 tooltip: 'How many tiles you are allowed to reveal for a given round.',
             },
         },
@@ -1970,12 +1970,16 @@ const removeTiles = () => {
 };
 
 const onClickTile = (evt) => {
+    const tile = evt.target;
+    evt.preventDefault();
+    evt.stopPropagation();
+    evt.stopImmediatePropagation();
+
     TILE_COUNT = getTileCount();
     if (TILE_COUNT > 0) {
         TILE_COUNT -= 1;
         const counter = document.getElementById('gg-tile-count-counter');
         counter.innerText = TILE_COUNT;
-        const tile = evt.target;
         tile.classList.add('removed');
     }
 };
@@ -1992,7 +1996,17 @@ const makeTiles = (nRows, nCols) => {
         const tile = document.createElement('div');
         tile.className = 'gg-tile-block';
         tile.addEventListener('click', (evt) => {
+            evt.preventDefault();
+            evt.stopPropagation();
             onClickTile(evt);
+        });
+        tile.addEventListener('mousedown', (evt) => {
+            evt.preventDefault();
+            evt.stopPropagation();
+        });
+        tile.addEventListener('mouseup', (evt) => {
+            evt.preventDefault();
+            evt.stopPropagation();
         });
         tileOverlay.appendChild(tile);
     }
@@ -2011,6 +2025,8 @@ const updateTileReveal = (forceState = null) => {
         const nCols = getOption(mod, 'nCols');
         makeTiles(nRows, nCols);
         makeTileCounter();
+        TILE_COUNT = getOption(mod, 'nClicks');
+        TILE_COUNT = getTileCount(); // Fix any weird inputs.
     } else {
         removeTileCount();
     }
@@ -3181,15 +3197,13 @@ const style = `
     }
 
     #gg-tile-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
+        position: relative;
         width: 100vw;
         height: 100vh;
         background: transparent;
         display: grid;
         z-index: 1000;
-        pointer-events: all;
+        pointer-events: none;
     }
 
     .gg-tile-block {
@@ -3197,6 +3211,7 @@ const style = `
         border: 1px solid #333;
         cursor: pointer;
         transition: opacity 0.3s ease;
+        pointer-events: all;
     }
 
     .gg-tile-block:hover {
