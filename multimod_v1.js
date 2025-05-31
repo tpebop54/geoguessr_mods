@@ -2558,62 +2558,6 @@ const clearCh_eatOverlay = () => {
     }
 };
 
-/**
-  Some mods take a short time to load after the DOM content is loaded. DOM loaded does not mean the map is loaded.
-  Black out the screen until the map is loaded, with a fixed timeout if something goes wrong.
-  Block all mouse events to underlying elements. This will be inserted over the big map canvas, so other controls still work.
-*/
-let BLACKOUT_SCREEN;
-
-const clearBlackoutScreen = () => {
-    if (BLACKOUT_SCREEN) {
-        try {
-            BLACKOUT_SCREEN.parentElement.removeChild(BLACKOUT_SCREEN);
-        } catch (err) {
-            console.error(err);
-        }
-        BLACKOUT_SCREEN = undefined;
-    }
-};
-
-const addBlackoutScreen = () => {
-    if (BLACKOUT_SCREEN) {
-        return;
-    }
-    const bigMapCanvas = getBigMapCanvas();
-    if (!bigMapCanvas) {
-        return;
-    }
-    const div = document.createElement('div');
-    Object.assign(div.style, {
-        position: 'fixed',
-        width: '100vw',
-        height: '100vw',
-        top: '0',
-        left: '0',
-        pointerEvents: 'all',
-        backgroundColor: 'black',
-    });
-
-    const blockEvt = function(evt) {
-        evt.preventDefault();
-        evt.stopPropagation();
-        evt.stopImmediatePropagation();
-        return false;
-    };
-
-    for (const evtType of [
-        'click', 'mousedown', 'mouseup', 'mousemove',
-        'mouseover', 'mouseout', 'mouseenter', 'mouseleave',
-        'dblclick', 'contextmenu', 'wheel'
-    ]) {
-        div.addEventListener(evtType, blockEvt, true);
-    }
-
-    BLACKOUT_SCREEN = document.body.insertBefore(div, document.body.firstChild);
-    setTimeout(clearBlackoutScreen, 3000); // In case something goes wrong, don't brick the site.
-};
-
 let _CH_EA_AT_DE_TE_CT_IO_N = 'on your honor';
 
 window.addEventListener('load', () => {
@@ -2676,7 +2620,8 @@ window.addEventListener('load', () => {
 
     // Other measures are taken, but no matter what we can't let this div brick thie entire site,
     //   e.g. if they change the URL naming scheme. Race condition with map loading, but so be it.
-    setTimeout(clearCh_eatOverlay, 3000);
+    // This also should allow ample time for mods to load after the initial GOOGLE_MAP load. There may be a better way to do this.
+    setTimeout(clearCh_eatOverlay, 5000);
 });
 
 /**
@@ -2878,7 +2823,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
                     initMods();
                     console.log(`Tpebop's mods initialized.`);
                     setTimeout(clearCh_eatOverlay, 1000);
-                    clearBlackoutScreen();
                     clickGarbage(900);
 				});
                 google.maps.event.addListener(this, 'dragstart', () => {
