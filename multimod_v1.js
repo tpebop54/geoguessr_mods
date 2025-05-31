@@ -191,7 +191,7 @@ const MODS = {
     },
 
     puzzle: {
-        show: !!GOOGLE_MAPS_API_KEY && false, // Not quite working yet :(
+        show: !!GOOGLE_MAPS_API_KEY, // TODO: Not quite working yet :(
         key: 'puzzle',
         name: 'Puzzle',
         tooltip: 'Split up the large map into tiles and rearrange them randomly',
@@ -1482,7 +1482,9 @@ const updateLottery = (forceState = null) => {
 // TODO
 // - block tiling until first render.
 // - add option to make to actual puzzle.
-// - maybe disable moving and panning. Need to update note at top if so.
+// - disable moving and panning and zooming. Need to update note at top.
+// - what happens if it's solved on start? reshuffle automatically?
+// - make able to restore original 3d state.
 
 // https://developers.google.com/maps/documentation/tile/streetview#street_view_image_tiles
 // https://developers.google.com/maps/documentation/javascript/coordinates#tile-coordinates
@@ -1502,7 +1504,6 @@ let _PUZZLE_IS_SOLVED = false; // TODO: what happens if it is solved on start?
 let _PUZZLE_DRAGGING_IMG; // Draw tile as <img> element so it can be redrawn on the canvas while dragging tiles.
 let _PUZZLE_DRAGGING_CANVAS; // Mini canvas to draw _PUZZLE_DRAGGING_IMG on.
 
-let _STREETVIEW_LISTENER; // Listener to trigger redraw on moving, panning, or zooming. TODO: will this trigger too many redraws and potentially hit API limits?
 let _CANVAS_2D_MOUSEMOVE; // Track all mouse movements on 2D canvas.
 let _CANVAS_2D_MOUSE_LOC = { x: 0, y: 0 };
 
@@ -1548,112 +1549,68 @@ async function drawCanvas2d() {
         const loc = GOOGLE_STREETVIEW.getPosition();
         const lat = loc.lat();
         const lng = loc.lng();
+        const pov = GOOGLE_STREETVIEW.getPov();
+        const zoom = pov.zoom; // TODO: where is it getting the actual zoom level from?
 
-        // We are going to take the original heading and pitch, and generate 4 images from it.
-        // Would be nice to do this in one go, but the max resolution for free accounts is 640x640.
-        // We will limit the dimensions of the stitched image to the screen size, whichever (width or height) is the limiter.
-        // We then stitch those together on a 2D canvas, then we can mess with it.
-        // ref: https://developers.google.com/maps/documentation/javascript/streetview
-        const center = GOOGLE_STREETVIEW.getPov();
-        const centerHeading = center.heading;
-        const centerPitch = center.pitch;
-        const zoom = center.zoom;
-        const fov = 360 / Math.pow(2, zoom); // TODO: is this correct?
-        const size = 640; // max size for Street View Static API.
-        const offsetHeading = fov / 4; // How much to offset each quadrant from center.
-        const offsetPitch = fov / 4; // How much to offset pitch up/down.
-
-        // Define the 4 quadrants relative to current view.
-        const quadrants = [
-            {
-                name: 'top-left',
-                heading: centerHeading - offsetHeading,
-                pitch: centerPitch + offsetPitch
-            },
-            {
-                name: 'top-right',
-                heading: centerHeading + offsetHeading,
-                pitch: centerPitch + offsetPitch
-            },
-            {
-                name: 'bottom-left',
-                heading: centerHeading - offsetHeading,
-                pitch: centerPitch - offsetPitch
-            },
-            {
-                name: 'bottom-right',
-                heading: centerHeading + offsetHeading,
-                pitch: centerPitch - offsetPitch
-            }
-        ];
-
-        const fetchImageBlob = (url) => {
-            return new Promise((resolve, reject) => {
-                GM_xmlhttpRequest({ // Requires GM_ or else it will hit a 403.
-                    method: 'GET',
-                    url: url,
-                    responseType: 'blob',
-                    onload: function(response) {
-                        const blobUrl = URL.createObjectURL(response.response);
-                        const img = new Image();
-                        img.onload = () => {
-                            URL.revokeObjectURL(blobUrl);
-                            resolve(img);
-                        };
-                        img.onerror = reject;
-                        img.src = blobUrl;
-                    },
-                    onerror: reject
-                });
-            });
-        };
-
-        const fetchTile = async (tileHeading, tilePitch, tileZoom) => {
-            const url = `https://maps.googleapis.com/maps/api/streetview?size=${size}x${size}` +
-                `&location=${lat},${lng}` +
-                `&heading=${tileHeading}` +
-                `&pitch=${tilePitch}` +
-                `&zoom-${tileZoom}` +
-                `&fov=90` +
-                `&key=${GOOGLE_MAPS_API_KEY}`;
-            return await fetchImageBlob(url);
-        };
-
-        const tilesToFetch = quadrants.map(quadrant => [quadrant.heading, quadrant.pitch, zoom]);
-        const tilePromises = [];
-        for (const tileToFetch of tilesToFetch) {
-            tilePromises.push(fetchTile(tileToFetch[0], tileToFetch[1], tileToFetch[2]));
-        }
-        const images = await Promise.all(tilePromises);
+        // TODO: is this correct?
+        // Calculate tile dimensions based on zoom level
+        const tileSize = 512; // Google Street View tiles are 512x512.
+        const nCols = Math.ceil(Math.pow(2, zoom + 1));
+        const nRows = Math.ceil(Math.pow(2, zoom));
 
         clearCanvas2d();
         const canvas3d = getBigMapCanvas();
         CANVAS_2D = document.createElement('canvas');
         CANVAS_2D.id = 'gg-big-canvas-2d';
-        CANVAS_2D.width = canvas3d.width;
-        CANVAS_2D.height = canvas3d.height;
+        CANVAS_2D.width = nCols * tileSize;
+        CANVAS_2D.height = nRows * tileSize;
+        const ctx2d = CANVAS_2D.getContext('2d');
+        const panoID = GOOGLE_STREETVIEW.getPano();
 
-        // Put 2D canvas on top of 3D and allow pointer events to the 3D. This is up here so we can watch it draw the canvas in debug mode.
+        const loadedTiles = [];
+        let tilesLoaded = 0;
+        const totalTiles = nCols * nRows;
+
+        const loadTile = (x, y) => { // Load single tile at row x, column y.
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => {
+                    const drawX = x * tileSize;
+                    const drawY = y * tileSize;
+                    ctx2d.drawImage(img, drawX, drawY);
+                    tilesLoaded++;
+                    console.log(`Loaded tile ${x},${y} (${tilesLoaded}/${totalTiles})`);
+                    resolve();
+                };
+                img.onerror = (err) => {
+                    reject(new Error(`Failed to load tile ${x},${y}`));
+                };
+
+                // Zoom Level 0: Offers the widest possible view, covering 360 degrees of the panorama.
+                // Zoom Level 1: Shows a view of 180 degrees, half the panorama.
+                // Zoom Level 2: Reduces the FOV to 90 degrees, a quarter of the panorama.
+                // Zoom Level 3: Further narrows the view to 45 degrees.
+                const fovZoom = 3;
+                const tileUrl = `https://streetviewpixels-pa.googleapis.com/v1/tile?cb_client=apiv3&panoid=${panoID}&output=tile&x=${x}&y=${y}&zoom=${fovZoom}&nbt=1&fover=2`;
+                img.src = tileUrl;
+            });
+        };
+
+        // Load all tiles.
+        const tilePromises = [];
+        for (let y = 0; y < nRows; y++) {
+            for (let x = 0; x < nCols; x++) {
+                tilePromises.push(loadTile(x, y));
+            }
+        }
+        await Promise.all(tilePromises);
+
+        // Put 2D canvas on top of 3D and block pointer events to the 3D. This is up here so we can watch it draw the canvas in debug mode.
         const mapParent = canvas3d.parentElement.parentElement;
         mapParent.insertBefore(CANVAS_2D, mapParent.firstChild);
         CANVAS_2D_IS_REDRAWING = false;
         addCanvas2dMousemove()
-
-        // Draw 2x2 grid. Sadly, we're limited to a square image with a maximum resolution. Google made it impossible to clone the 3D canvas with CORS restrictions.
-        // TODO: need to rescale to window size, whichever dimension is the limiting one.
-        const ctx = CANVAS_2D.getContext('2d');
-        ctx.clearRect(0, 0, CANVAS_2D.width, CANVAS_2D.height);
-        ctx.drawImage(images[0], 0, 0, size, size); // Top left.
-        ctx.drawImage(images[1], size, 0, size, size); // Top right.
-        ctx.drawImage(images[2], 0, size, size, size); // Bottom left.
-        ctx.drawImage(images[3], size, size, size, size); // Bottom right.
-
-        if (!_STREETVIEW_LISTENER) {
-            _STREETVIEW_LISTENER = GOOGLE_STREETVIEW.addListener('position_changed', () => { // TODO: needs zoom and pan.
-                drawCanvas2d(_STREETVIEW_LISTENER, GOOGLE_MAPS_API_KEY);
-            });
-        }
-
     } catch (err) {
         console.error(err);
         CANVAS_2D_IS_REDRAWING = false;
@@ -1863,7 +1820,6 @@ const onPuzzleClick = () => {
     }
 };
 
-// TODO: something is fucked up here
 async function updatePuzzle(forceState = null) {
     const mod = MODS.puzzle;
     const active = updateMod(mod, forceState);
@@ -1871,11 +1827,6 @@ async function updatePuzzle(forceState = null) {
     clearCanvas2d();
 
     if (!active) {
-        if (_STREETVIEW_LISTENER) {
-            const google = getGoogle();
-            google.maps.event.clearListeners(_STREETVIEW_LISTENER, 'position_changed'); // TODO: other listeners
-            _STREETVIEW_LISTENER = undefined;
-        }
         return;
     }
 
@@ -1883,7 +1834,12 @@ async function updatePuzzle(forceState = null) {
     const nCols = getOption(mod, 'nCols');
 
     async function makePuzzle() {
-        await drawCanvas2d();
+        try {
+            await drawCanvas2d();
+        } catch (err) {
+            console.error(err);
+            return;
+        }
         const scattered = scatterCanvas2d(nRows, nCols);
         if (!scattered) {
             return;
@@ -1900,8 +1856,6 @@ async function updatePuzzle(forceState = null) {
         updateMod(mod, false);
         return;
     }
-
-    _STREETVIEW_LISTENER = CANVAS_2D.addEventListener('load', makePuzzle);
 
     const ctx = CANVAS_2D.getContext('2d');
 
