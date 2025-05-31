@@ -2558,6 +2558,62 @@ const clearCh_eatOverlay = () => {
     }
 };
 
+/**
+  Some mods take a short time to load after the DOM content is loaded. DOM loaded does not mean the map is loaded.
+  Black out the screen until the map is loaded, with a fixed timeout if something goes wrong.
+  Block all mouse events to underlying elements. This will be inserted over the big map canvas, so other controls still work.
+*/
+let BLACKOUT_SCREEN;
+
+const clearBlackoutScreen = () => {
+    if (BLACKOUT_SCREEN) {
+        try {
+            BLACKOUT_SCREEN.parentElement.removeChild(BLACKOUT_SCREEN);
+        } catch (err) {
+            console.error(err);
+        }
+        BLACKOUT_SCREEN = undefined;
+    }
+};
+
+const addBlackoutScreen = () => {
+    if (BLACKOUT_SCREEN) {
+        return;
+    }
+    const bigMapCanvas = getBigMapCanvas();
+    if (!bigMapCanvas) {
+        return;
+    }
+    const div = document.createElement('div');
+    Object.assign(div.style, {
+        position: 'fixed',
+        width: '100vw',
+        height: '100vw',
+        top: '0',
+        left: '0',
+        pointerEvents: 'all',
+        backgroundColor: 'black',
+    });
+
+    const blockEvt = function(evt) {
+        evt.preventDefault();
+        evt.stopPropagation();
+        evt.stopImmediatePropagation();
+        return false;
+    };
+
+    for (const evtType of [
+        'click', 'mousedown', 'mouseup', 'mousemove',
+        'mouseover', 'mouseout', 'mouseenter', 'mouseleave',
+        'dblclick', 'contextmenu', 'wheel'
+    ]) {
+        div.addEventListener(evtType, blockEvt, true);
+    }
+
+    BLACKOUT_SCREEN = document.body.insertBefore(div, document.body.firstChild);
+    setTimeout(clearBlackoutScreen, 3000); // In case something goes wrong, don't brick the site.
+};
+
 let _CH_EA_AT_DE_TE_CT_IO_N = 'on your honor';
 
 window.addEventListener('load', () => {
@@ -2697,16 +2753,6 @@ const initMods = () => { // Enable mods that were already enabled via localStora
     }
 };
 
-const initModsCallback = () => {
-    if (GOOGLE_MAP) {
-        const google = getGoogle();
-        google.maps.event.addListenerOnce(GOOGLE_MAP, 'idle', () => { // Actions on initial guess map load.
-            initMods();
-            console.log(`Tpebop's mods initialized.`);
-        });
-    };
-};
-
 const onMapClick = (evt) => {
     const lat = evt.latLng.lat();
     const lng = evt.latLng.lng();
@@ -2830,8 +2876,9 @@ document.addEventListener('DOMContentLoaded', (event) => {
 				});
 				google.maps.event.addListenerOnce(this, 'idle', () => { // Actions on initial guess map load.
                     initMods();
-                    console.log('GeoGuessr mods initialized.');
+                    console.log(`Tpebop's mods initialized.`);
                     setTimeout(clearCh_eatOverlay, 1000);
+                    clearBlackoutScreen();
                     clickGarbage(900);
 				});
                 google.maps.event.addListener(this, 'dragstart', () => {
@@ -2856,7 +2903,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
                         });
                     }
                 }
-
                 GOOGLE_MAP = this; // Store globally for use in other functions once this is instantiated.
 			}
 		}
@@ -2876,7 +2922,6 @@ GeoGuessrEventFramework.init().then(GEF => {
         } catch (err) {
             console.err(err);
         }
-        initModsCallback();
     });
 
     GEF.events.addEventListener('round_end', (evt) => {
@@ -2884,7 +2929,7 @@ GeoGuessrEventFramework.init().then(GEF => {
         GG_CLICK = undefined;
     });
 
-	document.addEventListener('keydown', (evt) => {
+	document.addEventListener('keydown', (evt) => { // Custom hotkeys.
 		if (document.activeElement.tagName === 'INPUT') {
             return;
         }
