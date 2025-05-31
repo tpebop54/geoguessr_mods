@@ -209,6 +209,30 @@ const MODS = {
         },
     },
 
+    tileReveal: {
+        show: true,
+        key: 'tile-reveal',
+        name: 'Tile Reveal',
+        tooltip: 'Overlay big map with tiles and you can click to reveal them.',
+        options: {
+            nRows: {
+                label: '# Rows',
+                default: 4,
+                tooltip: 'How many rows of tiles for you to select from.',
+            },
+            nCols: {
+                label: '# Columns',
+                default: 4,
+                tooltip: 'How many columns of titles for you to select from.',
+            },
+            nClicks: {
+                label: '',
+                default: 8,
+                tooltip: 'How many tiles you are allowed to reveal for a given round.',
+            },
+        },
+    },
+
     // Miscellaneous display options that don't deserve a full button.
     displayOptions: {
         show: true,
@@ -247,7 +271,7 @@ const MODS = {
     },
 
     userChallenges: {
-        show: true,
+        show: false, // Incomplete idea.
         key: 'user-challenges',
         name: 'User Challenges',
         tooltip: 'User challenges that a player must complete before making a guess.',
@@ -1899,7 +1923,22 @@ async function updatePuzzle(forceState = null) {
 
 
 
-// MOD: Display options
+// MOD: Display tiles.
+// ===============================================================================================================================
+
+const updateTileReveal = (forceState = null) => {
+    const mod = MODS.tileReveal;
+    const active = updateMod(mod, forceState);
+
+    console.log('yo');
+};
+
+// -------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+// MOD: Display options.
 // ===============================================================================================================================
 
 const _updateTidy = (mod) => {
@@ -2098,6 +2137,7 @@ const _USER_CHALLENGES = {
     doAtDesk: [
         'Tell us a joke',
         'Tell us a fun fact',
+        'Count to 30 out loud',
 
     ],
     mapChoices: [
@@ -2162,6 +2202,7 @@ const _BINDINGS = [
     [MODS.inFrame, updateInFrame],
     [MODS.lottery, updateLottery],
     [MODS.puzzle, updatePuzzle],
+    [MODS.tileReveal, updateTileReveal],
     [MODS.displayOptions, updateDisplayOptions],
     [MODS.userChallenges, updateUserChallenges],
     [MODS.scratch, updateScratch],
