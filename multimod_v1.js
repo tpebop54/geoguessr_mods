@@ -1930,13 +1930,6 @@ let TILE_COUNT_DISPLAY; // Div for showing the number of remaining tiles.
 let TILE_COUNT; // How many remaining tiles the user has.
 let OVERLAY_TILES; // Opaque black tiles to overlay.
 
-const removeTileCount = () => {
-    if (TILE_COUNT_DISPLAY) {
-        TILE_COUNT_DISPLAY.parentElement.removeChild(TILE_COUNT_DISPLAY);
-        TILE_COUNT_DISPLAY = undefined;
-    }
-};
-
 const getTileCount = () => { // Number of remaining clicks the user has.
     TILE_COUNT = Math.round(Number(TILE_COUNT));
     if (isNaN(TILE_COUNT)) {
@@ -1945,8 +1938,15 @@ const getTileCount = () => { // Number of remaining clicks the user has.
     return TILE_COUNT;
 };
 
+const removeTileCounter = () => {
+    if (TILE_COUNT_DISPLAY) {
+        TILE_COUNT_DISPLAY.parentElement.removeChild(TILE_COUNT_DISPLAY);
+        TILE_COUNT_DISPLAY = undefined;
+    }
+};
+
 const makeTileCounter = () => { // Make the tile count display overlay.
-    removeTileCount();
+    removeTileCounter();
 
     const container = document.createElement('div'); // Label and counter side by side.
     container.id = 'gg-tile-count';
@@ -2028,7 +2028,8 @@ const updateTileReveal = (forceState = null) => {
         TILE_COUNT = getOption(mod, 'nClicks');
         TILE_COUNT = getTileCount(); // Fix any weird inputs.
     } else {
-        removeTileCount();
+        removeTiles();
+        removeTileCounter();
     }
 };
 
@@ -3194,6 +3195,7 @@ const style = `
 
     #gg-tile-count-counter {
         padding-left: 0.5em;
+        pointer-events: none;
     }
 
     #gg-tile-overlay {
