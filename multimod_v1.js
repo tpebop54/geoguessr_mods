@@ -178,7 +178,7 @@ const MODS = {
     },
 
     puzzle: {
-        show: false, // Almost working...
+        show: true, // Almost working...
         key: 'puzzle',
         name: 'Puzzle',
         tooltip: 'Split up the large map into tiles and rearrange them randomly',
@@ -220,8 +220,7 @@ const MODS = {
         },
     },
 
-    // Miscellaneous display options that don't deserve a full button.
-    displayOptions: {
+    displayOptions: { // Miscellaneous display options that don't deserve a full button.
         show: true,
         key: 'display-preferences',
         name: 'Display Preferences',
@@ -1723,34 +1722,53 @@ const onDropTile = (evt) => { // When mouse is released, drop the dragged tile a
         toDrawOnDrop = _PUZZLE_DRAGGING_IMG;
     }
 
-    // Always have to redraw the drag tile.
-    ctx2d.drawImage(
-        toDrawOnDrag,
-        _PUZZLE_DRAGGING_TILE.sx,
-        _PUZZLE_DRAGGING_TILE.sy,
-        _PUZZLE_TILE_WIDTH,
-        _PUZZLE_TILE_HEIGHT,
-        _PUZZLE_DRAGGING_TILE.sx, // TODO: pick up here, I think this is wrong
-        _PUZZLE_DRAGGING_TILE.sy,
-        _PUZZLE_TILE_WIDTH,
-        _PUZZLE_TILE_HEIGHT,
-    );
+    // TODO: there has to be a cleaner way to do this.
+    // Always have to redraw the drag tile (as either the original drag tile, or the drop tile).
+    // Ref: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/drawImage
+    try {
+        if (toDrawOnDrag instanceof Uint8ClampedArray) {
+            const imageData = ctx2d.createImageData(_PUZZLE_TILE_WIDTH, _PUZZLE_TILE_HEIGHT);
+            ctx2d.putImageData(imageData, _PUZZLE_CURRENT_DROP_TILE.sx, _PUZZLE_CURRENT_DROP_TILE.sy);
+        } else {
+            ctx2d.drawImage(
+                toDrawOnDrag,
+                0,
+                0,
+                _PUZZLE_TILE_WIDTH,
+                _PUZZLE_TILE_HEIGHT,
+                _PUZZLE_DRAGGING_TILE.sx, // TODO: pick up here, I think this is wrong
+                _PUZZLE_DRAGGING_TILE.sy,
+                _PUZZLE_TILE_WIDTH,
+                _PUZZLE_TILE_HEIGHT,
+            );
+        }
+    } catch (err) {
+        debugger
+    }
 
     // Have to redraw the drop tile only if it is different than the drag tile.
     if (toDrawOnDrop) {
-        ctx2d.drawImage(
-            toDrawOnDrop,
-            _PUZZLE_CURRENT_DROP_TILE.sx,
-            _PUZZLE_CURRENT_DROP_TILE.sy,
-            _PUZZLE_TILE_WIDTH,
-            _PUZZLE_TILE_HEIGHT,
-            _PUZZLE_CURRENT_DROP_TILE.sx,
-            _PUZZLE_CURRENT_DROP_TILE.sy,
-            _PUZZLE_TILE_WIDTH,
-            _PUZZLE_TILE_HEIGHT,
-        );
+        try {
+            if (toDrawOnDrop instanceof Uint8ClampedArray) {
+                const imageData = ctx2d.createImageData(_PUZZLE_TILE_WIDTH, _PUZZLE_TILE_HEIGHT);
+                ctx2d.putImageData(imageData, _PUZZLE_CURRENT_DROP_TILE.sx, _PUZZLE_CURRENT_DROP_TILE.sy);
+            } else {
+                ctx2d.drawImage(
+                    toDrawOnDrop,
+                    0,
+                    0,
+                    _PUZZLE_TILE_WIDTH,
+                    _PUZZLE_TILE_HEIGHT,
+                    _PUZZLE_CURRENT_DROP_TILE.sx,
+                    _PUZZLE_CURRENT_DROP_TILE.sy,
+                    _PUZZLE_TILE_WIDTH,
+                    _PUZZLE_TILE_HEIGHT,
+                );
+            }
+        } catch (err) {
+            debugger
+        }
     }
-
     _PUZZLE_DRAGGING_TILE = undefined;
     _PUZZLE_CURRENT_DROP_TILE = undefined;
 
@@ -2016,7 +2034,6 @@ const makeTiles = (nRows, nCols) => {
     const bigMapCanvas = getBigMapCanvas();
     bigMapCanvas.parentElement.insertBefore(tileOverlay, bigMapCanvas.parentElement.firstChild);
 };
-
 
 const updateTileReveal = (forceState = null) => {
     const mod = MODS.tileReveal;
