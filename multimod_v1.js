@@ -1725,13 +1725,13 @@ const onDropTile = (evt) => { // When mouse is released, drop the dragged tile a
 
     // Always have to redraw the drag tile.
     ctx2d.drawImage(
-        _PUZZLE_DRAGGING_IMG,
-        _PUZZLE_CURRENT_DROP_TILE.sx,
-        _PUZZLE_CURRENT_DROP_TILE.sy,
+        toDrawOnDrag,
+        _PUZZLE_DRAGGING_TILE.sx,
+        _PUZZLE_DRAGGING_TILE.sy,
         _PUZZLE_TILE_WIDTH,
         _PUZZLE_TILE_HEIGHT,
-        _PUZZLE_CURRENT_DROP_TILE.sx,
-        _PUZZLE_CURRENT_DROP_TILE.sy,
+        _PUZZLE_DRAGGING_TILE.sx, // TODO: pick up here, I think this is wrong
+        _PUZZLE_DRAGGING_TILE.sy,
         _PUZZLE_TILE_WIDTH,
         _PUZZLE_TILE_HEIGHT,
     );
