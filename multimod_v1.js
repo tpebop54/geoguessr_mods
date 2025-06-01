@@ -19,29 +19,16 @@
     - When loading, you may occasionally have to refresh the page once or twice.
     - You can disable the quotes if you want via the SHOW_QUOTES variable. Blackout screen is non-negotiable.
     - If things go super bad, press "Alt Shift ." (period is actually a > with Shift active). This will disable all mods and refresh the page.
+    - If you want to toggle a mod, change 'show' to true or false for it in MODS.
 /*
 
 /**
   DEV NOTES
     - Shout-out to miraclewhips for geoguessr-event-framework and some essential functions in this script.
-    - If you want to disable a mod, change 'show' to false for it in MODS.
     - Keep same configuration for all mods. Must add to _BINDINGS at the bottom of the file for any new mods.
     - MODS is a global variable that the script will modify. The saved state will override certain parts of it on each page load.
     - Past that, you're on your own. Use this for good.
 */
-
-/** Google stuff
-    - THIS IS OPTIONAL! Some mods use it but most do not.
-    - The Google Maps API key allows for some specific functionality. It's complicated, but read through the code if you want.
-    - You need to make your own API key if you want to use certain tools. https://developers.google.com/maps/documentation/javascript/get-api-key
-    - This will require payment info via Google, but you will NOT be charged unless you exceed 10,000 API calls in a month, which is very unlikely.
-    - You should restrict your API key to your personal computer(s). Look up how to do this, but at a minimum, do not show your key publicly.
-    - Unless you are using specific mods intensely, you are not going to be anywhere near this limit. You can also check your usage on the Google Cloud Console.
-        For example, the puzzle mod will make 4 API calls per movement. If you make 49 movements per round, which I don't know why you would do, that's 200 API calls, so 50 rounds will hit your API limit.
-        It is possible to hit your limit, so keep an eye on https://console.cloud.google.com/apis/dashboard. If you are approaching 10k requests, stop using those mods unless you want to start paying.
-        You can also swap in a different API key if you want. Google doesn't care about 10k requests, they care about 10M.
-*/
-const GOOGLE_MAPS_API_KEY = 'AIzaSyDUXpYTJjKCXy256sIdBQQMr2LvVj5d8Nk'; // Put yours here if you know what you're doing. This is restricted to Tpebop's computers, so you need your own.
 
 // Mods available in this script.
 // ===============================================================================================================================
@@ -191,7 +178,7 @@ const MODS = {
     },
 
     puzzle: {
-        show: !!GOOGLE_MAPS_API_KEY && false, // Not quite working yet :(
+        show: false, // Almost working...
         key: 'puzzle',
         name: 'Puzzle',
         tooltip: 'Split up the large map into tiles and rearrange them randomly',
@@ -205,6 +192,30 @@ const MODS = {
                 label: '# Columns',
                 default: 4,
                 tooltip: 'How many tiles to split up the puzzle into horizontally.',
+            },
+        },
+    },
+
+    tileReveal: {
+        show: true,
+        key: 'tile-reveal',
+        name: 'Tile Reveal',
+        tooltip: 'Overlay big map with tiles and you can click to reveal them.',
+        options: {
+            nRows: {
+                label: '# Rows',
+                default: 4,
+                tooltip: 'How many rows of tiles for you to select from.',
+            },
+            nCols: {
+                label: '# Columns',
+                default: 4,
+                tooltip: 'How many columns of titles for you to select from.',
+            },
+            nClicks: {
+                label: 'Max. clicks',
+                default: 4,
+                tooltip: 'How many tiles you are allowed to reveal for a given round.',
             },
         },
     },
@@ -233,6 +244,7 @@ const MODS = {
                 options: [ // Must update along with _COLOR_FILTERS.
                     'normal',
                     'grayscale',
+                    'black and white',
                     'deuteranopia',
                     'tritanopia',
                     'dog',
@@ -243,6 +255,23 @@ const MODS = {
                 ],
             },
         },
+    },
+
+    userChallenges: {
+        show: false, // Incomplete idea.
+        key: 'user-challenges',
+        name: 'User Challenges',
+        tooltip: 'User challenges that a player must complete before making a guess.',
+        options: {}, // If you want to configure what categories or specific challenges are shown, go to _CHALLENGE_OPTIONS.
+    },
+
+    scratch: {
+        show: false, // Used for dev work.
+        key: 'scratch',
+        name: 'Show Scratch',
+        tooltip: 'For dev.',
+        scoreMode: false,
+        options: {},
     },
 
 };
@@ -1433,19 +1462,19 @@ const updateLottery = (forceState = null) => {
   Unfortunately, we can't use the 3D canvas, so we recreate it as a 2D canvas to make the puzzle.
   This may make this mod unusable with some others. I haven't tested out every combination.
   This requires a GOOGLE_MAPS_API_KEY at the top to generate static tiles. Google blocks calls to render the webgl canvas as a 2d canvas.
-  Ref: // ref: https://webdesign.tutsplus.com/create-an-html5-canvas-tile-swapping-puzzle--active-10747t
+  Ref: https://webdesign.tutsplus.com/create-an-html5-canvas-tile-swapping-puzzle--active-10747t
   Also, shit this was hard to figure out.
 */
 
 // TODO
 // - block tiling until first render.
 // - add option to make to actual puzzle.
-// - maybe disable moving and panning. Need to update note at top if so.
+// - disable moving and panning and zooming. Need to update note at top.
+// - what happens if it's solved on start? reshuffle automatically?
+// - make able to restore original 3d state.
+// - clean up unused shit.
 
-// https://developers.google.com/maps/documentation/tile/streetview#street_view_image_tiles
-// https://developers.google.com/maps/documentation/javascript/coordinates#tile-coordinates
-
-let CANVAS_2D; // canvas element that overlays the 3D one.
+let CANVAS_2D; // 2D canvas element that overlays the 3D one.
 let CANVAS_2D_IS_REDRAWING = false; // If we're still redrawing the previous frame, this can brick the site.
 
 let _PUZZLE_WIDTH;
@@ -1456,11 +1485,12 @@ let _PUZZLE_DRAGGING_TILE;
 let _PUZZLE_CURRENT_DROP_TILE;
 let _PUZZLE_TILES = [];
 let _PUZZLE_HOVER_TINT = '#009900'; // Used for drag and drop formatting.
-let _PUZZLE_IS_SOLVED = false; // TODO: what happens if it is solved on start?
+let _PUZZLE_IS_SOLVED = false;
 let _PUZZLE_DRAGGING_IMG; // Draw tile as <img> element so it can be redrawn on the canvas while dragging tiles.
 let _PUZZLE_DRAGGING_CANVAS; // Mini canvas to draw _PUZZLE_DRAGGING_IMG on.
 
-let _STREETVIEW_LISTENER; // Listener to trigger redraw on moving, panning, or zooming. TODO: will this trigger too many redraws and potentially hit API limits?
+let _CANVAS_2D_MOUSEDOWN; // Pointer down listener.
+let _CANVAS_2D_MOUSEUP; // Pointer up listener.
 let _CANVAS_2D_MOUSEMOVE; // Track all mouse movements on 2D canvas.
 let _CANVAS_2D_MOUSE_LOC = { x: 0, y: 0 };
 
@@ -1472,6 +1502,13 @@ const addCanvas2dMousemove = () => {
         _CANVAS_2D_MOUSE_LOC.x = evt.offsetX - CANVAS_2D.offsetLeft;
         _CANVAS_2D_MOUSE_LOC.y = evt.offsetY - CANVAS_2D.offsetTop;
     });
+};
+
+const getTileSize = () => { // TODO: way to adjust this to window size?
+    return {
+        width: 512, // Google Street View tiles are 512x512. Maximum is 640x640.
+        height: 512,
+    };
 };
 
 const clearCanvas2d = () => {
@@ -1496,8 +1533,8 @@ const clearCanvas2d = () => {
 
 /**
   Redraw the 3D canvas as a 2D canvas so we can mess around with it.
-  We have to extract the image data from the 3D view using Google Maps API. They make it impossible to extract directly from that canvas.
-  Return true if the canvas was redrawn, else false.
+  We have to extract the image data from the 3D view using Google Maps API.
+  They make it impossible to extract directly from that canvas.
 */
 async function drawCanvas2d() {
     CANVAS_2D_IS_REDRAWING = true;
@@ -1506,112 +1543,65 @@ async function drawCanvas2d() {
         const loc = GOOGLE_STREETVIEW.getPosition();
         const lat = loc.lat();
         const lng = loc.lng();
+        const pov = GOOGLE_STREETVIEW.getPov();
+        const zoom = pov.zoom; // TODO: where is it getting the actual zoom level from?
 
-        // We are going to take the original heading and pitch, and generate 4 images from it.
-        // Would be nice to do this in one go, but the max resolution for free accounts is 640x640.
-        // We will limit the dimensions of the stitched image to the screen size, whichever (width or height) is the limiter.
-        // We then stitch those together on a 2D canvas, then we can mess with it.
-        // ref: https://developers.google.com/maps/documentation/javascript/streetview
-        const center = GOOGLE_STREETVIEW.getPov();
-        const centerHeading = center.heading;
-        const centerPitch = center.pitch;
-        const zoom = center.zoom;
-        const fov = 360 / Math.pow(2, zoom); // TODO: is this correct?
-        const size = 640; // max size for Street View Static API.
-        const offsetHeading = fov / 4; // How much to offset each quadrant from center.
-        const offsetPitch = fov / 4; // How much to offset pitch up/down.
-
-        // Define the 4 quadrants relative to current view.
-        const quadrants = [
-            {
-                name: 'top-left',
-                heading: centerHeading - offsetHeading,
-                pitch: centerPitch + offsetPitch
-            },
-            {
-                name: 'top-right',
-                heading: centerHeading + offsetHeading,
-                pitch: centerPitch + offsetPitch
-            },
-            {
-                name: 'bottom-left',
-                heading: centerHeading - offsetHeading,
-                pitch: centerPitch - offsetPitch
-            },
-            {
-                name: 'bottom-right',
-                heading: centerHeading + offsetHeading,
-                pitch: centerPitch - offsetPitch
-            }
-        ];
-
-        const fetchImageBlob = (url) => {
-            return new Promise((resolve, reject) => {
-                GM_xmlhttpRequest({ // Requires GM_ or else it will hit a 403.
-                    method: 'GET',
-                    url: url,
-                    responseType: 'blob',
-                    onload: function(response) {
-                        const blobUrl = URL.createObjectURL(response.response);
-                        const img = new Image();
-                        img.onload = () => {
-                            URL.revokeObjectURL(blobUrl);
-                            resolve(img);
-                        };
-                        img.onerror = reject;
-                        img.src = blobUrl;
-                    },
-                    onerror: reject
-                });
-            });
-        };
-
-        const fetchTile = async (tileHeading, tilePitch, tileZoom) => {
-            const url = `https://maps.googleapis.com/maps/api/streetview?size=${size}x${size}` +
-                `&location=${lat},${lng}` +
-                `&heading=${tileHeading}` +
-                `&pitch=${tilePitch}` +
-                `&zoom-${tileZoom}` +
-                `&fov=90` +
-                `&key=${GOOGLE_MAPS_API_KEY}`;
-            return await fetchImageBlob(url);
-        };
-
-        const tilesToFetch = quadrants.map(quadrant => [quadrant.heading, quadrant.pitch, zoom]);
-        const tilePromises = [];
-        for (const tileToFetch of tilesToFetch) {
-            tilePromises.push(fetchTile(tileToFetch[0], tileToFetch[1], tileToFetch[2]));
-        }
-        const images = await Promise.all(tilePromises);
+        // TODO: is this correct? Maybe need to scale the canvas on screen size or something? Or max it out, puzzle will be unsolvable if stuff goes off screen.
+        // Calculate tile dimensions based on zoom level
+        const tileSize = getTileSize();
+        const nCols = Math.ceil(Math.pow(2, zoom + 1));
+        const nRows = Math.ceil(Math.pow(2, zoom));
 
         clearCanvas2d();
         const canvas3d = getBigMapCanvas();
         CANVAS_2D = document.createElement('canvas');
         CANVAS_2D.id = 'gg-big-canvas-2d';
-        CANVAS_2D.width = canvas3d.width;
-        CANVAS_2D.height = canvas3d.height;
+        CANVAS_2D.width = nCols * tileSize.width;
+        CANVAS_2D.height = nRows * tileSize.height;
+        const ctx2d = CANVAS_2D.getContext('2d');
+        const panoID = GOOGLE_STREETVIEW.getPano();
 
-        // Put 2D canvas on top of 3D and allow pointer events to the 3D. This is up here so we can watch it draw the canvas in debug mode.
+        const loadedTiles = [];
+        let tilesLoaded = 0;
+        const totalTiles = nCols * nRows;
+
+        const loadTile = (x, y) => { // Load single tile at row x, column y.
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => {
+                    const drawX = x * tileSize.width;
+                    const drawY = y * tileSize.height;
+                    ctx2d.drawImage(img, drawX, drawY);
+                    tilesLoaded++;
+                    // console.log(`Loaded tile ${x},${y} (${tilesLoaded}/${totalTiles})`); // Kept for debugging.
+                    resolve();
+                };
+                img.onerror = (err) => {
+                    reject(new Error(`Failed to load tile ${x},${y}`));
+                };
+
+                // Zoom Level 0: 360 degrees of the panorama. 1: 180 deg. 2: 90 deg. 3: 45 deg.
+                const fovZoom = 3;
+                const tileUrl = `https://streetviewpixels-pa.googleapis.com/v1/tile?cb_client=apiv3&panoid=${panoID}&output=tile&x=${x}&y=${y}&zoom=${fovZoom}&nbt=1&fover=2`;
+                img.src = tileUrl;
+            });
+        };
+
+        // Load all tiles.
+        const tilePromises = [];
+        for (let y = 0; y < nRows; y++) {
+            for (let x = 0; x < nCols; x++) {
+                tilePromises.push(loadTile(x, y));
+            }
+        }
+        await Promise.all(tilePromises);
+
+        // Put 2D canvas on top of 3D and block pointer events to the 3D. This is up here so we can watch it draw the canvas in debug mode.
         const mapParent = canvas3d.parentElement.parentElement;
         mapParent.insertBefore(CANVAS_2D, mapParent.firstChild);
         CANVAS_2D_IS_REDRAWING = false;
         addCanvas2dMousemove()
-
-        // Draw 2x2 grid. Sadly, we're limited to a square image with a maximum resolution. Google made it impossible to clone the 3D canvas with CORS restrictions.
-        // TODO: need to rescale to window size, whichever dimension is the limiting one.
-        const ctx = CANVAS_2D.getContext('2d');
-        ctx.clearRect(0, 0, CANVAS_2D.width, CANVAS_2D.height);
-        ctx.drawImage(images[0], 0, 0, size, size); // Top left.
-        ctx.drawImage(images[1], size, 0, size, size); // Top right.
-        ctx.drawImage(images[2], 0, size, size, size); // Bottom left.
-        ctx.drawImage(images[3], size, size, size, size); // Bottom right.
-
-        if (!_STREETVIEW_LISTENER) {
-            _STREETVIEW_LISTENER = GOOGLE_STREETVIEW.addListener('position_changed', () => { // TODO: needs zoom and pan.
-                drawCanvas2d(_STREETVIEW_LISTENER, GOOGLE_MAPS_API_KEY);
-            });
-        }
-
     } catch (err) {
         console.error(err);
         CANVAS_2D_IS_REDRAWING = false;
@@ -1619,7 +1609,7 @@ async function drawCanvas2d() {
     }
 }
 
-const scatterCanvas2d = (nRows, nCols) => {
+const scatterCanvas2d = (nRows, nCols) => { // TODO: can maybe deal with width and height here.
     const ctx2d = CANVAS_2D.getContext('2d');
     const tileWidth = CANVAS_2D.width / nCols;
     const tileHeight = CANVAS_2D.height / nRows;
@@ -1636,7 +1626,6 @@ const scatterCanvas2d = (nRows, nCols) => {
     }
 
     // Scramble the tiles and draw on the 2D canvas.
-    // TODO: something is still messed up with the scaling here. Some tiles are showing parts of other tiles. Might be related to FOV.
     _PUZZLE_TILES = shuffleArray(tiles);
     const locations = Object.values(_PUZZLE_TILES).map(tile => { return { sx: tile.sx, sy: tile.sy } });
     for (const tile of tiles) {
@@ -1662,8 +1651,7 @@ const scatterCanvas2d = (nRows, nCols) => {
     };
 };
 
-// TODO: something is fucked up here
-const pasteToDraggingImage = () => { // Used for showing the tile image while dragging.
+const pasteToDraggingImage = () => { // Paste image to temporary small canvas for dragging animation.
     if (!_PUZZLE_DRAGGING_TILE) {
         return;
     }
@@ -1678,87 +1666,7 @@ const pasteToDraggingImage = () => { // Used for showing the tile image while dr
     _PUZZLE_DRAGGING_CANVAS.width = imageData.width;
     _PUZZLE_DRAGGING_CANVAS.height = imageData.height;
     ctx2d.putImageData(imageData, 0, 0);
-    _PUZZLE_DRAGGING_IMG.src = _PUZZLE_DRAGGING_CANVAS.toDataURL();
-};
-
-// TODO: something is fucked up here
-const updatePuzzleTiles = () => {
-    if (!CANVAS_2D || !_PUZZLE_DRAGGING_TILE) {
-        return; // User has not clicked yet. Mouse movements are tracked after first click.
-    }
-    const ctx = CANVAS_2D.getContext('2d');
-
-    _PUZZLE_CURRENT_DROP_TILE = null;
-    ctx.clearRect(0, 0, _PUZZLE_WIDTH, _PUZZLE_HEIGHT); // TODO: remove?
-    pasteToDraggingImage();
-    for (const tile of _PUZZLE_TILES) {
-        if (tile === _PUZZLE_DRAGGING_TILE) {
-            continue;
-        }
-        ctx.drawImage(
-            _PUZZLE_DRAGGING_IMG,
-            tile.sx,
-            tile.sy,
-            _PUZZLE_TILE_WIDTH,
-            _PUZZLE_TILE_HEIGHT,
-            tile.sx,
-            tile.sy,
-            _PUZZLE_TILE_WIDTH,
-            _PUZZLE_TILE_HEIGHT
-        );
-        _PUZZLE_CURRENT_DROP_TILE = getCurrentMouseTile();
-        if (!_PUZZLE_CURRENT_DROP_TILE) {
-            return;
-        }
-        ctx.save();
-        ctx.globalAlpha = 0.4;
-        ctx.fillStyle = _PUZZLE_HOVER_TINT;
-        ctx.fillRect(
-            _PUZZLE_CURRENT_DROP_TILE.sx,
-            _PUZZLE_CURRENT_DROP_TILE.sy,
-            _PUZZLE_TILE_WIDTH,
-            _PUZZLE_TILE_HEIGHT
-        );
-        ctx.restore();
-    }
-    ctx.save();
-    ctx.globalAlpha = 0.6;
-    ctx.drawImage(
-        _PUZZLE_DRAGGING_IMG,
-        _PUZZLE_DRAGGING_TILE.sx,
-        _PUZZLE_DRAGGING_TILE.sy,
-        _PUZZLE_TILE_WIDTH,
-        _PUZZLE_TILE_HEIGHT,
-        _CANVAS_2D_MOUSE_LOC .x - _PUZZLE_TILE_WIDTH / 2,
-        _CANVAS_2D_MOUSE_LOC .y - _PUZZLE_TILE_HEIGHT / 2,
-        _PUZZLE_TILE_WIDTH,
-        _PUZZLE_TILE_HEIGHT,
-    );
-    ctx.restore();
-};
-
-// TODO: something is fucked up here
-const onDropTile = (evt) => { // When mouse is released, drop the dragged tile at the location, and swap them.
-    if (!_PUZZLE_DRAGGING_TILE || !_PUZZLE_CURRENT_DROP_TILE) {
-        console.error('Drag or drop tile is missing.');
-        _PUZZLE_DRAGGING_TILE = null;
-        _PUZZLE_CURRENT_DROP_TILE = null;
-        return;
-    }
-    const tmp = {
-        sx: _PUZZLE_DRAGGING_TILE.sx,
-        sy: _PUZZLE_DRAGGING_TILE.sy
-    };
-    _PUZZLE_DRAGGING_TILE.sx = _PUZZLE_CURRENT_DROP_TILE.sy;
-    _PUZZLE_DRAGGING_TILE.sy = _PUZZLE_CURRENT_DROP_TILE.sy;
-    _PUZZLE_CURRENT_DROP_TILE.sx = tmp.sx;
-    _PUZZLE_CURRENT_DROP_TILE.sy = tmp.sy;
-
-    _PUZZLE_DRAGGING_TILE = undefined;
-    _PUZZLE_CURRENT_DROP_TILE = undefined;
-
-    // checkSolved(); // TODO
-    console.log('tile dropped');
+    _PUZZLE_DRAGGING_IMG.src = _PUZZLE_DRAGGING_CANVAS.toDataURL(); // TODO: not working.
 };
 
 const getCurrentMouseTile = () => { // Tile that the mouse is currently over. Doesn't matter if user is dragging a tile or not.
@@ -1781,47 +1689,185 @@ const getCurrentMouseTile = () => { // Tile that the mouse is currently over. Do
     return null;
 };
 
-// TODO: something is fucked up here. Deletes the tile
-const onPuzzleClick = () => {
-    if (!CANVAS_2D) {
-        drawCanvas2d(); // TODO: this is sloppy
-    }
-    const ctx = CANVAS_2D.getContext('2d');
-
-    _PUZZLE_DRAGGING_TILE = getCurrentMouseTile();
-    if (!_PUZZLE_DRAGGING_TILE) {
-        console.error('Failed to get drag tile.'); // TODO
+const onDropTile = (evt) => { // When mouse is released, drop the dragged tile at the location, and swap them.
+    if (!_PUZZLE_DRAGGING_TILE || !_PUZZLE_CURRENT_DROP_TILE) {
+        console.error('Drag or drop tile is missing.');
+        _PUZZLE_DRAGGING_TILE = null;
+        _PUZZLE_CURRENT_DROP_TILE = null;
         return;
     }
-    pasteToDraggingImage();
 
+    // Swap the x and y indices of the dragging tile and the dropping tile.
+    const tmp = {
+        sx: _PUZZLE_DRAGGING_TILE.sx,
+        sy: _PUZZLE_DRAGGING_TILE.sy
+    };
+    _PUZZLE_DRAGGING_TILE.sx = _PUZZLE_CURRENT_DROP_TILE.sy;
+    _PUZZLE_DRAGGING_TILE.sy = _PUZZLE_CURRENT_DROP_TILE.sy;
+    _PUZZLE_CURRENT_DROP_TILE.sx = tmp.sx;
+    _PUZZLE_CURRENT_DROP_TILE.sy = tmp.sy;
+
+    // Draw the drag tile in the drop spot, and vice versa.
+    const ctx2d = CANVAS_2D.getContext('2d');
+    const tileSize = getTileSize();
+
+    let toDrawOnDrop; // imageData that we are going to draw on the tile that we drop on.
+    let toDrawOnDrag; // imageData for the tile we dragged from.
+
+    if (_PUZZLE_DRAGGING_TILE === _PUZZLE_CURRENT_DROP_TILE ) { // Dropped within the same tile as it was dragged from.
+        toDrawOnDrag = _PUZZLE_DRAGGING_IMG; // We dropped on the same tile we dragged from.
+        toDrawOnDrop = null; // No need to draw it twice.
+    } else {
+        toDrawOnDrag = ctx2d.getImageData(
+            _PUZZLE_CURRENT_DROP_TILE.sx, _PUZZLE_CURRENT_DROP_TILE.sy, tileSize.width, tileSize.height).data;
+        toDrawOnDrop = _PUZZLE_DRAGGING_IMG;
+    }
+
+    // Always have to redraw the drag tile.
+    ctx2d.drawImage(
+        toDrawOnDrag,
+        _PUZZLE_DRAGGING_TILE.sx,
+        _PUZZLE_DRAGGING_TILE.sy,
+        _PUZZLE_TILE_WIDTH,
+        _PUZZLE_TILE_HEIGHT,
+        _PUZZLE_DRAGGING_TILE.sx, // TODO: pick up here, I think this is wrong
+        _PUZZLE_DRAGGING_TILE.sy,
+        _PUZZLE_TILE_WIDTH,
+        _PUZZLE_TILE_HEIGHT,
+    );
+
+    // Have to redraw the drop tile only if it is different than the drag tile.
+    if (toDrawOnDrop) {
+        ctx2d.drawImage(
+            toDrawOnDrop,
+            _PUZZLE_CURRENT_DROP_TILE.sx,
+            _PUZZLE_CURRENT_DROP_TILE.sy,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT,
+            _PUZZLE_CURRENT_DROP_TILE.sx,
+            _PUZZLE_CURRENT_DROP_TILE.sy,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT,
+        );
+    }
+
+    _PUZZLE_DRAGGING_TILE = undefined;
+    _PUZZLE_CURRENT_DROP_TILE = undefined;
+
+    // checkSolved(); // TODO
+    console.log('tile dropped'); // TODO: remove
+};
+
+const onPuzzleMousemove = () => {
+    if (!CANVAS_2D || !_PUZZLE_DRAGGING_TILE) {
+        return; // User has not clicked yet. Mouse movements are tracked after first click.
+    }
+    const ctx2d = CANVAS_2D.getContext('2d');
+
+    _PUZZLE_CURRENT_DROP_TILE = undefined;
+    for (const tile of _PUZZLE_TILES) {
+        if (tile === _PUZZLE_DRAGGING_TILE) {
+            continue;
+        }
+        ctx2d.drawImage(
+            _PUZZLE_DRAGGING_IMG,
+            tile.sx,
+            tile.sy,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT,
+            tile.sx,
+            tile.sy,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT
+        );
+        _PUZZLE_CURRENT_DROP_TILE = getCurrentMouseTile();
+        if (!_PUZZLE_CURRENT_DROP_TILE) {
+            return;
+        }
+        ctx2d.save();
+        ctx2d.globalAlpha = 0.4;
+        ctx2d.fillStyle = _PUZZLE_HOVER_TINT;
+        ctx2d.fillRect(
+            _PUZZLE_CURRENT_DROP_TILE.sx,
+            _PUZZLE_CURRENT_DROP_TILE.sy,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT
+        );
+        ctx2d.restore();
+    }
+    ctx2d.save();
+    ctx2d.globalAlpha = 0.6;
+    ctx2d.drawImage(
+        _PUZZLE_DRAGGING_IMG,
+        _PUZZLE_DRAGGING_TILE.sx,
+        _PUZZLE_DRAGGING_TILE.sy,
+        _PUZZLE_TILE_WIDTH,
+        _PUZZLE_TILE_HEIGHT,
+        _CANVAS_2D_MOUSE_LOC .x - _PUZZLE_TILE_WIDTH / 2,
+        _CANVAS_2D_MOUSE_LOC .y - _PUZZLE_TILE_HEIGHT / 2,
+        _PUZZLE_TILE_WIDTH,
+        _PUZZLE_TILE_HEIGHT,
+    );
+    ctx2d.restore();
+};
+
+const removeCanvas2dListeners = () => {
+    if (!CANVAS_2D) {
+        return;
+    }
+    if (_CANVAS_2D_MOUSEDOWN) {
+        CANVAS_2D.removeEventListener(_CANVAS_2D_MOUSEDOWN);
+    }
+    if (_CANVAS_2D_MOUSEMOVE) {
+        CANVAS_2D.removeEventListener(_CANVAS_2D_MOUSEMOVE);
+    }
+    if (_CANVAS_2D_MOUSEUP) {
+        CANVAS_2D.removeEventListener(_CANVAS_2D_MOUSEUP);
+    }
+};
+
+const addCanvas2dListeners = () => {
+    if (!CANVAS_2D) {
+        return;
+    }
+    removeCanvas2dListeners();
+    _CANVAS_2D_MOUSEDOWN = CANVAS_2D.addEventListener('pointerup', _CANVAS_2D_MOUSEDOWN);
+    _CANVAS_2D_MOUSEMOVE = CANVAS_2D.addEventListener('mousemove', _CANVAS_2D_MOUSEDOWN);
+    _CANVAS_2D_MOUSEUP = CANVAS_2D.addEventListener('pointerup', _CANVAS_2D_MOUSEDOWN);
+};
+
+const onPuzzleClick = () => {
+    _PUZZLE_DRAGGING_TILE = getCurrentMouseTile();
+    _PUZZLE_CURRENT_DROP_TILE = _PUZZLE_DRAGGING_TILE; // Always same on initial click.
+    pasteToDraggingImage(); // Paste clicked tile to draggable canvas.
+
+    const ctx2d = CANVAS_2D.getContext('2d');
     if (_PUZZLE_DRAGGING_TILE) {
-        ctx.clearRect(
+        ctx2d.clearRect(
             _PUZZLE_DRAGGING_TILE.sx,
             _PUZZLE_DRAGGING_TILE.sy,
             _PUZZLE_TILE_WIDTH,
             _PUZZLE_TILE_HEIGHT,
         );
-        ctx.save();
-        ctx.globalAlpha = 0.9;
-        ctx.drawImage(
+        ctx2d.save();
+        ctx2d.globalAlpha = 0.9;
+        ctx2d.drawImage(
             _PUZZLE_DRAGGING_IMG,
             _PUZZLE_DRAGGING_TILE.sx,
             _PUZZLE_DRAGGING_TILE.sy,
             _PUZZLE_TILE_WIDTH,
             _PUZZLE_TILE_HEIGHT,
-            _CANVAS_2D_MOUSE_LOC .x - _PUZZLE_TILE_WIDTH / 2,
-            _CANVAS_2D_MOUSE_LOC .y - _PUZZLE_TILE_HEIGHT / 2,
+            _CANVAS_2D_MOUSE_LOC.x - _PUZZLE_TILE_WIDTH / 2,
+            _CANVAS_2D_MOUSE_LOC.y - _PUZZLE_TILE_HEIGHT / 2,
             _PUZZLE_TILE_WIDTH,
             _PUZZLE_TILE_HEIGHT,
         );
-        ctx.restore();
-        document.onpointermove = updatePuzzleTiles; // TODO: these should be on the canvas, not the document.
-        document.onpointerup = onDropTile;
+        ctx2d.restore();
+        CANVAS_2D.onpointermove = onPuzzleMousemove; // TODO: what happens if dropped on a button or mini map or something?
+        CANVAS_2D.onpointerup = onDropTile;
     }
 };
 
-// TODO: something is fucked up here
 async function updatePuzzle(forceState = null) {
     const mod = MODS.puzzle;
     const active = updateMod(mod, forceState);
@@ -1829,11 +1875,6 @@ async function updatePuzzle(forceState = null) {
     clearCanvas2d();
 
     if (!active) {
-        if (_STREETVIEW_LISTENER) {
-            const google = getGoogle();
-            google.maps.event.clearListeners(_STREETVIEW_LISTENER, 'position_changed'); // TODO: other listeners
-            _STREETVIEW_LISTENER = undefined;
-        }
         return;
     }
 
@@ -1841,7 +1882,12 @@ async function updatePuzzle(forceState = null) {
     const nCols = getOption(mod, 'nCols');
 
     async function makePuzzle() {
-        await drawCanvas2d();
+        try {
+            await drawCanvas2d();
+        } catch (err) {
+            console.error(err);
+            return;
+        }
         const scattered = scatterCanvas2d(nRows, nCols);
         if (!scattered) {
             return;
@@ -1859,8 +1905,6 @@ async function updatePuzzle(forceState = null) {
         return;
     }
 
-    _STREETVIEW_LISTENER = CANVAS_2D.addEventListener('load', makePuzzle);
-
     const ctx = CANVAS_2D.getContext('2d');
 
     const checkSolved = () => { // TODO: decide how to handle when puzzle is solved.
@@ -1872,7 +1916,7 @@ async function updatePuzzle(forceState = null) {
         }
     }
 
-    document.onpointerdown = onPuzzleClick; // TODO: should be canvas only.
+    CANVAS_2D.onpointerdown = onPuzzleClick;
 
 };
 
@@ -1881,7 +1925,122 @@ async function updatePuzzle(forceState = null) {
 
 
 
-// MOD: Display options
+// MOD: Tile reveal.
+// ===============================================================================================================================
+
+let TILE_COUNT_DISPLAY; // Div for showing the number of remaining tiles.
+let TILE_COUNT; // How many remaining tiles the user has.
+let OVERLAY_TILES; // Opaque black tiles to overlay.
+
+const getTileCount = () => { // Number of remaining clicks the user has.
+    TILE_COUNT = Math.round(Number(TILE_COUNT));
+    if (isNaN(TILE_COUNT)) {
+        TILE_COUNT = 0; // Don't let decimals or weird values mess up the logic here. -1 means infinite.
+    }
+    return TILE_COUNT;
+};
+
+const removeTileCounter = () => {
+    if (TILE_COUNT_DISPLAY) {
+        TILE_COUNT_DISPLAY.parentElement.removeChild(TILE_COUNT_DISPLAY);
+        TILE_COUNT_DISPLAY = undefined;
+    }
+};
+
+const makeTileCounter = () => { // Make the tile count display overlay.
+    removeTileCounter();
+
+    const container = document.createElement('div'); // Label and counter side by side.
+    container.id = 'gg-tile-count';
+    const counterLabel = document.createElement('div'); // Text label.
+    counterLabel.textContent = 'Tiles remaining:';
+    const counter = document.createElement('div'); // How many tiles you have left, will update each click.
+    counter.id = 'gg-tile-count-counter';
+    counter.innerText = getTileCount();
+    container.appendChild(counterLabel);
+    container.appendChild(counter);
+    document.body.appendChild(container);
+
+    TILE_COUNT_DISPLAY = container;
+};
+
+const removeTiles = () => {
+    const tileOverlay = document.getElementById('gg-tile-overlay');
+    if (tileOverlay) {
+        tileOverlay.parentElement.removeChild(tileOverlay);
+    }
+};
+
+const onClickTile = (evt) => {
+    const tile = evt.target;
+    evt.preventDefault();
+    evt.stopPropagation();
+    evt.stopImmediatePropagation();
+
+    TILE_COUNT = getTileCount();
+    if (TILE_COUNT > 0) {
+        TILE_COUNT -= 1;
+        const counter = document.getElementById('gg-tile-count-counter');
+        counter.innerText = TILE_COUNT;
+        tile.classList.add('removed');
+    }
+};
+
+const makeTiles = (nRows, nCols) => {
+    removeTiles();
+
+    const tileOverlay = document.createElement('div');
+    tileOverlay.id = 'gg-tile-overlay';
+    tileOverlay.style.gridTemplateRows = `repeat(${nRows}, 1fr)`;
+    tileOverlay.style.gridTemplateColumns = `repeat(${nCols}, 1fr)`;
+
+    for (let i = 0; i < nRows * nCols; i++) {
+        const tile = document.createElement('div');
+        tile.className = 'gg-tile-block';
+        tile.addEventListener('click', (evt) => {
+            evt.preventDefault();
+            evt.stopPropagation();
+            onClickTile(evt);
+        });
+        tile.addEventListener('mousedown', (evt) => {
+            evt.preventDefault();
+            evt.stopPropagation();
+        });
+        tile.addEventListener('mouseup', (evt) => {
+            evt.preventDefault();
+            evt.stopPropagation();
+        });
+        tileOverlay.appendChild(tile);
+    }
+
+    const bigMapCanvas = getBigMapCanvas();
+    bigMapCanvas.parentElement.insertBefore(tileOverlay, bigMapCanvas.parentElement.firstChild);
+};
+
+
+const updateTileReveal = (forceState = null) => {
+    const mod = MODS.tileReveal;
+    const active = updateMod(mod, forceState);
+
+    if (active) {
+        const nRows = getOption(mod, 'nRows');
+        const nCols = getOption(mod, 'nCols');
+        makeTiles(nRows, nCols);
+        makeTileCounter();
+        TILE_COUNT = getOption(mod, 'nClicks');
+        TILE_COUNT = getTileCount(); // Fix any weird inputs.
+    } else {
+        removeTiles();
+        removeTileCounter();
+    }
+};
+
+// -------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+// MOD: Display options.
 // ===============================================================================================================================
 
 const _updateTidy = (mod) => {
@@ -1933,6 +2092,12 @@ const _BASE_COLOR_FILTER = Object.freeze({ // Available filter options for big m
 const _COLOR_FILTERS = {
     grayscale: {
         grayscale: '100%',
+    },
+    'black and white': { // TODO: does this need to be configurable based on the image?
+        grayscale: '100%',
+        contrast: '1000%',
+        threshold: '128',
+        brightness: '1.5',
     },
     deuteranopia: {
         'hue-rotate': '-20deg',
@@ -1987,8 +2152,7 @@ const _COLOR_FILTERS = {
         brightness: '85%',
         blur: '0.1px',
         'drop-shadow': '0 0 3px rgba(255,255,255,0.4)',
-    }
-
+    },
 };
 
 const getFilterStr = (mod) => { // Get string that can be applied to streetview canvas filters.
@@ -2011,7 +2175,7 @@ const getFilterStr = (mod) => { // Get string that can be applied to streetview 
         if (value == null) {
             continue
         }
-        filterStr += `${key}(${value})` ; // Requires units in value.
+        filterStr += `${key}(${value}) ` ; // Requires units in value.
     }
     filterStr = filterStr.trim();
     return filterStr;
@@ -2036,6 +2200,95 @@ const updateDisplayOptions = (forceState = null) => {
 
 
 
+// MOD: User challenges.
+// ===============================================================================================================================
+
+// TODO:
+// - user must click a button that says they did the thing before it shows them the map.
+// - Need to separate stuff like solving equations from clicking on a border. Require a different message per category, e.g. I have done this thing
+// - Option to not have repeats per round. Need at least 5 things per thing.
+// - Option to sync randomzation to other user.
+// - Maybe use API key to detect if they violated a condition.
+// - Click on a city, river, whatever that starts with whatever or contains the letter whatever. Weight the letters?
+// - Weight the enabled challenges somehow?
+
+// Ideas that need more consideration
+// - figure out how to say X in Y language
+// - generate math equation
+
+// Here, you can disable categories. Copy the keys from _USER_CHALLENGES and set to false if you don't want them. All are enabled by default.
+const _ENABLED_CHALLENGES = {
+    indoor: true,
+};
+
+const _USER_CHALLENGES = {
+    getUpAndDoStuff: [
+        'Drink a small glass of water',
+        'Put on sunglasses',
+        'Go outside and come back inside',
+        'Find a rock and show it to the camera',
+        'Find leaf or blade of grass and show it to the camera',
+        'Put on sunglasses for this round',
+        'Find a spoon and show it to the camera',
+        'Find a fork and show it to the camera',
+        'Put on a different shirt',
+        'Find us a fruit or vegetable and show it to the camera',
+        'Either change your shoes, or put on shoes',
+        'Find a toothbrush and show it to the camera',
+    ],
+    doAtDesk: [
+        'Tell us a joke',
+        'Tell us a fun fact',
+        'Count to 30 out loud',
+
+    ],
+    mapChoices: [
+        'Click on water',
+        'Click on a border',
+        'Click on a country that is smaller than the actual country',
+        'Click on a country that is larger than the actual country',
+        'Click on the equator or the prime meridan',
+        'Click on the wrong country',
+    ],
+};
+
+const updateUserChallenges = (forceState = null) => {
+    const mod = MODS.userChallenges;
+    const active = updateMod(mod, forceState);
+
+    function getRandomIndex(arrayLength) {
+        const seed = Math.floor(Date.now() / 30000);
+        return Math.floor(((1664525 * seed + 1013904223) % 4294967296) / 4294967296 * arrayLength);
+    }
+
+    // Example usage:
+    const myArray = ['apple', 'banana', 'cherry', 'date', 'elderberry'];
+    const index = getRandomIndex(myArray.length);
+    console.log(`Selected: ${myArray[index]}`);
+
+    console.log('yo');
+};
+
+// -------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+// MOD: Scratch and test work.
+// ===============================================================================================================================
+
+const updateScratch = (forceState = null) => {
+    const mod = MODS.scratch;
+    const active = updateMod(mod, forceState);
+
+    console.log('yo');
+};
+
+// -------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
 // Add bindings and start the script.
 // ===============================================================================================================================
 
@@ -2051,7 +2304,10 @@ const _BINDINGS = [
     [MODS.inFrame, updateInFrame],
     [MODS.lottery, updateLottery],
     [MODS.puzzle, updatePuzzle],
+    [MODS.tileReveal, updateTileReveal],
     [MODS.displayOptions, updateDisplayOptions],
+    [MODS.userChallenges, updateUserChallenges],
+    [MODS.scratch, updateScratch],
 ];
 
 const closePopup = (evt) => { // Always close the popup menu when disabling a mod.
@@ -2263,6 +2519,7 @@ const _QUOTES = {
         `A cheap Casio watch or an Arduino Uno have the computing power of the first lunar lander. $10-$20.`,
         `The inventor of the glue used in Post-Its intended to make a very strong glue but accidentally made a very weak glue.`,
         `Popsicles were invented by an 11-year-old.`,
+        `The plural of octopus has three accepted versions- octopuses, octopi, octopodes.`,
     ],
 
 };
@@ -2365,7 +2622,8 @@ window.addEventListener('load', () => {
 
     // Other measures are taken, but no matter what we can't let this div brick thie entire site,
     //   e.g. if they change the URL naming scheme. Race condition with map loading, but so be it.
-    setTimeout(clearCh_eatOverlay, 3000);
+    // This also should allow ample time for mods to load after the initial GOOGLE_MAP load. There may be a better way to do this.
+    setTimeout(clearCh_eatOverlay, 5000);
 });
 
 /**
@@ -2440,16 +2698,6 @@ const initMods = () => { // Enable mods that were already enabled via localStora
             callback(true);
         }
     }
-};
-
-const initModsCallback = () => {
-    if (GOOGLE_MAP) {
-        const google = getGoogle();
-        google.maps.event.addListenerOnce(GOOGLE_MAP, 'idle', () => { // Actions on initial guess map load.
-            initMods();
-            console.log(`Tpebop's mods initialized.`);
-        });
-    };
 };
 
 const onMapClick = (evt) => {
@@ -2575,7 +2823,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 				});
 				google.maps.event.addListenerOnce(this, 'idle', () => { // Actions on initial guess map load.
                     initMods();
-                    console.log('GeoGuessr mods initialized.');
+                    console.log(`Tpebop's mods initialized.`);
                     setTimeout(clearCh_eatOverlay, 1000);
                     clickGarbage(900);
 				});
@@ -2601,7 +2849,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
                         });
                     }
                 }
-
                 GOOGLE_MAP = this; // Store globally for use in other functions once this is instantiated.
 			}
 		}
@@ -2621,7 +2868,6 @@ GeoGuessrEventFramework.init().then(GEF => {
         } catch (err) {
             console.err(err);
         }
-        initModsCallback();
     });
 
     GEF.events.addEventListener('round_end', (evt) => {
@@ -2629,7 +2875,7 @@ GeoGuessrEventFramework.init().then(GEF => {
         GG_CLICK = undefined;
     });
 
-	document.addEventListener('keydown', (evt) => {
+	document.addEventListener('keydown', (evt) => { // Custom hotkeys.
 		if (document.activeElement.tagName === 'INPUT') {
             return;
         }
@@ -2876,6 +3122,9 @@ const style = `
     }
 
     #gg-lottery {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
         position: absolute;
         top: 13%;
         left: 50%;
@@ -2883,9 +3132,6 @@ const style = `
         color: white;
         text-shadow: ${bodyShadow};
         transform: translate(-50%, -50%);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
         background-color: rgba(0, 100, 0, 0.8);
         padding: 0.5em;
         border-radius: 10px;
@@ -2918,6 +3164,57 @@ const style = `
         position: absolute;
         pointer-events: none;
         z-index: 99999999;
+    }
+
+    /* TODO: can this be merged with the lottery CSS? */
+    #gg-tile-count {
+        display: flex;
+        justify-content: space-between;
+        position: absolute;
+        top: 13%;
+        left: 50%;
+        font-size: 30px;
+        color: white;
+        text-shadow: ${bodyShadow};
+        transform: translate(-50%, -50%);
+        align-items: center;
+        background-color: rgba(0, 100, 0, 0.8);
+        padding: 0.5em;
+        border-radius: 10px;
+        z-index: 9999;
+    }
+
+    #gg-tile-count-counter {
+        padding-left: 0.5em;
+        pointer-events: none;
+    }
+
+    #gg-tile-overlay {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        background: transparent;
+        display: grid;
+        z-index: 1000;
+        pointer-events: none;
+    }
+
+    .gg-tile-block {
+        background: black;
+        border: 1px solid #333;
+        cursor: pointer;
+        transition: opacity 0.3s ease;
+        pointer-events: all;
+    }
+
+    .gg-tile-block:hover {
+        background: #222;
+    }
+
+    .gg-tile-block.removed {
+        pointer-events: none;
+        background: transparent !important;
+        border: none;
     }
 
 `;
