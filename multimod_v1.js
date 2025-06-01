@@ -1711,22 +1711,19 @@ const onDropTile = (evt) => { // When mouse is released, drop the dragged tile a
     const ctx2d = CANVAS_2D.getContext('2d');
     const tileSize = getTileSize();
 
-    // The tile that we are dragging from is currently empty, so first redraw the drop tile onto the drag tile.
-    const dropTileImageData = ctx2d.getImageData(
-        _PUZZLE_CURRENT_DROP_TILE.sx, _PUZZLE_CURRENT_DROP_TILE.sy, tileSize.width, tileSize.height);
-    ctx2d.drawImage(
-        dropTileImageData,
-        _PUZZLE_CURRENT_DROP_TILE.sx,
-        _PUZZLE_CURRENT_DROP_TILE.sy,
-        _PUZZLE_TILE_WIDTH,
-        _PUZZLE_TILE_HEIGHT,
-        _PUZZLE_CURRENT_DROP_TILE.sx,
-        _PUZZLE_CURRENT_DROP_TILE.sy,
-        _PUZZLE_TILE_WIDTH,
-        _PUZZLE_TILE_HEIGHT,
-    );
+    let toDrawOnDrop; // imageData that we are going to draw on the tile that we drop on.
+    let toDrawOnDrag; // imageData for the tile we dragged from.
 
-    // Second, paste the dragged tile over top of the drop tile.
+    if (_PUZZLE_DRAGGING_TILE === _PUZZLE_CURRENT_DROP_TILE ) { // Dropped within the same tile as it was dragged from.
+        toDrawOnDrag = _PUZZLE_DRAGGING_IMG; // We dropped on the same tile we dragged from.
+        toDrawOnDrop = null; // No need to draw it twice.
+    } else {
+        toDrawOnDrag = ctx2d.getImageData(
+            _PUZZLE_CURRENT_DROP_TILE.sx, _PUZZLE_CURRENT_DROP_TILE.sy, tileSize.width, tileSize.height).data;
+        toDrawOnDrop = _PUZZLE_DRAGGING_IMG;
+    }
+
+    // Always have to redraw the drag tile.
     ctx2d.drawImage(
         _PUZZLE_DRAGGING_IMG,
         _PUZZLE_CURRENT_DROP_TILE.sx,
@@ -1738,6 +1735,21 @@ const onDropTile = (evt) => { // When mouse is released, drop the dragged tile a
         _PUZZLE_TILE_WIDTH,
         _PUZZLE_TILE_HEIGHT,
     );
+
+    // Have to redraw the drop tile only if it is different than the drag tile.
+    if (toDrawOnDrop) {
+        ctx2d.drawImage(
+            toDrawOnDrop,
+            _PUZZLE_CURRENT_DROP_TILE.sx,
+            _PUZZLE_CURRENT_DROP_TILE.sy,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT,
+            _PUZZLE_CURRENT_DROP_TILE.sx,
+            _PUZZLE_CURRENT_DROP_TILE.sy,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT,
+        );
+    }
 
     _PUZZLE_DRAGGING_TILE = undefined;
     _PUZZLE_CURRENT_DROP_TILE = undefined;
@@ -1825,13 +1837,11 @@ const addCanvas2dListeners = () => {
 };
 
 const onPuzzleClick = () => {
-    const ctx2d = CANVAS_2D.getContext('2d');
-
-    pasteToDraggingImage(); // Paste clicked tile to draggable canvas.
-
     _PUZZLE_DRAGGING_TILE = getCurrentMouseTile();
     _PUZZLE_CURRENT_DROP_TILE = _PUZZLE_DRAGGING_TILE; // Always same on initial click.
+    pasteToDraggingImage(); // Paste clicked tile to draggable canvas.
 
+    const ctx2d = CANVAS_2D.getContext('2d');
     if (_PUZZLE_DRAGGING_TILE) {
         ctx2d.clearRect(
             _PUZZLE_DRAGGING_TILE.sx,
