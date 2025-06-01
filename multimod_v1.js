@@ -178,7 +178,7 @@ const MODS = {
     },
 
     puzzle: {
-        show: true,
+        show: false, // Almost working...
         key: 'puzzle',
         name: 'Puzzle',
         tooltip: 'Split up the large map into tiles and rearrange them randomly',
