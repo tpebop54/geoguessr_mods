@@ -1484,39 +1484,28 @@ let _PUZZLE_DROP_TILE;
 let _PUZZLE_TILES = [];
 let _PUZZLE_HOVER_TINT = '#009900'; // Used for drag and drop formatting.
 let _PUZZLE_IS_SOLVED = false;
+
+// TODO: can this be consolidated?
 let _PUZZLE_DRAGGING_IMG; // Draw tile as <img> element so it can be redrawn on the canvas while dragging tiles.
 let _PUZZLE_DRAGGING_CANVAS; // Mini canvas to draw _PUZZLE_DRAGGING_IMG on. This will be dragged around by the cursor.
 
-let _CANVAS_2D_POINTERDOWN; // Pointer down listener.
-let _CANVAS_2D_MOUSEUP; // Pointer up listener.
-let _CANVAS_2D_MOUSEMOVE; // Track all mouse movements on 2D canvas.
+let _CANVAS_2D_POINTERDOWN;
+let _CANVAS_2D_POINTERUP;
+let _CANVAS_2D_MOUSEMOVE;
 let _CANVAS_2D_MOUSE_LOC = { x: 0, y: 0 };
 
-const addCanvas2dMousemove = () => {
-    if (_CANVAS_2D_MOUSEMOVE) {
-        return;
-    }
-    _CANVAS_2D_MOUSEMOVE = CANVAS_2D.addEventListener('mousemove', (evt) => {
-        _CANVAS_2D_MOUSE_LOC.x = evt.offsetX - CANVAS_2D.offsetLeft;
-        _CANVAS_2D_MOUSE_LOC.y = evt.offsetY - CANVAS_2D.offsetTop;
-    });
-};
-
-const getTileSize = () => { // TODO: way to adjust this to window size?
-    return {
-        width: 512, // Google Street View tiles are 512x512. Maximum is 640x640. But in the google loader we're doing 256x256. Need to figure this out.
-        height: 512,
-    };
-};
-
 const clearCanvas2d = () => { // Remove the 2D overlay and go back to whatever streetview was loaded.
-    if (CANVAS_2D && _CANVAS_2D_MOUSEMOVE) {
-        CANVAS_2D.removeListener(_CANVAS_2D_MOUSEMOVE);
+    if (_CANVAS_2D_POINTERDOWN) {
+        CANVAS_2D.removeEventListener(_CANVAS_2D_POINTERDOWN);
+        _CANVAS_2D_POINTERDOWN = undefined;
+    }
+    if (_CANVAS_2D_MOUSEMOVE) {
+        CANVAS_2D.removeEventListener(_CANVAS_2D_MOUSEMOVE);
         _CANVAS_2D_MOUSEMOVE = undefined;
     }
-    if (CANVAS_2D && CANVAS_2D.parentElement) {
-        CANVAS_2D.parentElement.removeChild(CANVAS_2D);
-        CANVAS_2D = undefined;
+    if (_CANVAS_2D_POINTERUP) {
+        CANVAS_2D.removeEventListener(_CANVAS_2D_POINTERUP);
+        _CANVAS_2D_POINTERUP = undefined;
     }
     if (_PUZZLE_DRAGGING_IMG) {
         _PUZZLE_DRAGGING_IMG.parentElement.removeChild(_PUZZLE_DRAGGING_IMG);
@@ -1526,7 +1515,18 @@ const clearCanvas2d = () => { // Remove the 2D overlay and go back to whatever s
         _PUZZLE_DRAGGING_CANVAS.parentElement.removeChild(_PUZZLE_DRAGGING_CANVAS);
         _PUZZLE_DRAGGING_CANVAS = undefined;
     }
-    CANVAS_2D = undefined;
+    if (CANVAS_2D && CANVAS_2D.parentElement) {
+        CANVAS_2D.parentElement.removeChild(CANVAS_2D);
+        CANVAS_2D = undefined;
+    }
+    CANVAS_2D_IS_REDRAWING = false;
+};
+
+const getTileSize = () => { // TODO: way to adjust this to window size?
+    return {
+        width: 512, // Google Street View tiles are 512x512. Maximum is 640x640. But in the google loader we're doing 256x256. Need to figure this out.
+        height: 512,
+    };
 };
 
 /**
@@ -1599,10 +1599,13 @@ async function drawCanvas2d() {
         const mapParent = canvas3d.parentElement.parentElement;
         mapParent.insertBefore(CANVAS_2D, mapParent.firstChild);
         CANVAS_2D_IS_REDRAWING = false;
-        addCanvas2dMousemove()
+
+        _CANVAS_2D_MOUSEMOVE = CANVAS_2D.addEventListener('mousemove', (evt) => {
+            _CANVAS_2D_MOUSE_LOC.x = evt.offsetX - CANVAS_2D.offsetLeft;
+            _CANVAS_2D_MOUSE_LOC.y = evt.offsetY - CANVAS_2D.offsetTop;
+        });
     } catch (err) {
         console.error(err);
-        CANVAS_2D_IS_REDRAWING = false;
         clearCanvas2d();
     }
 }
@@ -1649,26 +1652,7 @@ const scatterCanvas2d = (nRows, nCols) => { // TODO: can maybe deal with width a
     };
 };
 
-// TODO: this is fucked up, not pasting image because it's already blanked or something
-const pasteToDraggingImage = () => { // Paste image to temporary small canvas for dragging animation.
-    if (!_PUZZLE_DRAG_TILE) {
-        return;
-    }
-    if (!_PUZZLE_DRAGGING_CANVAS) {
-        _PUZZLE_DRAGGING_CANVAS = document.createElement('canvas');
-    }
-    if (!_PUZZLE_DRAGGING_IMG) {
-        _PUZZLE_DRAGGING_IMG = document.createElement('img');
-    }
-    const ctx2d = _PUZZLE_DRAGGING_CANVAS.getContext('2d');
-    const imageData = _PUZZLE_DRAG_TILE.imageData;
-    _PUZZLE_DRAGGING_CANVAS.width = imageData.width;
-    _PUZZLE_DRAGGING_CANVAS.height = imageData.height;
-    ctx2d.putImageData(imageData, 0, 0);
-    _PUZZLE_DRAGGING_IMG.src = _PUZZLE_DRAGGING_CANVAS.toDataURL(); // TODO: not working.
-};
-
-const getCurrentMouseTile = () => { // Tile that the mouse is currently over. Doesn't matter if user is dragging a tile or not.
+const getCurrentPointerTile = () => { // Tile that the mouse is currently over.
     if (!_CANVAS_2D_MOUSE_LOC || !_PUZZLE_TILES) {
         return null;
     }
@@ -1688,7 +1672,59 @@ const getCurrentMouseTile = () => { // Tile that the mouse is currently over. Do
     return null;
 };
 
-const onDropTile = (evt) => { // When mouse is released, drop the dragged tile at the location, and swap them.
+// TODO: this is fucked up, not pasting image because it's already blanked or something
+const pasteToDraggingImg = () => { // Paste image to temporary small canvas for dragging animation.
+    if (!_PUZZLE_DRAG_TILE) {
+        return;
+    }
+    if (!_PUZZLE_DRAGGING_CANVAS) {
+        _PUZZLE_DRAGGING_CANVAS = document.createElement('canvas');
+    }
+    if (!_PUZZLE_DRAGGING_IMG) {
+        _PUZZLE_DRAGGING_IMG = document.createElement('img');
+    }
+    const ctx2d = _PUZZLE_DRAGGING_CANVAS.getContext('2d');
+    const imageData = _PUZZLE_DRAG_TILE.imageData;
+    _PUZZLE_DRAGGING_CANVAS.width = imageData.width;
+    _PUZZLE_DRAGGING_CANVAS.height = imageData.height;
+    ctx2d.putImageData(imageData, 0, 0);
+    _PUZZLE_DRAGGING_IMG.src = _PUZZLE_DRAGGING_CANVAS.toDataURL(); // TODO: not working.
+};
+
+const onPuzzlePointerdown = () => {
+    _PUZZLE_DRAG_TILE = getCurrentPointerTile();
+    _PUZZLE_DROP_TILE = _PUZZLE_DRAG_TILE; // Always same on initial click.
+    pasteToDraggingImg(); // Paste clicked tile to draggable canvas.
+
+    const ctx2d = CANVAS_2D.getContext('2d');
+    if (_PUZZLE_DRAG_TILE) {
+        ctx2d.clearRect(
+            _PUZZLE_DRAG_TILE.sx,
+            _PUZZLE_DRAG_TILE.sy,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT,
+        );
+        ctx2d.save();
+        ctx2d.globalAlpha = 0.9;
+        ctx2d.drawImage(
+            _PUZZLE_DRAGGING_IMG,
+            _PUZZLE_DRAG_TILE.sx,
+            _PUZZLE_DRAG_TILE.sy,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT,
+            _CANVAS_2D_MOUSE_LOC.x - _PUZZLE_TILE_WIDTH / 2,
+            _CANVAS_2D_MOUSE_LOC.y - _PUZZLE_TILE_HEIGHT / 2,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT,
+        );
+        ctx2d.restore();
+        CANVAS_2D.onpointerdown = onPuzzlePointerdown;
+        CANVAS_2D.onpointermove = onPuzzleMousemove; // TODO: what happens if dropped on a button or mini map or something?
+        CANVAS_2D.onpointerup = onPuzzlePointerup;
+    }
+};
+
+const onPuzzlePointerup = (evt) => { // When mouse is released, drop the dragged tile at the location, and swap them.
     if (!_PUZZLE_DRAG_TILE || !_PUZZLE_DROP_TILE) {
         console.error('Drag or drop tile is missing.');
         _PUZZLE_DRAG_TILE = null;
@@ -1829,56 +1865,6 @@ const onPuzzleMousemove = () => {
     ctx2d.restore();
 };
 
-const removeCanvas2dListeners = () => {
-    if (!CANVAS_2D) {
-        return;
-    }
-    if (_CANVAS_2D_POINTERDOWN) {
-        CANVAS_2D.removeEventListener(_CANVAS_2D_POINTERDOWN);
-        _CANVAS_2D_POINTERDOWN = undefined;
-    }
-    if (_CANVAS_2D_MOUSEMOVE) {
-        CANVAS_2D.removeEventListener(_CANVAS_2D_MOUSEMOVE);
-        _CANVAS_2D_MOUSEMOVE = undefined;
-    }
-    if (_CANVAS_2D_MOUSEUP) {
-        CANVAS_2D.removeEventListener(_CANVAS_2D_MOUSEUP);
-        _CANVAS_2D_MOUSEUP = undefined;
-    }
-};
-
-const onPuzzleClick = () => {
-    _PUZZLE_DRAG_TILE = getCurrentMouseTile();
-    _PUZZLE_DROP_TILE = _PUZZLE_DRAG_TILE; // Always same on initial click.
-    pasteToDraggingImage(); // Paste clicked tile to draggable canvas.
-
-    const ctx2d = CANVAS_2D.getContext('2d');
-    if (_PUZZLE_DRAG_TILE) {
-        ctx2d.clearRect(
-            _PUZZLE_DRAG_TILE.sx,
-            _PUZZLE_DRAG_TILE.sy,
-            _PUZZLE_TILE_WIDTH,
-            _PUZZLE_TILE_HEIGHT,
-        );
-        ctx2d.save();
-        ctx2d.globalAlpha = 0.9;
-        ctx2d.drawImage(
-            _PUZZLE_DRAGGING_IMG,
-            _PUZZLE_DRAG_TILE.sx,
-            _PUZZLE_DRAG_TILE.sy,
-            _PUZZLE_TILE_WIDTH,
-            _PUZZLE_TILE_HEIGHT,
-            _CANVAS_2D_MOUSE_LOC.x - _PUZZLE_TILE_WIDTH / 2,
-            _CANVAS_2D_MOUSE_LOC.y - _PUZZLE_TILE_HEIGHT / 2,
-            _PUZZLE_TILE_WIDTH,
-            _PUZZLE_TILE_HEIGHT,
-        );
-        ctx2d.restore();
-        CANVAS_2D.onpointermove = onPuzzleMousemove; // TODO: what happens if dropped on a button or mini map or something?
-        CANVAS_2D.onpointerup = onDropTile;
-    }
-};
-
 async function updatePuzzle(forceState = null) {
     const mod = MODS.puzzle;
     const active = updateMod(mod, forceState);
@@ -1886,7 +1872,7 @@ async function updatePuzzle(forceState = null) {
     clearCanvas2d();
 
     if (!active) {
-        removeCanvas2dListeners();
+        clearCanvas2d();
         return;
     }
 
@@ -1897,12 +1883,12 @@ async function updatePuzzle(forceState = null) {
             console.error(err);
             return;
         }
+        const nRows = getOption(mod, 'nRows');
+        const nCols = getOption(mod, 'nCols');
         const scattered = scatterCanvas2d(nRows, nCols);
         if (!scattered) {
             return;
         }
-        const nRows = getOption(mod, 'nRows');
-        const nCols = getOption(mod, 'nCols');
         _PUZZLE_TILES = scattered.tiles;
         _PUZZLE_TILE_WIDTH = scattered.tileWidth;
         _PUZZLE_TILE_HEIGHT = scattered.tileHeight;
