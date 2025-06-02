@@ -10,7 +10,6 @@
 // @grant        GM_addStyle
 // @grant        GM_openInTab
 // @grant        GM.xmlHttpRequest
-// @grant        GM_xmlhttpRequest
 
 // ==/UserScript==
 
@@ -308,7 +307,7 @@ for (const mod of Object.values(MODS)) {
 const STATE_KEY = 'gg_state'; // Key in window.localStorage.
 
 const saveState = () => {
-	window.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
+    window.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
 };
 
 const clearState = () => {
@@ -372,10 +371,10 @@ const SHOW_QUOTES = {
 };
 
 /**
-  SCORE_FUNC is a function used to display the overlay that shows how well you clicked (score, direction, whatever).
-  This can only be used by one mod at a time, so in mods that use it we have to use disableOtherScoreModes to disable the other ones.
-  It uses GG_ROUND and GG_CLICK to determine how well you clicked. SCORE_FUNC can be globally set for the active mod.
-  By default, it will give the 0-5000 score, but some mods override it.
+SCORE_FUNC is a function used to display the overlay that shows how well you clicked (score, direction, whatever).
+This can only be used by one mod at a time, so in mods that use it we have to use disableOtherScoreModes to disable the other ones.
+It uses GG_ROUND and GG_CLICK to determine how well you clicked. SCORE_FUNC can be globally set for the active mod.
+By default, it will give the 0-5000 score, but some mods override it.
 */
 let SCORE_FUNC;
 
@@ -516,7 +515,7 @@ const setOption = (mod, key, value, save = true) => {
 };
 
 const isArrayOption = (mod, key) => {
-    if (!mod.options ||!mod.options[key]) {
+    if (!mod.options || !mod.options[key]) {
         return false;
     }
     return Array.isArray(mod.options[key].options);
@@ -616,10 +615,10 @@ const makeOptionMenu = (mod) => {
     const formDiv = document.createElement('div');
     formDiv.id = 'gg-option-form-div';
     for (const [label, callback] of [
-            ['Close', onClose],
-            ['Reset', onReset],
-            ['Apply', onApply],
-        ]) {
+        ['Close', onClose],
+        ['Reset', onReset],
+        ['Apply', onApply],
+    ]) {
         const button = document.createElement('button');
         button.id = `gg-option-${label.toLowerCase()}`;
         button.classList.add('gg-option-label');
@@ -748,7 +747,7 @@ const setMapCenter = (lat = null, lng = null, zoom = null) => { // All optional 
         lng = currentLng;
     }
     GOOGLE_MAP.setCenter({ lat, lng });
-    if (zoom != null && zoom !==currentZoom) {
+    if (zoom != null && zoom !== currentZoom) {
         GOOGLE_MAP.setZoom(zoom);
     }
 };
@@ -808,8 +807,8 @@ const isInBounds = (loc, bounds) => {
 };
 
 /**
-  N, S, SW, SSW, etc... Angle is in degrees, true heading (degrees clockwise from true North).
-  Level 0 is for NESW, Level 1 includes NE, SE, etc., level 2 includes NNW, ESE, etc.
+N, S, SW, SSW, etc... Angle is in degrees, true heading (degrees clockwise from true North).
+Level 0 is for NESW, Level 1 includes NE, SE, etc., level 2 includes NNW, ESE, etc.
 */
 const getCardinalDirection = (degrees, level = 0) => {
     degrees = degrees % 360;
@@ -838,7 +837,7 @@ const getCardinalDirection = (degrees, level = 0) => {
 };
 
 /**
-  Map click listener. For scoring mods, SCORE_FUNC needs to be defined and then cleared when the mod is deactivated.
+Map click listener. For scoring mods, SCORE_FUNC needs to be defined and then cleared when the mod is deactivated.
 */
 const scoreListener = (evt) => {
     let scoreString;
@@ -885,8 +884,8 @@ const getRandomLat = (lat1, lat2) => {
 };
 
 /**
-  Get random longitude. This one is complicated because it can cross the prime meridian.
-  Thank you ChatGPT... I am so screwed as a software engineer.
+Get random longitude. This one is complicated because it can cross the prime meridian.
+Thank you ChatGPT... I am so screwed as a software engineer.
 */
 const getRandomLng = (lng1, lng2) => {
     if (Math.abs(lng1) === 180 && Math.abs(lng2) === 180) { // If both +-180, we'll assume it's [-180, 180].
@@ -930,8 +929,8 @@ const getRandomLng = (lng1, lng2) => {
 };
 
 /**
-  Get random { lat, lng } between the given bounds, or for the full Earth if bounds are not provided.
-  lat is [-90, 90], lng is [-180, 180]. Negative is south and west, positive is north and east.
+Get random { lat, lng } between the given bounds, or for the full Earth if bounds are not provided.
+lat is [-90, 90], lng is [-180, 180]. Negative is south and west, positive is north and east.
 */
 const getRandomLoc = (minLat = null, maxLat = null, minLng = null, maxLng = null) => {
     const lat = getRandomLat(minLat, maxLat);
@@ -972,7 +971,7 @@ const addMarkerAt = (lat, lng, title = null) => {
         position: { lat, lng },
         map: GOOGLE_MAP,
         title: title == null ? '' : title,
-  });
+    });
 };
 
 const setGuessMapEvents = (enabled = true) => {
@@ -1458,30 +1457,29 @@ const updateLottery = (forceState = null) => {
 // ===============================================================================================================================
 
 /**
-  Unfortunately, we can't use the 3D canvas, so we recreate it as a 2D canvas to make the puzzle.
-  This may make this mod unusable with some others. I haven't tested out every combination.
-  This requires a GOOGLE_MAPS_API_KEY at the top to generate static tiles. Google blocks calls to render the webgl canvas as a 2d canvas.
-  Ref: https://webdesign.tutsplus.com/create-an-html5-canvas-tile-swapping-puzzle--active-10747t
-  Also, shit this was hard to figure out.
+Unfortunately, we can't use the 3D canvas, so we recreate it as a 2D canvas to make the puzzle.
+This may make this mod unusable with some others. I haven't tested out every combination.
+This requires a GOOGLE_MAPS_API_KEY at the top to generate static tiles. Google blocks calls to render the webgl canvas as a 2d canvas.
+Ref: https://webdesign.tutsplus.com/create-an-html5-canvas-tile-swapping-puzzle--active-10747t
+Also, shit this was hard to figure out.
 */
 
 // TODO
-// - block tiling until first render.
-// - add option to make to actual puzzle.
-// - disable moving and panning and zooming. Need to update note at top.
+// - Allow moving/NM?
+// - add option to require solving puzzle.
 // - what happens if it's solved on start? reshuffle automatically?
-// - make able to restore original 3d state.
 // - clean up unused shit.
+// - still a race condition and it's blink mode sometimes.
 
 let CANVAS_2D; // 2D canvas element that overlays the 3D one.
 let CANVAS_2D_IS_REDRAWING = false; // If we're still redrawing the previous frame, this can brick the site.
 
-let _PUZZLE_WIDTH;
+let _PUZZLE_WIDTH; // TODO: unused but might be needed.
 let _PUZZLE_HEIGHT;
 let _PUZZLE_TILE_WIDTH;
 let _PUZZLE_TILE_HEIGHT;
-let _PUZZLE_DRAGGING_TILE;
-let _PUZZLE_CURRENT_DROP_TILE;
+let _PUZZLE_DRAG_TILE;
+let _PUZZLE_DROP_TILE;
 let _PUZZLE_TILES = [];
 let _PUZZLE_HOVER_TINT = '#009900'; // Used for drag and drop formatting.
 let _PUZZLE_IS_SOLVED = false;
@@ -1531,9 +1529,9 @@ const clearCanvas2d = () => {
 };
 
 /**
-  Redraw the 3D canvas as a 2D canvas so we can mess around with it.
-  We have to extract the image data from the 3D view using Google Maps API.
-  They make it impossible to extract directly from that canvas.
+Redraw the 3D canvas as a 2D canvas so we can mess around with it.
+We have to extract the image data from the 3D view using Google Maps API.
+They make it impossible to extract directly from that canvas.
 */
 async function drawCanvas2d() {
     CANVAS_2D_IS_REDRAWING = true;
@@ -1610,7 +1608,7 @@ async function drawCanvas2d() {
 
 const scatterCanvas2d = (nRows, nCols) => { // TODO: can maybe deal with width and height here.
     const ctx2d = CANVAS_2D.getContext('2d');
-    const tileWidth = CANVAS_2D.width / nCols;
+    const tileWidth = CANVAS_2D.width / nCols; // TODO: this is using 512px tiles, which might go out of bounds.
     const tileHeight = CANVAS_2D.height / nRows;
 
     // Split 2D image into tiles.
@@ -1650,8 +1648,9 @@ const scatterCanvas2d = (nRows, nCols) => { // TODO: can maybe deal with width a
     };
 };
 
+// TODO: this is fucked up, not pasting image
 const pasteToDraggingImage = () => { // Paste image to temporary small canvas for dragging animation.
-    if (!_PUZZLE_DRAGGING_TILE) {
+    if (!_PUZZLE_DRAG_TILE) {
         return;
     }
     if (!_PUZZLE_DRAGGING_CANVAS) {
@@ -1661,7 +1660,7 @@ const pasteToDraggingImage = () => { // Paste image to temporary small canvas fo
         _PUZZLE_DRAGGING_IMG = document.createElement('img');
     }
     const ctx2d = _PUZZLE_DRAGGING_CANVAS.getContext('2d');
-    const imageData = _PUZZLE_DRAGGING_TILE.imageData;
+    const imageData = _PUZZLE_DRAG_TILE.imageData;
     _PUZZLE_DRAGGING_CANVAS.width = imageData.width;
     _PUZZLE_DRAGGING_CANVAS.height = imageData.height;
     ctx2d.putImageData(imageData, 0, 0);
@@ -1689,22 +1688,22 @@ const getCurrentMouseTile = () => { // Tile that the mouse is currently over. Do
 };
 
 const onDropTile = (evt) => { // When mouse is released, drop the dragged tile at the location, and swap them.
-    if (!_PUZZLE_DRAGGING_TILE || !_PUZZLE_CURRENT_DROP_TILE) {
+    if (!_PUZZLE_DRAG_TILE || !_PUZZLE_DROP_TILE) {
         console.error('Drag or drop tile is missing.');
-        _PUZZLE_DRAGGING_TILE = null;
-        _PUZZLE_CURRENT_DROP_TILE = null;
+        _PUZZLE_DRAG_TILE = null;
+        _PUZZLE_DROP_TILE = null;
         return;
     }
 
     // Swap the x and y indices of the dragging tile and the dropping tile.
     const tmp = {
-        sx: _PUZZLE_DRAGGING_TILE.sx,
-        sy: _PUZZLE_DRAGGING_TILE.sy
+        sx: _PUZZLE_DRAG_TILE.sx,
+        sy: _PUZZLE_DRAG_TILE.sy
     };
-    _PUZZLE_DRAGGING_TILE.sx = _PUZZLE_CURRENT_DROP_TILE.sy;
-    _PUZZLE_DRAGGING_TILE.sy = _PUZZLE_CURRENT_DROP_TILE.sy;
-    _PUZZLE_CURRENT_DROP_TILE.sx = tmp.sx;
-    _PUZZLE_CURRENT_DROP_TILE.sy = tmp.sy;
+    _PUZZLE_DRAG_TILE.sx = _PUZZLE_DROP_TILE.sy;
+    _PUZZLE_DRAG_TILE.sy = _PUZZLE_DROP_TILE.sy;
+    _PUZZLE_DROP_TILE.sx = tmp.sx;
+    _PUZZLE_DROP_TILE.sy = tmp.sy;
 
     // Draw the drag tile in the drop spot, and vice versa.
     const ctx2d = CANVAS_2D.getContext('2d');
@@ -1713,12 +1712,12 @@ const onDropTile = (evt) => { // When mouse is released, drop the dragged tile a
     let toDrawOnDrop; // imageData that we are going to draw on the tile that we drop on.
     let toDrawOnDrag; // imageData for the tile we dragged from.
 
-    if (_PUZZLE_DRAGGING_TILE === _PUZZLE_CURRENT_DROP_TILE ) { // Dropped within the same tile as it was dragged from.
+    if (_PUZZLE_DRAG_TILE === _PUZZLE_DROP_TILE) { // Dropped within the same tile as it was dragged from.
         toDrawOnDrag = _PUZZLE_DRAGGING_IMG; // We dropped on the same tile we dragged from.
         toDrawOnDrop = null; // No need to draw it twice.
     } else {
         toDrawOnDrag = ctx2d.getImageData(
-            _PUZZLE_CURRENT_DROP_TILE.sx, _PUZZLE_CURRENT_DROP_TILE.sy, tileSize.width, tileSize.height).data;
+            _PUZZLE_DROP_TILE.sx, _PUZZLE_DROP_TILE.sy, tileSize.width, tileSize.height).data;
         toDrawOnDrop = _PUZZLE_DRAGGING_IMG;
     }
 
@@ -1726,9 +1725,9 @@ const onDropTile = (evt) => { // When mouse is released, drop the dragged tile a
     // Always have to redraw the drag tile (as either the original drag tile, or the drop tile).
     // Ref: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/drawImage
     try {
-        if (toDrawOnDrag instanceof Uint8ClampedArray) {
+        if (toDrawOnDrag instanceof Uint8ClampedArray) { // TODO: this is fucked up
             const imageData = ctx2d.createImageData(_PUZZLE_TILE_WIDTH, _PUZZLE_TILE_HEIGHT);
-            ctx2d.putImageData(imageData, _PUZZLE_CURRENT_DROP_TILE.sx, _PUZZLE_CURRENT_DROP_TILE.sy);
+            ctx2d.putImageData(imageData, _PUZZLE_DROP_TILE.sx, _PUZZLE_DROP_TILE.sy);
         } else {
             ctx2d.drawImage(
                 toDrawOnDrag,
@@ -1736,8 +1735,8 @@ const onDropTile = (evt) => { // When mouse is released, drop the dragged tile a
                 0,
                 _PUZZLE_TILE_WIDTH,
                 _PUZZLE_TILE_HEIGHT,
-                _PUZZLE_DRAGGING_TILE.sx, // TODO: pick up here, I think this is wrong
-                _PUZZLE_DRAGGING_TILE.sy,
+                _PUZZLE_DRAG_TILE.sx,
+                _PUZZLE_DRAG_TILE.sy,
                 _PUZZLE_TILE_WIDTH,
                 _PUZZLE_TILE_HEIGHT,
             );
@@ -1751,7 +1750,7 @@ const onDropTile = (evt) => { // When mouse is released, drop the dragged tile a
         try {
             if (toDrawOnDrop instanceof Uint8ClampedArray) {
                 const imageData = ctx2d.createImageData(_PUZZLE_TILE_WIDTH, _PUZZLE_TILE_HEIGHT);
-                ctx2d.putImageData(imageData, _PUZZLE_CURRENT_DROP_TILE.sx, _PUZZLE_CURRENT_DROP_TILE.sy);
+                ctx2d.putImageData(imageData, _PUZZLE_DROP_TILE.sx, _PUZZLE_DROP_TILE.sy);
             } else {
                 ctx2d.drawImage(
                     toDrawOnDrop,
@@ -1759,8 +1758,8 @@ const onDropTile = (evt) => { // When mouse is released, drop the dragged tile a
                     0,
                     _PUZZLE_TILE_WIDTH,
                     _PUZZLE_TILE_HEIGHT,
-                    _PUZZLE_CURRENT_DROP_TILE.sx,
-                    _PUZZLE_CURRENT_DROP_TILE.sy,
+                    _PUZZLE_DROP_TILE.sx,
+                    _PUZZLE_DROP_TILE.sy,
                     _PUZZLE_TILE_WIDTH,
                     _PUZZLE_TILE_HEIGHT,
                 );
@@ -1769,22 +1768,22 @@ const onDropTile = (evt) => { // When mouse is released, drop the dragged tile a
             debugger
         }
     }
-    _PUZZLE_DRAGGING_TILE = undefined;
-    _PUZZLE_CURRENT_DROP_TILE = undefined;
+    _PUZZLE_DRAG_TILE = undefined;
+    _PUZZLE_DROP_TILE = undefined;
 
     // checkSolved(); // TODO
     console.log('tile dropped'); // TODO: remove
 };
 
 const onPuzzleMousemove = () => {
-    if (!CANVAS_2D || !_PUZZLE_DRAGGING_TILE) {
+    if (!CANVAS_2D || !_PUZZLE_DRAG_TILE) {
         return; // User has not clicked yet. Mouse movements are tracked after first click.
     }
     const ctx2d = CANVAS_2D.getContext('2d');
 
-    _PUZZLE_CURRENT_DROP_TILE = undefined;
+    _PUZZLE_DROP_TILE = undefined;
     for (const tile of _PUZZLE_TILES) {
-        if (tile === _PUZZLE_DRAGGING_TILE) {
+        if (tile === _PUZZLE_DRAG_TILE) {
             continue;
         }
         ctx2d.drawImage(
@@ -1798,16 +1797,16 @@ const onPuzzleMousemove = () => {
             _PUZZLE_TILE_WIDTH,
             _PUZZLE_TILE_HEIGHT
         );
-        _PUZZLE_CURRENT_DROP_TILE = getCurrentMouseTile();
-        if (!_PUZZLE_CURRENT_DROP_TILE) {
+        _PUZZLE_DROP_TILE = getCurrentMouseTile();
+        if (!_PUZZLE_DROP_TILE) {
             return;
         }
         ctx2d.save();
         ctx2d.globalAlpha = 0.4;
         ctx2d.fillStyle = _PUZZLE_HOVER_TINT;
         ctx2d.fillRect(
-            _PUZZLE_CURRENT_DROP_TILE.sx,
-            _PUZZLE_CURRENT_DROP_TILE.sy,
+            _PUZZLE_DROP_TILE.sx,
+            _PUZZLE_DROP_TILE.sy,
             _PUZZLE_TILE_WIDTH,
             _PUZZLE_TILE_HEIGHT
         );
@@ -1817,12 +1816,12 @@ const onPuzzleMousemove = () => {
     ctx2d.globalAlpha = 0.6;
     ctx2d.drawImage(
         _PUZZLE_DRAGGING_IMG,
-        _PUZZLE_DRAGGING_TILE.sx,
-        _PUZZLE_DRAGGING_TILE.sy,
+        _PUZZLE_DRAG_TILE.sx,
+        _PUZZLE_DRAG_TILE.sy,
         _PUZZLE_TILE_WIDTH,
         _PUZZLE_TILE_HEIGHT,
-        _CANVAS_2D_MOUSE_LOC .x - _PUZZLE_TILE_WIDTH / 2,
-        _CANVAS_2D_MOUSE_LOC .y - _PUZZLE_TILE_HEIGHT / 2,
+        _CANVAS_2D_MOUSE_LOC.x - _PUZZLE_TILE_WIDTH / 2,
+        _CANVAS_2D_MOUSE_LOC.y - _PUZZLE_TILE_HEIGHT / 2,
         _PUZZLE_TILE_WIDTH,
         _PUZZLE_TILE_HEIGHT,
     );
@@ -1855,15 +1854,15 @@ const addCanvas2dListeners = () => {
 };
 
 const onPuzzleClick = () => {
-    _PUZZLE_DRAGGING_TILE = getCurrentMouseTile();
-    _PUZZLE_CURRENT_DROP_TILE = _PUZZLE_DRAGGING_TILE; // Always same on initial click.
+    _PUZZLE_DRAG_TILE = getCurrentMouseTile();
+    _PUZZLE_DROP_TILE = _PUZZLE_DRAG_TILE; // Always same on initial click.
     pasteToDraggingImage(); // Paste clicked tile to draggable canvas.
 
     const ctx2d = CANVAS_2D.getContext('2d');
-    if (_PUZZLE_DRAGGING_TILE) {
+    if (_PUZZLE_DRAG_TILE) {
         ctx2d.clearRect(
-            _PUZZLE_DRAGGING_TILE.sx,
-            _PUZZLE_DRAGGING_TILE.sy,
+            _PUZZLE_DRAG_TILE.sx,
+            _PUZZLE_DRAG_TILE.sy,
             _PUZZLE_TILE_WIDTH,
             _PUZZLE_TILE_HEIGHT,
         );
@@ -1871,8 +1870,8 @@ const onPuzzleClick = () => {
         ctx2d.globalAlpha = 0.9;
         ctx2d.drawImage(
             _PUZZLE_DRAGGING_IMG,
-            _PUZZLE_DRAGGING_TILE.sx,
-            _PUZZLE_DRAGGING_TILE.sy,
+            _PUZZLE_DRAG_TILE.sx,
+            _PUZZLE_DRAG_TILE.sy,
             _PUZZLE_TILE_WIDTH,
             _PUZZLE_TILE_HEIGHT,
             _CANVAS_2D_MOUSE_LOC.x - _PUZZLE_TILE_WIDTH / 2,
@@ -2192,7 +2191,7 @@ const getFilterStr = (mod) => { // Get string that can be applied to streetview 
         if (value == null) {
             continue
         }
-        filterStr += `${key}(${value}) ` ; // Requires units in value.
+        filterStr += `${key}(${value}) `; // Requires units in value.
     }
     filterStr = filterStr.trim();
     return filterStr;
@@ -2351,9 +2350,9 @@ const bindButtons = () => {
 };
 
 const addButtons = () => { // Add mod buttons to the active round, with a little button to toggle them.
-	const bigMapContainer = getBigMapContainer();
+    const bigMapContainer = getBigMapContainer();
     const modContainer = getModDiv(); // Includes header and buttons.
-	if (!bigMapContainer || modContainer) { // Page not loaded, or modContainer is already rendered.
+    if (!bigMapContainer || modContainer) { // Page not loaded, or modContainer is already rendered.
         return;
     }
 
@@ -2388,10 +2387,10 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
 
     modsContainer.appendChild(headerContainer);
     modsContainer.appendChild(buttonContainer);
-	bigMapContainer.appendChild(modsContainer);
-	bindButtons();
+    bigMapContainer.appendChild(modsContainer);
+    bindButtons();
 
-    modMenuToggle.addEventListener('click', function() {
+    modMenuToggle.addEventListener('click', function () {
         if (buttonContainer.classList.contains('hidden')) {
             buttonContainer.classList.remove('hidden');
             modMenuToggle.textContent = '▼';
@@ -2644,11 +2643,11 @@ window.addEventListener('load', () => {
 });
 
 /**
-  Click around the map *after* it is loaded and idle, and the screen is blacked out.
-  This will be a callback in the google maps section of this script.
-  This will completely mess up the repl ay file. We have 1 second to do this.
-  Always end with a click at { lat: 0, lng: 0 }. This will be extremely obvious in r eplays, both for streaming and the actual re play files.
-  This function is sloppy, but it doesn't really matter as long as we screw up the repl ay.
+Click around the map *after* it is loaded and idle, and the screen is blacked out.
+This will be a callback in the google maps section of this script.
+This will completely mess up the repl ay file. We have 1 second to do this.
+Always end with a click at { lat: 0, lng: 0 }. This will be extremely obvious in r eplays, both for streaming and the actual re play files.
+This function is sloppy, but it doesn't really matter as long as we screw up the repl ay.
 */
 const clickGarbage = (nMilliseconds = 900) => {
     const nClicks = 20; // Approximately...
@@ -2675,38 +2674,38 @@ const clickGarbage = (nMilliseconds = 900) => {
 // Script injection, extracted from unityscript extracted from extenssr:
 // https://gitlab.com/nonreviad/extenssr/-/blob/main/src/injected_scripts/maps_api_injecter.ts
 const overrideOnLoad = (googleScript, observer, overrider) => {
-	const oldOnload = googleScript.onload;
-	googleScript.onload = (event) => {
-		const google = getGoogle();
-		if (google) {
-			observer.disconnect();
-			overrider(google);
-		}
-		if (oldOnload) {
-			oldOnload.call(googleScript, event);
-		}
-	}
+    const oldOnload = googleScript.onload;
+    googleScript.onload = (event) => {
+        const google = getGoogle();
+        if (google) {
+            observer.disconnect();
+            overrider(google);
+        }
+        if (oldOnload) {
+            oldOnload.call(googleScript, event);
+        }
+    }
 }
 
 const grabGoogleScript = (mutations) => {
-	for (const mutation of mutations) {
-		for (const newNode of mutation.addedNodes) {
-			const asScript = newNode;
-			if (asScript && asScript.src && asScript.src.startsWith('https://maps.googleapis.com/')) {
-				return asScript;
-			}
-		}
-	}
-	return null;
+    for (const mutation of mutations) {
+        for (const newNode of mutation.addedNodes) {
+            const asScript = newNode;
+            if (asScript && asScript.src && asScript.src.startsWith('https://maps.googleapis.com/')) {
+                return asScript;
+            }
+        }
+    }
+    return null;
 }
 
 const injecter = (overrider) => {
-	new MutationObserver((mutations, observer) => {
-		const googleScript = grabGoogleScript(mutations);
-		if (googleScript) {
-			overrideOnLoad(googleScript, observer, overrider);
-		}
-	}).observe(document.documentElement, { childList: true, subtree: true });
+    new MutationObserver((mutations, observer) => {
+        const googleScript = grabGoogleScript(mutations);
+        if (googleScript) {
+            overrideOnLoad(googleScript, observer, overrider);
+        }
+    }).observe(document.documentElement, { childList: true, subtree: true });
 }
 
 const initMods = () => { // Enable mods that were already enabled via localStorage.
@@ -2732,9 +2731,9 @@ _CHEAT_DETECTION = true; // I freaking dare you.
 
 const _getIsCheatingOrMaybeNotCheating = () => {
     const t = 30,
-          e = Math.floor(0.5 * t),
-          n = Math.floor(0.3 * t),
-          r = t - e - n;
+        e = Math.floor(0.5 * t),
+        n = Math.floor(0.3 * t),
+        r = t - e - n;
     const a = new Set();
     while (a.size < 8) {
         const x = Math.floor(100 * Math.random()) + 1;
@@ -2781,7 +2780,7 @@ const _YOURE_LOOKING_AT_MY_CODE = (v) => {
                 const e = [
                     () => Boolean(c.match(/.+/)),
                     () => [null, undefined, NaN, 0, '', false].includes(b),
-                    () => new Set(madeYouLook()).has([...Array(5)].map((_,i) => i).filter(x => x < 5).reduce((a,b) => a + (b === 0 ? 0 : 1), 0) + ([] + [])[1] || +!![] + +!![] + +!![] + +!![]),
+                    () => new Set(madeYouLook()).has([...Array(5)].map((_, i) => i).filter(x => x < 5).reduce((a, b) => a + (b === 0 ? 0 : 1), 0) + ([] + [])[1] || +!![] + +!![] + +!![] + +!![]),
                     () => Object.is(b, null)
                 ];
                 for (let f = 0; f < e.length; f++) {
@@ -2812,47 +2811,47 @@ document.addEventListener('DOMContentLoaded', (event) => {
         return; // Get outta 'ere
     }
 
-	injecter(() => {
-		const google = getGoogle();
-		if (!google) {
+    injecter(() => {
+        const google = getGoogle();
+        if (!google) {
             return;
         }
 
-		google.maps.StreetViewPanorama = class extends google.maps.StreetViewPanorama {
-			constructor(...args) {
-				super(...args);
-				GOOGLE_STREETVIEW = this;
-			}
-		}
+        google.maps.StreetViewPanorama = class extends google.maps.StreetViewPanorama {
+            constructor(...args) {
+                super(...args);
+                GOOGLE_STREETVIEW = this;
+            }
+        }
 
-		google.maps.Map = class extends google.maps.Map {
-			constructor(...args) {
-				super(...args);
+        google.maps.Map = class extends google.maps.Map {
+            constructor(...args) {
+                super(...args);
                 this.setRenderingType(google.maps.RenderingType.VECTOR); // Must be a vector map for some additional controls.
                 this.setHeadingInteractionEnabled(true);
                 this.setTiltInteractionEnabled(true);
 
-				GOOGLE_SVC = new google.maps.ImageMapType({
-					getTileUrl: (point, zoom) => `https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i${zoom}!2i${point.x}!3i${point.y}!2i9!3x1!2m8!1e2!2ssvv!4m2!1scc!2s*211m3*211e2*212b1*213e2*212b1*214b1!4m2!1ssvl!2s*211b0*212b1!3m8!2sen!3sus!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e`,
-					tileSize: new google.maps.Size(256, 256),
-					maxZoom: 9,
-					minZoom: 0,
-				});
-				google.maps.event.addListenerOnce(this, 'idle', () => { // Actions on initial guess map load.
+                GOOGLE_SVC = new google.maps.ImageMapType({
+                    getTileUrl: (point, zoom) => `https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i${zoom}!2i${point.x}!3i${point.y}!2i9!3x1!2m8!1e2!2ssvv!4m2!1scc!2s*211m3*211e2*212b1*213e2*212b1*214b1!4m2!1ssvl!2s*211b0*212b1!3m8!2sen!3sus!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e`,
+                    tileSize: new google.maps.Size(256, 256),
+                    maxZoom: 9,
+                    minZoom: 0,
+                });
+                google.maps.event.addListenerOnce(this, 'idle', () => { // Actions on initial guess map load.
                     initMods();
                     console.log(`Tpebop's mods initialized.`);
                     setTimeout(clearCh_eatOverlay, 1000);
                     clickGarbage(900);
-				});
+                });
                 google.maps.event.addListener(this, 'dragstart', () => {
-					IS_DRAGGING_SMALL_MAP = true;
-				});
+                    IS_DRAGGING_SMALL_MAP = true;
+                });
                 google.maps.event.addListener(this, 'dragend', () => {
-					IS_DRAGGING_SMALL_MAP = false;
-				});
+                    IS_DRAGGING_SMALL_MAP = false;
+                });
                 google.maps.event.addListener(this, 'click', (evt) => {
-					onMapClick(evt);
-				});
+                    onMapClick(evt);
+                });
 
                 if (DEBUG) {
                     this.addListener('contextmenu', (evt) => { // Add right click listener to guess map for debugging.
@@ -2867,9 +2866,9 @@ document.addEventListener('DOMContentLoaded', (event) => {
                     }
                 }
                 GOOGLE_MAP = this; // Store globally for use in other functions once this is instantiated.
-			}
-		}
-	});
+            }
+        }
+    });
 });
 
 GeoGuessrEventFramework.init().then(GEF => {
@@ -2892,8 +2891,8 @@ GeoGuessrEventFramework.init().then(GEF => {
         GG_CLICK = undefined;
     });
 
-	document.addEventListener('keydown', (evt) => { // Custom hotkeys.
-		if (document.activeElement.tagName === 'INPUT') {
+    document.addEventListener('keydown', (evt) => { // Custom hotkeys.
+        if (document.activeElement.tagName === 'INPUT') {
             return;
         }
         if (evt.key === ',' && GOOGLE_MAP && !isActive(MODS.zoomInOnly)) {
@@ -2908,14 +2907,14 @@ GeoGuessrEventFramework.init().then(GEF => {
             clearState();
             window.location.reload();
         }
-	});
+    });
 
 });
 
 loadState();
 
 const observer = new MutationObserver(() => { // TODO: this gets called way too much.
-	addButtons();
+    addButtons();
     // I think this is an anti-c h eat method from Geoguessr. It's annoying, so it's gone.
     const reactionsDiv = getGameReactionsDiv();
     if (reactionsDiv) {
@@ -2942,297 +2941,297 @@ const flashlightBlur = getOption(MODS.flashlight, 'blur');
 
 const style = `
 
-    body: {
-        overflow: hidden;
-    }
+  body: {
+      overflow: hidden;
+  }
 
-    .hidden {
-        display: none !important;
-    }
+  .hidden {
+      display: none !important;
+  }
 
-    #gg-mods-container {
-        position: absolute;
-        top: 40px;
-        left: 20px;
-        z-index: 9;	display: flex;
-        flex-direction: column;
-        min-width: 175px;
-    }
+  #gg-mods-container {
+      position: absolute;
+      top: 40px;
+      left: 20px;
+      z-index: 9;	display: flex;
+      flex-direction: column;
+      min-width: 175px;
+  }
 
-    #gg-mods-header-container {
-        display: flex;
-        align-items: center;
-        font-size: 18px;
-        justify-content: space-between;
-    }
+  #gg-mods-header-container {
+      display: flex;
+      align-items: center;
+      font-size: 18px;
+      justify-content: space-between;
+  }
 
-    #gg-mods-header {
-        font-weight: bold;
-        text-shadow: ${headerShadow};
-        position: relative;
-    }
+  #gg-mods-header {
+      font-weight: bold;
+      text-shadow: ${headerShadow};
+      position: relative;
+  }
 
-    #gg-mods-container-toggle {
-        padding: 0;
-        font-size: 16px;
-        cursor: pointer;
-        text-shadow: ${headerShadow};
-    }
+  #gg-mods-container-toggle {
+      padding: 0;
+      font-size: 16px;
+      cursor: pointer;
+      text-shadow: ${headerShadow};
+  }
 
-    #gg-mods-button-container {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        margin-top: 10px;
-    }
+  #gg-mods-button-container {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 10px;
+  }
 
-    .gg-mod-button {
-        background: var(--ds-color-purple-100);
-        border-radius: 5px;
-        font-size: 14px;
-        cursor: pointer;
-        opacity: 0.9;
-        transition: opacity 0.2s;
-        padding: 4px 10px;
-    }
+  .gg-mod-button {
+      background: var(--ds-color-purple-100);
+      border-radius: 5px;
+      font-size: 14px;
+      cursor: pointer;
+      opacity: 0.9;
+      transition: opacity 0.2s;
+      padding: 4px 10px;
+  }
 
-    .gg-mod-button:hover {
-        opacity: 1;
-    }
+  .gg-mod-button:hover {
+      opacity: 1;
+  }
 
-    #gg-score-div {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        font-size: 60px;
-        color: white;
-        text-shadow: ${bodyShadow};
-        transform: translate(-50%, -50%);
-        pointer-events: none;
-    }
+  #gg-score-div {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      font-size: 60px;
+      color: white;
+      text-shadow: ${bodyShadow};
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+  }
 
-    #gg-option-menu {
-        position: absolute;
-        left: 110%;
-        padding: 15px;
-        background: var(--ds-color-purple-100);
-        border-radius: 10px;
-        border: 2px solid black;
-        color: white;
-        font-size: 15px;
-        font-weight: bold;
-        text-shadow: ${bodyShadow};
-        z-index: 1;
-    }
+  #gg-option-menu {
+      position: absolute;
+      left: 110%;
+      padding: 15px;
+      background: var(--ds-color-purple-100);
+      border-radius: 10px;
+      border: 2px solid black;
+      color: white;
+      font-size: 15px;
+      font-weight: bold;
+      text-shadow: ${bodyShadow};
+      z-index: 1;
+  }
 
-    #gg-option-title {
-        padding-top: 5px;
-        padding-bottom: 12px;
-        text-align: center;
-        text-shadow: ${bodyShadow};
-        font-size: 18px;
-    }
+  #gg-option-title {
+      padding-top: 5px;
+      padding-bottom: 12px;
+      text-align: center;
+      text-shadow: ${bodyShadow};
+      font-size: 18px;
+  }
 
-    .gg-option-line {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
+  .gg-option-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+  }
 
-    .gg-option-label {
-        white-space: nowrap;
-        padding-right: 20px;
-    }
+  .gg-option-label {
+      white-space: nowrap;
+      padding-right: 20px;
+  }
 
-    .gg-option-input {
-        min-width: 70px;
-        max-width: 100px;
-        height: 25px;
-        border-radius: 20px;
-        margin: 5px 0;
-        border: none;
-    }
+  .gg-option-input {
+      min-width: 70px;
+      max-width: 100px;
+      height: 25px;
+      border-radius: 20px;
+      margin: 5px 0;
+      border: none;
+  }
 
-    .gg-option-button {
-        border-radius: 20px;
-        margin: 5px 0;
-        height: 30px;
-    }
+  .gg-option-button {
+      border-radius: 20px;
+      margin: 5px 0;
+      height: 30px;
+  }
 
-    #gg-option-form-div {
-        display: flex;
-        justify-content: space-between;
-        margin-top: 20px;
-    }
+  #gg-option-form-div {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+  }
 
-    .gg-option-form-button {
-        width: 80px;
-        height: 25px;
-        border-radius: 15px;
-        color: white;
-        shadow: ${bodyShadow};
-        padding: 0;
-        cursor: pointer;
-    }
+  .gg-option-form-button {
+      width: 80px;
+      height: 25px;
+      border-radius: 15px;
+      color: white;
+      shadow: ${bodyShadow};
+      padding: 0;
+      cursor: pointer;
+  }
 
-    #gg-option-close {
-       background: red;
-    }
+  #gg-option-close {
+     background: red;
+  }
 
-    #gg-option-reset {
-        background: purple;
-        margin: 0 5px;
-    }
+  #gg-option-reset {
+      background: purple;
+      margin: 0 5px;
+  }
 
-    #gg-option-apply {
-       background: green;
-    }
+  #gg-option-apply {
+     background: green;
+  }
 
-    input::-webkit-outer-spin-button,
-    input::-webkit-inner-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-    }
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+  }
 
-    input[type=number] {
-        -moz-appearance:textfield;
-    }
+  input[type=number] {
+      -moz-appearance:textfield;
+  }
 
-    #gg-flashlight-div {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 200%;
-        height: 200%;
-        padding: 5rem;
-        pointer-events: none;
+  #gg-flashlight-div {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 200%;
+      height: 200%;
+      padding: 5rem;
+      pointer-events: none;
 
-        overflow: hidden;
-        position: absolute;
-        z-index: 99999;
+      overflow: hidden;
+      position: absolute;
+      z-index: 99999;
 
-        --flashlight-y-pos: -50%;
-        --flashlight-x-pos: -50%;
-        --flashlight-inset: -300px;
-        --flashlight-radius: ${flashlightRadius}px;
-        --flashlight-blur: ${flashlightRadius + flashlightBlur}px;
-    }
+      --flashlight-y-pos: -50%;
+      --flashlight-x-pos: -50%;
+      --flashlight-inset: -300px;
+      --flashlight-radius: ${flashlightRadius}px;
+      --flashlight-blur: ${flashlightRadius + flashlightBlur}px;
+  }
 
-    #gg-flashlight-div::before {
-        content: "";
-        position: absolute;
-        inset: var(--flashlight-inset);
-        background-image: radial-gradient(circle, transparent 0%, rgba(47,52,2,0.4) var(--flashlight-radius), black var(--flashlight-blur), black 100%);
-        background-position: var(--flashlight-x-pos) var(--flashlight-y-pos);
-        background-repeat: no-repeat;
-        pointer-events: none;
-    }
+  #gg-flashlight-div::before {
+      content: "";
+      position: absolute;
+      inset: var(--flashlight-inset);
+      background-image: radial-gradient(circle, transparent 0%, rgba(47,52,2,0.4) var(--flashlight-radius), black var(--flashlight-blur), black 100%);
+      background-position: var(--flashlight-x-pos) var(--flashlight-y-pos);
+      background-repeat: no-repeat;
+      pointer-events: none;
+  }
 
-    #gg-flashlight-div::after {
-        content: "";
-        position: absolute;
-        transform: translate(var(--flashlight-x-pos), var(--flashlight-y-pos));
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        pointer-events: none;
-    }
+  #gg-flashlight-div::after {
+      content: "";
+      position: absolute;
+      transform: translate(var(--flashlight-x-pos), var(--flashlight-y-pos));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+  }
 
-    #gg-lottery {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        position: absolute;
-        top: 13%;
-        left: 50%;
-        font-size: 30px;
-        color: white;
-        text-shadow: ${bodyShadow};
-        transform: translate(-50%, -50%);
-        background-color: rgba(0, 100, 0, 0.8);
-        padding: 0.5em;
-        border-radius: 10px;
-        z-index: 9999;
-    }
+  #gg-lottery {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: absolute;
+      top: 13%;
+      left: 50%;
+      font-size: 30px;
+      color: white;
+      text-shadow: ${bodyShadow};
+      transform: translate(-50%, -50%);
+      background-color: rgba(0, 100, 0, 0.8);
+      padding: 0.5em;
+      border-radius: 10px;
+      z-index: 9999;
+  }
 
-    #gg-lottery-counter-div {
-        display: flex;
-        justify-content: space-between;
-    }
+  #gg-lottery-counter-div {
+      display: flex;
+      justify-content: space-between;
+  }
 
-    #gg-lottery-counter {
-        padding-left: 0.5em;
-    }
+  #gg-lottery-counter {
+      padding-left: 0.5em;
+  }
 
-    #gg-lottery-button {
-        font-size: 25px;
-        margin-top: 0.5em;
-        border-radius: 10px;
-        padding: 5px 20px;
-        color: white;
-        background: black;
-        opacity: 75%;
-        cursor: pointer;
-    }
+  #gg-lottery-button {
+      font-size: 25px;
+      margin-top: 0.5em;
+      border-radius: 10px;
+      padding: 5px 20px;
+      color: white;
+      background: black;
+      opacity: 75%;
+      cursor: pointer;
+  }
 
-    #gg-guessmap-blocker {
-        width: 100%;
-        height: 100%;
-        position: absolute;
-        pointer-events: none;
-        z-index: 99999999;
-    }
+  #gg-guessmap-blocker {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      pointer-events: none;
+      z-index: 99999999;
+  }
 
-    /* TODO: can this be merged with the lottery CSS? */
-    #gg-tile-count {
-        display: flex;
-        justify-content: space-between;
-        position: absolute;
-        top: 13%;
-        left: 50%;
-        font-size: 30px;
-        color: white;
-        text-shadow: ${bodyShadow};
-        transform: translate(-50%, -50%);
-        align-items: center;
-        background-color: rgba(0, 100, 0, 0.8);
-        padding: 0.5em;
-        border-radius: 10px;
-        z-index: 9999;
-    }
+  /* TODO: can this be merged with the lottery CSS? */
+  #gg-tile-count {
+      display: flex;
+      justify-content: space-between;
+      position: absolute;
+      top: 13%;
+      left: 50%;
+      font-size: 30px;
+      color: white;
+      text-shadow: ${bodyShadow};
+      transform: translate(-50%, -50%);
+      align-items: center;
+      background-color: rgba(0, 100, 0, 0.8);
+      padding: 0.5em;
+      border-radius: 10px;
+      z-index: 9999;
+  }
 
-    #gg-tile-count-counter {
-        padding-left: 0.5em;
-        pointer-events: none;
-    }
+  #gg-tile-count-counter {
+      padding-left: 0.5em;
+      pointer-events: none;
+  }
 
-    #gg-tile-overlay {
-        position: relative;
-        width: 100vw;
-        height: 100vh;
-        background: transparent;
-        display: grid;
-        z-index: 1000;
-        pointer-events: none;
-    }
+  #gg-tile-overlay {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background: transparent;
+      display: grid;
+      z-index: 1000;
+      pointer-events: none;
+  }
 
-    .gg-tile-block {
-        background: black;
-        border: 1px solid #333;
-        cursor: pointer;
-        transition: opacity 0.3s ease;
-        pointer-events: all;
-    }
+  .gg-tile-block {
+      background: black;
+      border: 1px solid #333;
+      cursor: pointer;
+      transition: opacity 0.3s ease;
+      pointer-events: all;
+  }
 
-    .gg-tile-block:hover {
-        background: #222;
-    }
+  .gg-tile-block:hover {
+      background: #222;
+  }
 
-    .gg-tile-block.removed {
-        pointer-events: none;
-        background: transparent !important;
-        border: none;
-    }
+  .gg-tile-block.removed {
+      pointer-events: none;
+      background: transparent !important;
+      border: none;
+  }
 
 `;
 
@@ -3242,8 +3241,13 @@ GM_addStyle(style);
 
 
 /**
-  TPEBOP'S NOTES
-  - Look into https://gitlab.com/nonreviad/extenssr/-/tree/main/src?ref_type=heads this is some legit stuff and can be a Chrome extension.
-  - https://openuserjs.org/scripts/drparse/GeoFilter/source for messing around with colors and crap.
-  - Figure out if it's detecting scripts; it's randomly triggering emotes.
+TPEBOP'S NOTES
+- Make mods list collapsed by default.
+- Look into https://gitlab.com/nonreviad/extenssr/-/tree/main/src?ref_type=heads this is some legit stuff and can be a Chrome extension.
+- https://openuserjs.org/scripts/drparse/GeoFilter/source for messing around with colors and crap.
+- Figure out if it's detecting scripts; it's randomly triggering emotes.
+
+- V2:
+  - Modularize everything in a way that allows people to make their own mods, and disable stuff if they want.
+  - Main install script that just imports stuff, put on GreasyFork
 */
