@@ -1465,17 +1465,18 @@ Also, shit this was hard to figure out.
 */
 
 // TODO
-// - Allow moving/NM?
 // - add option to require solving puzzle.
 // - what happens if it's solved on start? reshuffle automatically?
+// - option to show which tiles are out of place.
+// - buttons to shift a row or column in a direction.
 // - clean up unused shit.
 // - still a race condition and it's blink mode sometimes.
 
 let CANVAS_2D; // 2D canvas element that overlays the 3D one.
 let CANVAS_2D_IS_REDRAWING = false; // If we're still redrawing the previous frame, this can brick the site.
 
-let _PUZZLE_WIDTH; // TODO: unused but might be needed.
-let _PUZZLE_HEIGHT;
+// let _PUZZLE_WIDTH; // TODO: unused but might be needed for resizing to page.
+// let _PUZZLE_HEIGHT;
 let _PUZZLE_TILE_WIDTH;
 let _PUZZLE_TILE_HEIGHT;
 let _PUZZLE_DRAG_TILE;
@@ -1484,9 +1485,9 @@ let _PUZZLE_TILES = [];
 let _PUZZLE_HOVER_TINT = '#009900'; // Used for drag and drop formatting.
 let _PUZZLE_IS_SOLVED = false;
 let _PUZZLE_DRAGGING_IMG; // Draw tile as <img> element so it can be redrawn on the canvas while dragging tiles.
-let _PUZZLE_DRAGGING_CANVAS; // Mini canvas to draw _PUZZLE_DRAGGING_IMG on.
+let _PUZZLE_DRAGGING_CANVAS; // Mini canvas to draw _PUZZLE_DRAGGING_IMG on. This will be dragged around by the cursor.
 
-let _CANVAS_2D_MOUSEDOWN; // Pointer down listener.
+let _CANVAS_2D_POINTERDOWN; // Pointer down listener.
 let _CANVAS_2D_MOUSEUP; // Pointer up listener.
 let _CANVAS_2D_MOUSEMOVE; // Track all mouse movements on 2D canvas.
 let _CANVAS_2D_MOUSE_LOC = { x: 0, y: 0 };
@@ -1503,12 +1504,12 @@ const addCanvas2dMousemove = () => {
 
 const getTileSize = () => { // TODO: way to adjust this to window size?
     return {
-        width: 512, // Google Street View tiles are 512x512. Maximum is 640x640.
+        width: 512, // Google Street View tiles are 512x512. Maximum is 640x640. But in the google loader we're doing 256x256. Need to figure this out.
         height: 512,
     };
 };
 
-const clearCanvas2d = () => {
+const clearCanvas2d = () => { // Remove the 2D overlay and go back to whatever streetview was loaded.
     if (CANVAS_2D && _CANVAS_2D_MOUSEMOVE) {
         CANVAS_2D.removeListener(_CANVAS_2D_MOUSEMOVE);
         _CANVAS_2D_MOUSEMOVE = undefined;
@@ -1648,7 +1649,7 @@ const scatterCanvas2d = (nRows, nCols) => { // TODO: can maybe deal with width a
     };
 };
 
-// TODO: this is fucked up, not pasting image
+// TODO: this is fucked up, not pasting image because it's already blanked or something
 const pasteToDraggingImage = () => { // Paste image to temporary small canvas for dragging animation.
     if (!_PUZZLE_DRAG_TILE) {
         return;
@@ -1710,7 +1711,7 @@ const onDropTile = (evt) => { // When mouse is released, drop the dragged tile a
     const tileSize = getTileSize();
 
     let toDrawOnDrop; // imageData that we are going to draw on the tile that we drop on.
-    let toDrawOnDrag; // imageData for the tile we dragged from.
+    let toDrawOnDrag; // imageData that we are going to draw on the tile that we dragged from (prior imageData from the tile we dropped on).
 
     if (_PUZZLE_DRAG_TILE === _PUZZLE_DROP_TILE) { // Dropped within the same tile as it was dragged from.
         toDrawOnDrag = _PUZZLE_DRAGGING_IMG; // We dropped on the same tile we dragged from.
@@ -1832,25 +1833,18 @@ const removeCanvas2dListeners = () => {
     if (!CANVAS_2D) {
         return;
     }
-    if (_CANVAS_2D_MOUSEDOWN) {
-        CANVAS_2D.removeEventListener(_CANVAS_2D_MOUSEDOWN);
+    if (_CANVAS_2D_POINTERDOWN) {
+        CANVAS_2D.removeEventListener(_CANVAS_2D_POINTERDOWN);
+        _CANVAS_2D_POINTERDOWN = undefined;
     }
     if (_CANVAS_2D_MOUSEMOVE) {
         CANVAS_2D.removeEventListener(_CANVAS_2D_MOUSEMOVE);
+        _CANVAS_2D_MOUSEMOVE = undefined;
     }
     if (_CANVAS_2D_MOUSEUP) {
         CANVAS_2D.removeEventListener(_CANVAS_2D_MOUSEUP);
+        _CANVAS_2D_MOUSEUP = undefined;
     }
-};
-
-const addCanvas2dListeners = () => {
-    if (!CANVAS_2D) {
-        return;
-    }
-    removeCanvas2dListeners();
-    _CANVAS_2D_MOUSEDOWN = CANVAS_2D.addEventListener('pointerup', _CANVAS_2D_MOUSEDOWN);
-    _CANVAS_2D_MOUSEMOVE = CANVAS_2D.addEventListener('mousemove', _CANVAS_2D_MOUSEDOWN);
-    _CANVAS_2D_MOUSEUP = CANVAS_2D.addEventListener('pointerup', _CANVAS_2D_MOUSEDOWN);
 };
 
 const onPuzzleClick = () => {
@@ -1892,11 +1886,9 @@ async function updatePuzzle(forceState = null) {
     clearCanvas2d();
 
     if (!active) {
+        removeCanvas2dListeners();
         return;
     }
-
-    const nRows = getOption(mod, 'nRows');
-    const nCols = getOption(mod, 'nCols');
 
     async function makePuzzle() {
         try {
@@ -1909,11 +1901,12 @@ async function updatePuzzle(forceState = null) {
         if (!scattered) {
             return;
         }
+        const nRows = getOption(mod, 'nRows');
+        const nCols = getOption(mod, 'nCols');
         _PUZZLE_TILES = scattered.tiles;
         _PUZZLE_TILE_WIDTH = scattered.tileWidth;
         _PUZZLE_TILE_HEIGHT = scattered.tileHeight;
     };
-
     await makePuzzle();
 
     if (!CANVAS_2D) {
@@ -1922,19 +1915,8 @@ async function updatePuzzle(forceState = null) {
         return;
     }
 
-    const ctx = CANVAS_2D.getContext('2d');
-
-    const checkSolved = () => { // TODO: decide how to handle when puzzle is solved.
-        const solved = false;
-        if (solved) {
-            document.onpointerdown = null;
-            document.onpointermove = null;
-            document.onpointerup = null;
-        }
+    const checkSolved = () => { // TODO
     }
-
-    CANVAS_2D.onpointerdown = onPuzzleClick;
-
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -2019,7 +2001,7 @@ const makeTiles = (nRows, nCols) => {
             evt.stopPropagation();
             onClickTile(evt);
         });
-        tile.addEventListener('mousedown', (evt) => {
+        tile.addEventListener('POINTERDOWN', (evt) => {
             evt.preventDefault();
             evt.stopPropagation();
         });
@@ -3246,6 +3228,7 @@ TPEBOP'S NOTES
 - Look into https://gitlab.com/nonreviad/extenssr/-/tree/main/src?ref_type=heads this is some legit stuff and can be a Chrome extension.
 - https://openuserjs.org/scripts/drparse/GeoFilter/source for messing around with colors and crap.
 - Figure out if it's detecting scripts; it's randomly triggering emotes.
+- Quotes seem to not be coming through randomly. Get some way too often.
 
 - V2:
   - Modularize everything in a way that allows people to make their own mods, and disable stuff if they want.
