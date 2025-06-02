@@ -1493,7 +1493,7 @@ let _CANVAS_2D_POINTERUP;
 let _CANVAS_2D_MOUSEMOVE;
 let _CANVAS_2D_MOUSE_LOC = { x: 0, y: 0 };
 
-const clearCanvas2d = () => { // Remove the 2D overlay and go back to whatever streetview was loaded.
+const clearCanvas2dEvents = () => {
     if (_CANVAS_2D_POINTERDOWN) {
         CANVAS_2D.removeEventListener(_CANVAS_2D_POINTERDOWN);
         _CANVAS_2D_POINTERDOWN = undefined;
@@ -1506,6 +1506,9 @@ const clearCanvas2d = () => { // Remove the 2D overlay and go back to whatever s
         CANVAS_2D.removeEventListener(_CANVAS_2D_POINTERUP);
         _CANVAS_2D_POINTERUP = undefined;
     }
+};
+
+const clearCanvas2d = () => { // Remove the 2D overlay and go back to whatever streetview was loaded.
     if (_PUZZLE_DRAG_IMG) {
         _PUZZLE_DRAG_IMG.parentElement.removeChild(_PUZZLE_DRAG_IMG);
         _PUZZLE_DRAG_IMG = undefined;
@@ -1549,28 +1552,37 @@ const getCurrentPointerTile = () => { // Tile that the mouse is currently over.
     return null;
 };
 
-const pasteTileToDragImg = () => { // Paste image to temporary small canvas for dragging animation.
+const imageDataToCanvas = (imageData) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = imageData.width;
+    canvas.height = imageData.height;
+    const ctx2d = canvas.getContext('2d');
+    ctx2d.putImageData(imageData, 0, 0);
+    const img = document.createElement('img');
+    img.src = canvas.toDataURL();
+    return { img, canvas };
+};
+
+const pasteTileToDragImg = () => { // Paste imageData to canvas element so it can be used independently.
     if (!_PUZZLE_DRAG_TILE) {
         return;
     }
-    if (!_PUZZLE_DRAG_CANVAS) {
-        _PUZZLE_DRAG_CANVAS = document.createElement('canvas');
+    if (_PUZZLE_DRAG_CANVAS) {
+        _PUZZLE_DRAG_CANVAS.parentElement.removeChild(_PUZZLE_DRAG_CANVAS);
     }
-    if (!_PUZZLE_DRAG_IMG) {
-        _PUZZLE_DRAG_IMG = document.createElement('img');
+    if (_PUZZLE_DRAG_IMG) {
+        _PUZZLE_DRAG_IMG.parentElement.removeChild(_PUZZLE_DRAG_IMG);
     }
-    const ctx2d = _PUZZLE_DRAG_CANVAS.getContext('2d');
-    const imageData = _PUZZLE_DRAG_TILE.imageData; // TODO: fucked up.
-    _PUZZLE_DRAG_CANVAS.width = imageData.width;
-    _PUZZLE_DRAG_CANVAS.height = imageData.height;
-    ctx2d.putImageData(imageData, 0, 0);
-    _PUZZLE_DRAG_IMG.src = _PUZZLE_DRAG_CANVAS.toDataURL(); // TODO: fucked up.
+    const { img, canvas } = imageDataToCanvas(_PUZZLE_DRAG_TILE.imageData);
+    _PUZZLE_DRAG_IMG = img;
+    _PUZZLE_DRAG_CANVAS = canvas;
 };
 
+// TODO: clean this shit up.
 const onPuzzlePointerdown = () => {
     _PUZZLE_DRAG_TILE = getCurrentPointerTile();
     _PUZZLE_DROP_TILE = _PUZZLE_DRAG_TILE; // Always same on initial click.
-    pasteTileToDragImg(); // Paste clicked tile to draggable canvas. Uses global canvas and img. TODO: clean this up.
+    pasteTileToDragImg(); // Paste clicked tile to draggable canvas. Uses global canvas and img.
 
     const ctx2d = CANVAS_2D.getContext('2d');
     if (_PUZZLE_DRAG_TILE) {
@@ -1597,10 +1609,12 @@ const onPuzzlePointerdown = () => {
     }
 };
 
-const onPuzzleMousemove = () => {
+const onPuzzleMousemove = (evt) => {
     if (!CANVAS_2D || !_PUZZLE_DRAG_TILE) {
         return; // User has not clicked yet. Mouse movements are tracked after first click.
     }
+    _CANVAS_2D_MOUSE_LOC.x = evt.offsetX - CANVAS_2D.offsetLeft;
+    _CANVAS_2D_MOUSE_LOC.y = evt.offsetY - CANVAS_2D.offsetTop;
     _PUZZLE_DROP_TILE = getCurrentPointerTile();
     if (!_PUZZLE_DROP_TILE) {
         return;
@@ -1810,13 +1824,17 @@ async function drawCanvas2d() {
         mapParent.insertBefore(CANVAS_2D, mapParent.firstChild);
         CANVAS_2D_IS_REDRAWING = false;
 
-        _CANVAS_2D_MOUSEMOVE = CANVAS_2D.addEventListener('mousemove', (evt) => {
-            _CANVAS_2D_MOUSE_LOC.x = evt.offsetX - CANVAS_2D.offsetLeft;
-            _CANVAS_2D_MOUSE_LOC.y = evt.offsetY - CANVAS_2D.offsetTop;
-        });
+        clearCanvas2dEvents();
 
-        let _CANVAS_2D_POINTERDOWN;
-        let _CANVAS_2D_POINTERUP;
+        _CANVAS_2D_POINTERDOWN = CANVAS_2D.addEventListener('pointerdown', (evt) => {
+            onPuzzlePointerdown(evt);
+        });
+        _CANVAS_2D_MOUSEMOVE = CANVAS_2D.addEventListener('mousemove', (evt) => {
+            onPuzzlePointerup(evt);
+        });
+        _CANVAS_2D_MOUSEMOVE = CANVAS_2D.addEventListener('pointerup', (evt) => {
+            onPuzzlePointerup(evt);
+        });
 
     } catch (err) {
         console.error(err);
@@ -1833,8 +1851,8 @@ const scatterCanvas2d = (nRows, nCols) => { // TODO: can maybe deal with width a
     const tiles = [];
     for (let row = 0; row < nRows; row++) {
         for (let col = 0; col < nCols; col++) {
-            const sx = col * tileWidth;
-            const sy = row * tileHeight;
+            const sx = row * tileWidth;
+            const sy = col * tileHeight;
             const tile = ctx2d.getImageData(sx, sy, tileWidth, tileHeight);
             tiles.push({ imageData: tile, sx, sy, originalRow: row, originalCol: col });
         }
