@@ -1524,14 +1524,6 @@ const clearCanvas2d = () => { // Remove the 2D overlay and go back to whatever s
     CANVAS_2D_IS_REDRAWING = false;
 };
 
-// TODO: way to adjust this to window size?
-const getTileSize = () => {
-    return {
-        width: 512, // Google Street View tiles are 512x512. Maximum is 640x640. But in the google loader we're doing 256x256. Need to figure this out.
-        height: 512,
-    };
-};
-
 const getCurrentPointerTile = () => { // Tile that the mouse is currently over.
     if (!_CANVAS_2D_MOUSE_LOC || !_PUZZLE_TILES) {
         return null;
@@ -1664,6 +1656,15 @@ const onPuzzleMousemove = (evt) => {
     );
     ctx2d.restore();
 };
+
+// TODO: revisit. this may be fetching tiles out of frame, but we should be able to handle it in the puzzle scrambler.
+const getTileSize = () => {
+    return {
+        width: 512,
+        height: 512,
+    };
+};
+
 
 const onPuzzlePointerup = (evt) => { // When mouse is released, drop the dragged tile at the location, and swap them.
     if (!_PUZZLE_DRAG_TILE || !_PUZZLE_DROP_TILE) {
@@ -1819,7 +1820,7 @@ async function drawCanvas2d() {
         }
         await Promise.all(tilePromises);
 
-        // Put 2D canvas on top of 3D and block pointer events to the 3D. This is up here so we can watch it draw the canvas in debug mode.
+        // Put 2D canvas on top of 3D and block pointer events to the 3D.
         const mapParent = canvas3d.parentElement.parentElement;
         mapParent.insertBefore(CANVAS_2D, mapParent.firstChild);
         CANVAS_2D_IS_REDRAWING = false;
@@ -1842,9 +1843,21 @@ async function drawCanvas2d() {
     }
 }
 
-const scatterCanvas2d = (nRows, nCols) => { // TODO: can maybe deal with width and height here.
+const clipCanvas2d = () => { // After pasting tiled image data to 2D canvas, clip it to the dimensions of the 3D canvas.
+    const canvas3d = getBigMapCanvas();
+    if (!canvas3d || !CANVAS_2D) {
+        return;
+    }
+    const { width, height } = canvas3d;
     const ctx2d = CANVAS_2D.getContext('2d');
-    const tileWidth = CANVAS_2D.width / nCols; // TODO: this is using 512px tiles, which might go out of bounds.
+    const imageData = ctx2d.getImageData(0, 0, width, height);
+    Object.assign(CANVAS_2D, { width, height });
+    ctx2d.putImageData(imageData, 0, 0);
+};
+
+const scatterCanvas2d = (nRows, nCols) => {
+    const ctx2d = CANVAS_2D.getContext('2d');
+    const tileWidth = CANVAS_2D.width / nCols;
     const tileHeight = CANVAS_2D.height / nRows;
 
     // Split 2D image into tiles.
@@ -1896,12 +1909,8 @@ async function updatePuzzle(forceState = null) {
     }
 
     async function makePuzzle() {
-        try {
-            await drawCanvas2d();
-        } catch (err) {
-            console.error(err);
-            return;
-        }
+        await drawCanvas2d();
+        clipCanvas2d();
         const nRows = getOption(mod, 'nRows');
         const nCols = getOption(mod, 'nCols');
         const scattered = scatterCanvas2d(nRows, nCols);
