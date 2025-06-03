@@ -1556,22 +1556,19 @@ const imageDataToCanvas = (imageData) => {
 };
 
 const pasteTileToDragImg = () => { // Paste imageData to canvas element so it can be used independently.
-    if (!_PUZZLE_DRAG_TILE) {
+    if (!CANVAS_2D || !_PUZZLE_DRAG_TILE) {
         return;
     }
     if (_PUZZLE_DRAG_CANVAS) {
         _PUZZLE_DRAG_CANVAS.parentElement.removeChild(_PUZZLE_DRAG_CANVAS);
-    }
-    if (_PUZZLE_DRAG_IMG) {
-        _PUZZLE_DRAG_IMG.parentElement.removeChild(_PUZZLE_DRAG_IMG);
+        _PUZZLE_DRAG_CANVAS = undefined;
     }
     const { img, canvas } = imageDataToCanvas(_PUZZLE_DRAG_TILE.imageData);
     _PUZZLE_DRAG_IMG = img;
-    _PUZZLE_DRAG_CANVAS = canvas;
+    _PUZZLE_DRAG_CANVAS = CANVAS_2D.parentElement.insertBefore(canvas, CANVAS_2D.parentElement.firstChild);
 };
 
-// TODO: clean this shit up.
-const onPuzzlePointerdown = () => {
+const onPuzzlePointerdown = () => { // Click to start dragging a tile.
     _PUZZLE_DRAG_TILE = getCurrentPointerTile();
     _PUZZLE_DROP_TILE = _PUZZLE_DRAG_TILE; // Always same on initial click.
     pasteTileToDragImg(); // Paste clicked tile to draggable canvas. Uses global canvas and img.
@@ -1605,7 +1602,7 @@ const onPuzzleMousemove = (evt) => {
     if (!CANVAS_2D || !_PUZZLE_DRAG_TILE) {
         return; // User has not clicked yet. Mouse movements are tracked after first click.
     }
-    _CANVAS_2D_MOUSE_LOC.x = evt.offsetX - CANVAS_2D.offsetLeft;
+    _CANVAS_2D_MOUSE_LOC.x = evt.offsetX - CANVAS_2D.offsetLeft; // TODO: should be 0 offset I think?
     _CANVAS_2D_MOUSE_LOC.y = evt.offsetY - CANVAS_2D.offsetTop;
     _PUZZLE_DROP_TILE = getCurrentPointerTile();
     if (!_PUZZLE_DROP_TILE) {
@@ -1657,14 +1654,12 @@ const onPuzzleMousemove = (evt) => {
     ctx2d.restore();
 };
 
-// TODO: revisit. this may be fetching tiles out of frame, but we should be able to handle it in the puzzle scrambler.
 const getTileSize = () => {
     return {
         width: 512,
         height: 512,
     };
 };
-
 
 const onPuzzlePointerup = (evt) => { // When mouse is released, drop the dragged tile at the location, and swap them.
     if (!_PUZZLE_DRAG_TILE || !_PUZZLE_DROP_TILE) {
@@ -1686,7 +1681,6 @@ const onPuzzlePointerup = (evt) => { // When mouse is released, drop the dragged
 
     // Draw the drag tile in the drop spot, and vice versa.
     const ctx2d = CANVAS_2D.getContext('2d');
-    const tileSize = getTileSize();
 
     let toDrawOnDrop; // imageData that we are going to draw on the tile that we drop on.
     let toDrawOnDrag; // imageData that we are going to draw on the tile that we dragged from (prior imageData from the tile we dropped on).
@@ -1695,6 +1689,7 @@ const onPuzzlePointerup = (evt) => { // When mouse is released, drop the dragged
         toDrawOnDrag = _PUZZLE_DRAG_IMG; // We dropped on the same tile we dragged from.
         toDrawOnDrop = null; // No need to draw it twice.
     } else {
+        const tileSize = getTileSize();
         toDrawOnDrag = ctx2d.getImageData(
             _PUZZLE_DROP_TILE.sx, _PUZZLE_DROP_TILE.sy, tileSize.width, tileSize.height).data;
         toDrawOnDrop = _PUZZLE_DRAG_IMG;
@@ -1721,7 +1716,7 @@ const onPuzzlePointerup = (evt) => { // When mouse is released, drop the dragged
             );
         }
     } catch (err) {
-        debugger
+        debugger // TODO
     }
 
     // Have to redraw the drop tile only if it is different than the drag tile.
@@ -1754,6 +1749,7 @@ const onPuzzlePointerup = (evt) => { // When mouse is released, drop the dragged
     console.log('tile dropped'); // TODO: remove
 };
 
+// TODO: this isn't grabbing the right tiles. How do we determine which ones it should be grabbing based on heading?
 /**
 Redraw the 3D canvas as a 2D canvas so we can mess around with it.
 We have to extract the image data from the 3D view using Google Maps API.
@@ -1769,7 +1765,6 @@ async function drawCanvas2d() {
         const pov = GOOGLE_STREETVIEW.getPov();
         const zoom = pov.zoom; // TODO: where is it getting the actual zoom level from?
 
-        // TODO: is this correct? Maybe need to scale the canvas on screen size or something? Or max it out, puzzle will be unsolvable if stuff goes off screen.
         // Calculate tile dimensions based on zoom level
         const tileSize = getTileSize();
         const nCols = Math.ceil(Math.pow(2, zoom + 1));
@@ -1808,6 +1803,7 @@ async function drawCanvas2d() {
                 const fovZoom = 3;
                 const tileUrl = `https://streetviewpixels-pa.googleapis.com/v1/tile?cb_client=apiv3&panoid=${panoID}&output=tile&x=${x}&y=${y}&zoom=${fovZoom}&nbt=1&fover=2`;
                 img.src = tileUrl;
+                console.log(tileUrl); // TODO: remove
             });
         };
 
@@ -1831,7 +1827,7 @@ async function drawCanvas2d() {
             onPuzzlePointerdown(evt);
         });
         _CANVAS_2D_MOUSEMOVE = CANVAS_2D.addEventListener('mousemove', (evt) => {
-            onPuzzlePointerup(evt);
+            onPuzzleMousemove(evt);
         });
         _CANVAS_2D_MOUSEMOVE = CANVAS_2D.addEventListener('pointerup', (evt) => {
             onPuzzlePointerup(evt);
@@ -1853,6 +1849,50 @@ const clipCanvas2d = () => { // After pasting tiled image data to 2D canvas, cli
     const imageData = ctx2d.getImageData(0, 0, width, height);
     Object.assign(CANVAS_2D, { width, height });
     ctx2d.putImageData(imageData, 0, 0);
+
+
+
+
+
+
+/** TODO
+function resizeAndClipCanvas(sourceCanvas, targetWidth, targetHeight) {
+  // Create a new canvas for the result
+  const resultCanvas = document.createElement('canvas');
+  const ctx = resultCanvas.getContext('2d');
+
+  // Set the dimensions of the new canvas
+  resultCanvas.width = targetWidth;
+  resultCanvas.height = targetHeight;
+
+  // Calculate scale factors for both dimensions
+  const scaleX = targetWidth / sourceCanvas.width;
+  const scaleY = targetHeight / sourceCanvas.height;
+
+  // Use the larger scale factor to ensure the image fills the entire target area
+  const scale = Math.max(scaleX, scaleY);
+
+  // Calculate the scaled dimensions
+  const scaledWidth = sourceCanvas.width * scale;
+  const scaledHeight = sourceCanvas.height * scale;
+
+  // Calculate centering offsets to clip equally from both sides
+  const offsetX = (targetWidth - scaledWidth) / 2;
+  const offsetY = (targetHeight - scaledHeight) / 2;
+
+  // Draw the scaled and clipped image
+  ctx.drawImage(
+    sourceCanvas,
+    0, 0, sourceCanvas.width, sourceCanvas.height,  // source rectangle
+    offsetX, offsetY, scaledWidth, scaledHeight     // destination rectangle
+  );
+
+  return resultCanvas;
+}
+*/
+
+
+
 };
 
 const scatterCanvas2d = (nRows, nCols) => {
@@ -1927,9 +1967,6 @@ async function updatePuzzle(forceState = null) {
         console.error(`Canvas is not loaded yet. Can't initiate puzzle.`);
         updateMod(mod, false);
         return;
-    }
-
-    const checkSolved = () => { // TODO
     }
 };
 
@@ -2294,6 +2331,56 @@ const updateScratch = (forceState = null) => {
     const active = updateMod(mod, forceState);
 
     console.log('yo');
+
+    const obscureUnits = {
+        bc: 0.00847, // Barleycorn – Ancient English unit, about the size of a grain
+        finger: 0.1143, // Finger (cloth) – Used in measuring cloth width
+        h: 0.1016, // Hand – Common in horse height, 4 inches
+        nl: 0.05715, // Nail – 1/16th of a yard
+        shft: 0.1524, // Shaftment – Width of a fist + outstretched thumb
+        sp: 0.2286, // Span – Tip of thumb to tip of pinkie
+        cb: 0.4572, // Cubit – Elbow to middle fingertip
+        pR: 1.48, // Pace (Roman) – Two marching steps
+        pf: 0.3248, // Paris Foot – Old French foot (pied du roi)
+        palmo: 0.2225, // Palmo (Italian) – Palm width
+        xu: 1e-13, // Xunit – Used for x-ray and atomic scale wavelengths
+        tw: 1.76389e-5, // Twip – 1/20 of a point in typography
+        sm: 1.7018, // Smoot – Comical MIT unit based on Oliver Smoot
+        lnk: 0.201168, // Link – 1/100 of a Gunter's chain, used in surveying
+        rd: 5.0292, // Rod (Perch) – Surveyor's unit (16.5 feet)
+        ch: 20.1168, // Chain – Gunter’s chain, used in land measurement
+        ftm: 1.8288, // Fathom – Nautical depth, six feet
+        ell: 1.143, // Ell – Length of a man’s arm, used in cloth
+        ln: 0.002116, // Line – 1/12 of an inch, used in tailoring/jewelry
+        au: 1.496e11, // Astronomical Unit – Distance from Earth to Sun
+        ff: 91.44, // Football Field – American, endzone to endzone
+        sb: 0.17, // Subway Sandwich – Approx. 6 inches (standard "footlong")
+        bw: 30, // Blue Whale – Adult length, about 30 meters
+        ban: 0.18, // Banana – Average banana length
+        et: 330, // Eiffel Tower – Height from base to tip
+        tr: 21.336, // T. rex – Estimated length of a large adult
+        gzr: 1.8, // Giraffe – Adult, average height
+        lbh: 1.7, // LeBron Height – LeBron James is about 2.06m, this is ~average human height
+        css: 0.038, // Credit Card Short Side – 3.8cm
+        bld: 828, // Burj Khalifa – Tallest building, ~828 meters
+        mt: 8848.86, // Mount Everest – Peak above sea level
+        hp: 0.165, // Harry Potter – Book height (hardcover)
+        lk: 4.2, // Lightsaber – Typical blade length (fictional)
+        ht: 13.72, // School Bus – Full-size US bus
+        drk: 0.0127, // Dime Radius – US dime radius
+        sm: 1.7018, // Smoot – Classic MIT joke unit
+        gl: 2.5, // Great Lakes Average Depth – A fun "depth unit"
+        rnbw: 1e9, // Rainbow Unit – Entire electromagnetic visible spectrum length scale (silly)
+        cd: 0.12, // CD Diameter – Classic compact disc
+    };
+
+    const metersToUnit = (meters, unit) => {
+        const factor = obscureUnits[unit];
+        if (!factor) {
+            throw new Error(`Unknown unit: ${unit}`);
+        }
+        return meters / factor;
+    };
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
