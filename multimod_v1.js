@@ -4,7 +4,6 @@
 // @version      1.0
 // @author       tpebop
 // @match        *://*.geoguessr.com/*
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/gg_evt.js
 // @icon         https://www.google.com/s2/favicons?domain=geoguessr.com
 // @grant        unsafeWindow
 // @grant        GM_addStyle
@@ -12,6 +11,231 @@
 // @grant        GM.xmlHttpRequest
 
 // ==/UserScript==
+
+// Seems to not work with ad blocker
+
+
+console.log('fuck you');
+
+
+// @   require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/gg_evt.js
+
+
+// Taken and modified from https://miraclewhips.dev/geoguessr-event-framework/geoguessr-event-framework.js
+
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator.throw(value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+const THE_WINDOW = unsafeWindow || window;
+(function () {
+    class GEF {
+        constructor() {
+            this.events = new EventTarget();
+            this.state = this.defaultState();
+            this.loadState();
+            this.initFetchEvents();
+            this.overrideFetch();
+            this.init();
+            THE_WINDOW.addEventListener('load', () => {
+                var _a, _b, _c;
+                if (location.pathname.startsWith("/challenge/")) {
+                    const data = (_c = (_b = (_a = THE_WINDOW === null || THE_WINDOW === void 0 ? void 0 : THE_WINDOW.__NEXT_DATA__) === null || _a === void 0 ? void 0 : _a.props) === null || _b === void 0 ? void 0 : _b.pageProps) === null || _c === void 0 ? void 0 : _c.gameSnapshot;
+                    if (!data || !data.round) {
+                        return;
+                    }
+                    THE_WINDOW.GEFFetchEvents.dispatchEvent(new CustomEvent('received_data', { detail: data }));
+                }
+            });
+            THE_WINDOW.GEFFetchEvents.addEventListener('received_data', (event) => {
+                this.parseData(event.detail);
+            });
+        }
+        initFetchEvents() {
+            if (THE_WINDOW.GEFFetchEvents !== undefined) {
+                return;
+            }
+            THE_WINDOW.GEFFetchEvents = new EventTarget();
+        }
+        overrideFetch() {
+            if (THE_WINDOW.fetch.isGEFFetch) {
+                return;
+            }
+            const default_fetch = THE_WINDOW.fetch;
+            THE_WINDOW.fetch = (function () {
+                return function (...args) {
+                    return __awaiter(this, void 0, void 0, function* () {
+                        const url = args[0].toString();
+                        if (/geoguessr.com\/api\/v3\/(games|challenges)\//.test(url) && url.indexOf('daily-challenge') === -1) {
+                            const result = yield default_fetch.apply(THE_WINDOW, args);
+                            const data = yield result.clone().json();
+                            if (!data.round) {
+                                return result;
+                            }
+                            THE_WINDOW.GEFFetchEvents.dispatchEvent(new CustomEvent('received_data', { detail: data }));
+                            return result;
+                        }
+                        return default_fetch.apply(THE_WINDOW, args);
+                    });
+                };
+            })();
+            THE_WINDOW.fetch.isGEFFetch = true;
+        }
+        init() {
+            return __awaiter(this, void 0, void 0, function* () {
+                if (!this.loadedPromise) {
+                    this.loadedPromise = Promise.resolve(this);
+                }
+                return yield this.loadedPromise;
+            });
+        }
+        defaultState() {
+            return {
+                current_game_id: '',
+                is_challenge_link: false,
+                current_round: 0,
+                round_in_progress: false,
+                game_in_progress: true,
+                total_score: { amount: 0, unit: 'points', percentage: 0 },
+                total_distance: {
+                    meters: { amount: 0, unit: 'km' },
+                    miles: { amount: 0, unit: 'miles' }
+                },
+                total_time: 0,
+                rounds: [],
+                map: { id: '', name: '' },
+            };
+        }
+        parseData(data) {
+            const finished = data.player.guesses.length == data.round;
+            if (finished) {
+                this.stopRound(data);
+            }
+            else {
+                this.startRound(data);
+            }
+        }
+        loadState() {
+            let data = window.localStorage.getItem('GeoGuessrEventFramework_STATE');
+            if (!data) {
+                return;
+            }
+            let dataJson = JSON.parse(data);
+            if (!dataJson) {
+                return;
+            }
+            Object.assign(this.state, this.defaultState(), dataJson);
+            this.saveState();
+        }
+        saveState() {
+            window.localStorage.setItem('GeoGuessrEventFramework_STATE', JSON.stringify(this.state));
+        }
+        hex2a(hexx) {
+            const hex = hexx.toString(); //force conversion
+            let str = '';
+            for (let i = 0; i < hex.length; i += 2) {
+                str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+            }
+            return str;
+        }
+        startRound(data) {
+            this.state.current_round = data.round;
+            this.state.round_in_progress = true;
+            this.state.game_in_progress = true;
+            this.state.current_game_id = data.token;
+            this.state.is_challenge_link = data.type == 'challenge';
+            this.state.rounds = data.rounds; // Modified to include current round
+            if (data) {
+                this.state.map = {
+                    id: data.map,
+                    name: data.mapName
+                };
+            }
+            this.saveState();
+            if (this.state.current_round === 1) {
+                this.events.dispatchEvent(new CustomEvent('game_start', { detail: this.state }));
+            }
+            this.events.dispatchEvent(new CustomEvent('round_start', { detail: this.state }));
+        }
+        stopRound(data) {
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5;
+            this.state.round_in_progress = false;
+            if (data) {
+                const r = data.rounds[this.state.current_round - 1];
+                const g = data.player.guesses[this.state.current_round - 1];
+                if (!r || !g) {
+                    return;
+                }
+                this.state.rounds[this.state.current_round - 1] = {
+                    location: {
+                        lat: r.lat,
+                        lng: r.lng,
+                        heading: r.heading,
+                        pitch: r.pitch,
+                        zoom: r.zoom,
+                        panoId: r.panoId ? this.hex2a(r.panoId) : undefined,
+                    },
+                    player_guess: {
+                        lat: g.lat,
+                        lng: g.lng,
+                    },
+                    score: {
+                        amount: parseFloat((_a = g === null || g === void 0 ? void 0 : g.roundScore) === null || _a === void 0 ? void 0 : _a.amount) || 0,
+                        unit: ((_b = g === null || g === void 0 ? void 0 : g.roundScore) === null || _b === void 0 ? void 0 : _b.unit) || 'points',
+                        percentage: ((_c = g === null || g === void 0 ? void 0 : g.roundScore) === null || _c === void 0 ? void 0 : _c.percentage) || 0,
+                    },
+                    distance: {
+                        meters: {
+                            amount: parseFloat((_e = (_d = g === null || g === void 0 ? void 0 : g.distance) === null || _d === void 0 ? void 0 : _d.meters) === null || _e === void 0 ? void 0 : _e.amount) || 0,
+                            unit: ((_g = (_f = g === null || g === void 0 ? void 0 : g.distance) === null || _f === void 0 ? void 0 : _f.meters) === null || _g === void 0 ? void 0 : _g.unit) || 'km',
+                        },
+                        miles: {
+                            amount: parseFloat((_j = (_h = g === null || g === void 0 ? void 0 : g.distance) === null || _h === void 0 ? void 0 : _h.miles) === null || _j === void 0 ? void 0 : _j.amount) || 0,
+                            unit: ((_l = (_k = g === null || g === void 0 ? void 0 : g.distance) === null || _k === void 0 ? void 0 : _k.miles) === null || _l === void 0 ? void 0 : _l.unit) || 'miles',
+                        },
+                    },
+                    time: g === null || g === void 0 ? void 0 : g.time
+                };
+                this.state.total_score = {
+                    amount: parseFloat((_o = (_m = data === null || data === void 0 ? void 0 : data.player) === null || _m === void 0 ? void 0 : _m.totalScore) === null || _o === void 0 ? void 0 : _o.amount) || 0,
+                    unit: ((_q = (_p = data === null || data === void 0 ? void 0 : data.player) === null || _p === void 0 ? void 0 : _p.totalScore) === null || _q === void 0 ? void 0 : _q.unit) || 'points',
+                    percentage: ((_s = (_r = data === null || data === void 0 ? void 0 : data.player) === null || _r === void 0 ? void 0 : _r.totalScore) === null || _s === void 0 ? void 0 : _s.percentage) || 0,
+                };
+                this.state.total_distance = {
+                    meters: {
+                        amount: parseFloat((_v = (_u = (_t = data === null || data === void 0 ? void 0 : data.player) === null || _t === void 0 ? void 0 : _t.totalDistance) === null || _u === void 0 ? void 0 : _u.meters) === null || _v === void 0 ? void 0 : _v.amount) || 0,
+                        unit: ((_y = (_x = (_w = data === null || data === void 0 ? void 0 : data.player) === null || _w === void 0 ? void 0 : _w.totalDistance) === null || _x === void 0 ? void 0 : _x.meters) === null || _y === void 0 ? void 0 : _y.unit) || 'km',
+                    },
+                    miles: {
+                        amount: parseFloat((_1 = (_0 = (_z = data === null || data === void 0 ? void 0 : data.player) === null || _z === void 0 ? void 0 : _z.totalDistance) === null || _0 === void 0 ? void 0 : _0.miles) === null || _1 === void 0 ? void 0 : _1.amount) || 0,
+                        unit: ((_4 = (_3 = (_2 = data === null || data === void 0 ? void 0 : data.player) === null || _2 === void 0 ? void 0 : _2.totalDistance) === null || _3 === void 0 ? void 0 : _3.miles) === null || _4 === void 0 ? void 0 : _4.unit) || 'miles',
+                    },
+                };
+                this.state.total_time = (_5 = data === null || data === void 0 ? void 0 : data.player) === null || _5 === void 0 ? void 0 : _5.totalTime;
+                this.state.map = {
+                    id: data.map,
+                    name: data.mapName
+                };
+            }
+            this.saveState();
+            this.events.dispatchEvent(new CustomEvent('round_end', { detail: this.state }));
+            if (this.state.current_round === 5) {
+                this.events.dispatchEvent(new CustomEvent('game_end', { detail: this.state }));
+            }
+        }
+    }
+    if (!THE_WINDOW.GeoGuessrEventFramework) {
+        THE_WINDOW.GeoGuessrEventFramework = new GEF();
+        console.log('GeoGuessr Event Framework initialised: https://github.com/miraclewhips/geoguessr-event-framework');
+    }
+})();
+
 
 /**
   USER NOTES
@@ -177,7 +401,7 @@ const MODS = {
     },
 
     puzzle: {
-        show: true, // Almost working...
+        show: false, // Almost working...
         key: 'puzzle',
         name: 'Puzzle',
         tooltip: 'Split up the large map into tiles and rearrange them randomly',
@@ -219,7 +443,8 @@ const MODS = {
         },
     },
 
-    displayOptions: { // Miscellaneous display options that don't deserve a full button.
+    // Miscellaneous display options that don't deserve a full button.
+    displayOptions: {
         show: true,
         key: 'display-preferences',
         name: 'Display Preferences',
@@ -307,7 +532,7 @@ for (const mod of Object.values(MODS)) {
 const STATE_KEY = 'gg_state'; // Key in window.localStorage.
 
 const saveState = () => {
-    window.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
+	window.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
 };
 
 const clearState = () => {
@@ -371,10 +596,10 @@ const SHOW_QUOTES = {
 };
 
 /**
-SCORE_FUNC is a function used to display the overlay that shows how well you clicked (score, direction, whatever).
-This can only be used by one mod at a time, so in mods that use it we have to use disableOtherScoreModes to disable the other ones.
-It uses GG_ROUND and GG_CLICK to determine how well you clicked. SCORE_FUNC can be globally set for the active mod.
-By default, it will give the 0-5000 score, but some mods override it.
+  SCORE_FUNC is a function used to display the overlay that shows how well you clicked (score, direction, whatever).
+  This can only be used by one mod at a time, so in mods that use it we have to use disableOtherScoreModes to disable the other ones.
+  It uses GG_ROUND and GG_CLICK to determine how well you clicked. SCORE_FUNC can be globally set for the active mod.
+  By default, it will give the 0-5000 score, but some mods override it.
 */
 let SCORE_FUNC;
 
@@ -389,6 +614,17 @@ let _CHEAT_DETECTION = true; // true to perform some actions that will make it o
 
 // DOM and state utility functions.
 // ===============================================================================================================================
+
+const tryMultiple = (selectors) => { // Different modes, different versions, GeoGuessr changing around stuff, etc.
+    let element;
+    for (const selector of selectors) {
+        const element = document.querySelector(selector);
+        if (element) {
+            return element;
+        }
+    }
+    return null;
+};
 
 const getGoogle = () => {
     return window.google || unsafeWindow.google;
@@ -407,7 +643,11 @@ const getSmallMap = () => {
 };
 
 const getBigMapContainer = () => {
-    return document.querySelector(`div[class^="game_canvas__"]`);
+    const selectors = [
+        `div[class^="game_canvas__"]`,
+        `#panorama-container`,
+    ];
+    return tryMultiple(selectors);
 };
 
 const getBigMapCanvas = () => {
@@ -515,7 +755,7 @@ const setOption = (mod, key, value, save = true) => {
 };
 
 const isArrayOption = (mod, key) => {
-    if (!mod.options || !mod.options[key]) {
+    if (!mod.options ||!mod.options[key]) {
         return false;
     }
     return Array.isArray(mod.options[key].options);
@@ -615,10 +855,10 @@ const makeOptionMenu = (mod) => {
     const formDiv = document.createElement('div');
     formDiv.id = 'gg-option-form-div';
     for (const [label, callback] of [
-        ['Close', onClose],
-        ['Reset', onReset],
-        ['Apply', onApply],
-    ]) {
+            ['Close', onClose],
+            ['Reset', onReset],
+            ['Apply', onApply],
+        ]) {
         const button = document.createElement('button');
         button.id = `gg-option-${label.toLowerCase()}`;
         button.classList.add('gg-option-label');
@@ -747,7 +987,7 @@ const setMapCenter = (lat = null, lng = null, zoom = null) => { // All optional 
         lng = currentLng;
     }
     GOOGLE_MAP.setCenter({ lat, lng });
-    if (zoom != null && zoom !== currentZoom) {
+    if (zoom != null && zoom !==currentZoom) {
         GOOGLE_MAP.setZoom(zoom);
     }
 };
@@ -807,8 +1047,8 @@ const isInBounds = (loc, bounds) => {
 };
 
 /**
-N, S, SW, SSW, etc... Angle is in degrees, true heading (degrees clockwise from true North).
-Level 0 is for NESW, Level 1 includes NE, SE, etc., level 2 includes NNW, ESE, etc.
+  N, S, SW, SSW, etc... Angle is in degrees, true heading (degrees clockwise from true North).
+  Level 0 is for NESW, Level 1 includes NE, SE, etc., level 2 includes NNW, ESE, etc.
 */
 const getCardinalDirection = (degrees, level = 0) => {
     degrees = degrees % 360;
@@ -837,7 +1077,7 @@ const getCardinalDirection = (degrees, level = 0) => {
 };
 
 /**
-Map click listener. For scoring mods, SCORE_FUNC needs to be defined and then cleared when the mod is deactivated.
+  Map click listener. For scoring mods, SCORE_FUNC needs to be defined and then cleared when the mod is deactivated.
 */
 const scoreListener = (evt) => {
     let scoreString;
@@ -884,8 +1124,8 @@ const getRandomLat = (lat1, lat2) => {
 };
 
 /**
-Get random longitude. This one is complicated because it can cross the prime meridian.
-Thank you ChatGPT... I am so screwed as a software engineer.
+  Get random longitude. This one is complicated because it can cross the prime meridian.
+  Thank you ChatGPT... I am so screwed as a software engineer.
 */
 const getRandomLng = (lng1, lng2) => {
     if (Math.abs(lng1) === 180 && Math.abs(lng2) === 180) { // If both +-180, we'll assume it's [-180, 180].
@@ -929,8 +1169,8 @@ const getRandomLng = (lng1, lng2) => {
 };
 
 /**
-Get random { lat, lng } between the given bounds, or for the full Earth if bounds are not provided.
-lat is [-90, 90], lng is [-180, 180]. Negative is south and west, positive is north and east.
+  Get random { lat, lng } between the given bounds, or for the full Earth if bounds are not provided.
+  lat is [-90, 90], lng is [-180, 180]. Negative is south and west, positive is north and east.
 */
 const getRandomLoc = (minLat = null, maxLat = null, minLng = null, maxLng = null) => {
     const lat = getRandomLat(minLat, maxLat);
@@ -971,7 +1211,7 @@ const addMarkerAt = (lat, lng, title = null) => {
         position: { lat, lng },
         map: GOOGLE_MAP,
         title: title == null ? '' : title,
-    });
+  });
 };
 
 const setGuessMapEvents = (enabled = true) => {
@@ -1457,303 +1697,82 @@ const updateLottery = (forceState = null) => {
 // ===============================================================================================================================
 
 /**
-Unfortunately, we can't use the 3D canvas, so we recreate it as a 2D canvas to make the puzzle.
-This may make this mod unusable with some others. I haven't tested out every combination.
-This requires a GOOGLE_MAPS_API_KEY at the top to generate static tiles. Google blocks calls to render the webgl canvas as a 2d canvas.
-Ref: https://webdesign.tutsplus.com/create-an-html5-canvas-tile-swapping-puzzle--active-10747t
-Also, shit this was hard to figure out.
+  Unfortunately, we can't use the 3D canvas, so we recreate it as a 2D canvas to make the puzzle.
+  This may make this mod unusable with some others. I haven't tested out every combination.
+  This requires a GOOGLE_MAPS_API_KEY at the top to generate static tiles. Google blocks calls to render the webgl canvas as a 2d canvas.
+  Ref: https://webdesign.tutsplus.com/create-an-html5-canvas-tile-swapping-puzzle--active-10747t
+  Also, shit this was hard to figure out.
 */
 
 // TODO
-// - add option to require solving puzzle.
+// - block tiling until first render.
+// - add option to make to actual puzzle.
+// - disable moving and panning and zooming. Need to update note at top.
 // - what happens if it's solved on start? reshuffle automatically?
-// - option to show which tiles are out of place.
-// - buttons to shift a row or column in a direction.
+// - make able to restore original 3d state.
 // - clean up unused shit.
-// - remove as many globals as possible. This is sloppy as fuck.
-// - still a race condition and it's blink mode sometimes.
 
-let CANVAS_2D; // 2D canvas element that overlays the 3D one. We have to redraw 3D as 2D to mess with it.
-let CANVAS_2D_IS_REDRAWING = false; // Used for safeguards. If we're still redrawing the previous frame, this can brick the site.
+let CANVAS_2D; // 2D canvas element that overlays the 3D one.
+let CANVAS_2D_IS_REDRAWING = false; // If we're still redrawing the previous frame, this can brick the site.
 
-let _PUZZLE_TILE_HEIGHT; // Tile width on CANVAS_2D in pixels.
-let _PUZZLE_TILE_WIDTH; // Tile height on CANVAS_2D in pixels.
-let _PUZZLE_TILES = []; // Array of custom objects containing the original location, current location, and pixel data.
-let _PUZZLE_DRAG_TILE; // Tile that the user is currently dragging.
-let _PUZZLE_DROP_TILE; // Destination tile where user drops the drag tile.
+let _PUZZLE_WIDTH;
+let _PUZZLE_HEIGHT;
+let _PUZZLE_TILE_WIDTH;
+let _PUZZLE_TILE_HEIGHT;
+let _PUZZLE_DRAGGING_TILE;
+let _PUZZLE_CURRENT_DROP_TILE;
+let _PUZZLE_TILES = [];
+let _PUZZLE_HOVER_TINT = '#009900'; // Used for drag and drop formatting.
 let _PUZZLE_IS_SOLVED = false;
+let _PUZZLE_DRAGGING_IMG; // Draw tile as <img> element so it can be redrawn on the canvas while dragging tiles.
+let _PUZZLE_DRAGGING_CANVAS; // Mini canvas to draw _PUZZLE_DRAGGING_IMG on.
 
-// TODO: can this be consolidated?
-let _PUZZLE_DRAG_IMG; // Draw tile as <img> element so it can be redrawn on the canvas while dragging tiles.
-let _PUZZLE_DRAG_CANVAS; // Mini canvas to draw _PUZZLE_DRAG_IMG on. This will be dragged around by the cursor.
-
-// Events triggered on CANVAS_2D.
-let _CANVAS_2D_POINTERDOWN;
-let _CANVAS_2D_POINTERUP;
-let _CANVAS_2D_MOUSEMOVE;
+let _CANVAS_2D_MOUSEDOWN; // Pointer down listener.
+let _CANVAS_2D_MOUSEUP; // Pointer up listener.
+let _CANVAS_2D_MOUSEMOVE; // Track all mouse movements on 2D canvas.
 let _CANVAS_2D_MOUSE_LOC = { x: 0, y: 0 };
 
-const clearCanvas2dEvents = () => {
-    if (_CANVAS_2D_POINTERDOWN) {
-        CANVAS_2D.removeEventListener(_CANVAS_2D_POINTERDOWN);
-        _CANVAS_2D_POINTERDOWN = undefined;
-    }
+const addCanvas2dMousemove = () => {
     if (_CANVAS_2D_MOUSEMOVE) {
-        CANVAS_2D.removeEventListener(_CANVAS_2D_MOUSEMOVE);
-        _CANVAS_2D_MOUSEMOVE = undefined;
+        return;
     }
-    if (_CANVAS_2D_POINTERUP) {
-        CANVAS_2D.removeEventListener(_CANVAS_2D_POINTERUP);
-        _CANVAS_2D_POINTERUP = undefined;
-    }
+    _CANVAS_2D_MOUSEMOVE = CANVAS_2D.addEventListener('mousemove', (evt) => {
+        _CANVAS_2D_MOUSE_LOC.x = evt.offsetX - CANVAS_2D.offsetLeft;
+        _CANVAS_2D_MOUSE_LOC.y = evt.offsetY - CANVAS_2D.offsetTop;
+    });
 };
 
-const clearCanvas2d = () => { // Remove the 2D overlay and go back to whatever streetview was loaded.
-    if (_PUZZLE_DRAG_IMG) {
-        _PUZZLE_DRAG_IMG.parentElement.removeChild(_PUZZLE_DRAG_IMG);
-        _PUZZLE_DRAG_IMG = undefined;
-    }
-    if (_PUZZLE_DRAG_CANVAS) {
-        _PUZZLE_DRAG_CANVAS.parentElement.removeChild(_PUZZLE_DRAG_CANVAS);
-        _PUZZLE_DRAG_CANVAS = undefined;
+const getTileSize = () => { // TODO: way to adjust this to window size?
+    return {
+        width: 512, // Google Street View tiles are 512x512. Maximum is 640x640.
+        height: 512,
+    };
+};
+
+const clearCanvas2d = () => {
+    if (CANVAS_2D && _CANVAS_2D_MOUSEMOVE) {
+        CANVAS_2D.removeListener(_CANVAS_2D_MOUSEMOVE);
+        _CANVAS_2D_MOUSEMOVE = undefined;
     }
     if (CANVAS_2D && CANVAS_2D.parentElement) {
         CANVAS_2D.parentElement.removeChild(CANVAS_2D);
         CANVAS_2D = undefined;
     }
-    CANVAS_2D_IS_REDRAWING = false;
+    if (_PUZZLE_DRAGGING_IMG) {
+        _PUZZLE_DRAGGING_IMG.parentElement.removeChild(_PUZZLE_DRAGGING_IMG);
+        _PUZZLE_DRAGGING_IMG = undefined;
+    }
+    if (_PUZZLE_DRAGGING_CANVAS) {
+        _PUZZLE_DRAGGING_CANVAS.parentElement.removeChild(_PUZZLE_DRAGGING_CANVAS);
+        _PUZZLE_DRAGGING_CANVAS = undefined;
+    }
+    CANVAS_2D = undefined;
 };
 
-const getCurrentPointerTile = () => { // Tile that the mouse is currently over.
-    if (!_CANVAS_2D_MOUSE_LOC || !_PUZZLE_TILES) {
-        return null;
-    }
-    const { x, y } = _CANVAS_2D_MOUSE_LOC;
-    if (x == null || y == null) {
-        return null;
-    }
-    for (const tile of _PUZZLE_TILES) {
-        const leftX = tile.sx;
-        const rightX = leftX + tile.imageData.width;
-        const topY = tile.sy;
-        const bottomY = topY + tile.imageData.height;
-        if (x >= leftX && x <= rightX && y >= topY && y <= bottomY) {
-            return tile;
-        }
-    }
-    return null;
-};
-
-const imageDataToCanvas = (imageData) => {
-    const canvas = document.createElement('canvas');
-    canvas.width = imageData.width;
-    canvas.height = imageData.height;
-    const ctx2d = canvas.getContext('2d');
-    ctx2d.putImageData(imageData, 0, 0);
-    const img = document.createElement('img');
-    img.src = canvas.toDataURL();
-    return { img, canvas };
-};
-
-const pasteTileToDragImg = () => { // Paste imageData to canvas element so it can be used independently.
-    if (!CANVAS_2D || !_PUZZLE_DRAG_TILE) {
-        return;
-    }
-    if (_PUZZLE_DRAG_CANVAS) {
-        _PUZZLE_DRAG_CANVAS.parentElement.removeChild(_PUZZLE_DRAG_CANVAS);
-        _PUZZLE_DRAG_CANVAS = undefined;
-    }
-    const { img, canvas } = imageDataToCanvas(_PUZZLE_DRAG_TILE.imageData);
-    _PUZZLE_DRAG_IMG = img;
-    _PUZZLE_DRAG_CANVAS = CANVAS_2D.parentElement.insertBefore(canvas, CANVAS_2D.parentElement.firstChild);
-};
-
-const onPuzzlePointerdown = () => { // Click to start dragging a tile.
-    _PUZZLE_DRAG_TILE = getCurrentPointerTile();
-    _PUZZLE_DROP_TILE = _PUZZLE_DRAG_TILE; // Always same on initial click.
-    pasteTileToDragImg(); // Paste clicked tile to draggable canvas. Uses global canvas and img.
-
-    const ctx2d = CANVAS_2D.getContext('2d');
-    if (_PUZZLE_DRAG_TILE) {
-        ctx2d.clearRect(
-            _PUZZLE_DRAG_TILE.sx,
-            _PUZZLE_DRAG_TILE.sy,
-            _PUZZLE_TILE_WIDTH,
-            _PUZZLE_TILE_HEIGHT,
-        );
-        ctx2d.save();
-        ctx2d.globalAlpha = 0.9;
-        ctx2d.drawImage(
-            _PUZZLE_DRAG_IMG,
-            _PUZZLE_DRAG_TILE.sx,
-            _PUZZLE_DRAG_TILE.sy,
-            _PUZZLE_TILE_WIDTH,
-            _PUZZLE_TILE_HEIGHT,
-            _CANVAS_2D_MOUSE_LOC.x - _PUZZLE_TILE_WIDTH / 2,
-            _CANVAS_2D_MOUSE_LOC.y - _PUZZLE_TILE_HEIGHT / 2,
-            _PUZZLE_TILE_WIDTH,
-            _PUZZLE_TILE_HEIGHT,
-        );
-        ctx2d.restore();
-    }
-};
-
-const onPuzzleMousemove = (evt) => {
-    if (!CANVAS_2D || !_PUZZLE_DRAG_TILE) {
-        return; // User has not clicked yet. Mouse movements are tracked after first click.
-    }
-    _CANVAS_2D_MOUSE_LOC.x = evt.offsetX - CANVAS_2D.offsetLeft; // TODO: should be 0 offset I think?
-    _CANVAS_2D_MOUSE_LOC.y = evt.offsetY - CANVAS_2D.offsetTop;
-    _PUZZLE_DROP_TILE = getCurrentPointerTile();
-    if (!_PUZZLE_DROP_TILE) {
-        return;
-    }
-
-    const ctx2d = CANVAS_2D.getContext('2d');
-
-    for (const tile of _PUZZLE_TILES) {
-        if (tile === _PUZZLE_DRAG_TILE) {
-            continue;
-        }
-        ctx2d.drawImage(
-            _PUZZLE_DRAG_IMG,
-            tile.sx,
-            tile.sy,
-            _PUZZLE_TILE_WIDTH,
-            _PUZZLE_TILE_HEIGHT,
-            tile.sx,
-            tile.sy,
-            _PUZZLE_TILE_WIDTH,
-            _PUZZLE_TILE_HEIGHT
-        );
-
-        ctx2d.save();
-        ctx2d.globalAlpha = 0.4;
-        ctx2d.fillStyle = '#009900';
-        ctx2d.fillRect(
-            _PUZZLE_DROP_TILE.sx,
-            _PUZZLE_DROP_TILE.sy,
-            _PUZZLE_TILE_WIDTH,
-            _PUZZLE_TILE_HEIGHT,
-        );
-        ctx2d.restore();
-    }
-    ctx2d.save();
-    ctx2d.globalAlpha = 0.6;
-    ctx2d.drawImage(
-        _PUZZLE_DRAG_IMG,
-        _PUZZLE_DRAG_TILE.sx,
-        _PUZZLE_DRAG_TILE.sy,
-        _PUZZLE_TILE_WIDTH,
-        _PUZZLE_TILE_HEIGHT,
-        _CANVAS_2D_MOUSE_LOC.x - _PUZZLE_TILE_WIDTH / 2,
-        _CANVAS_2D_MOUSE_LOC.y - _PUZZLE_TILE_HEIGHT / 2,
-        _PUZZLE_TILE_WIDTH,
-        _PUZZLE_TILE_HEIGHT,
-    );
-    ctx2d.restore();
-};
-
-const getTileSize = () => {
-    return {
-        width: 512,
-        height: 512,
-    };
-};
-
-const onPuzzlePointerup = (evt) => { // When mouse is released, drop the dragged tile at the location, and swap them.
-    if (!_PUZZLE_DRAG_TILE || !_PUZZLE_DROP_TILE) {
-        console.error('Drag or drop tile is missing.');
-        _PUZZLE_DRAG_TILE = null;
-        _PUZZLE_DROP_TILE = null;
-        return;
-    }
-
-    // Swap the x and y indices of the dragging tile and the dropping tile.
-    const tmp = {
-        sx: _PUZZLE_DRAG_TILE.sx,
-        sy: _PUZZLE_DRAG_TILE.sy
-    };
-    _PUZZLE_DRAG_TILE.sx = _PUZZLE_DROP_TILE.sy;
-    _PUZZLE_DRAG_TILE.sy = _PUZZLE_DROP_TILE.sy;
-    _PUZZLE_DROP_TILE.sx = tmp.sx;
-    _PUZZLE_DROP_TILE.sy = tmp.sy;
-
-    // Draw the drag tile in the drop spot, and vice versa.
-    const ctx2d = CANVAS_2D.getContext('2d');
-
-    let toDrawOnDrop; // imageData that we are going to draw on the tile that we drop on.
-    let toDrawOnDrag; // imageData that we are going to draw on the tile that we dragged from (prior imageData from the tile we dropped on).
-
-    if (_PUZZLE_DRAG_TILE === _PUZZLE_DROP_TILE) { // Dropped within the same tile as it was dragged from.
-        toDrawOnDrag = _PUZZLE_DRAG_IMG; // We dropped on the same tile we dragged from.
-        toDrawOnDrop = null; // No need to draw it twice.
-    } else {
-        const tileSize = getTileSize();
-        toDrawOnDrag = ctx2d.getImageData(
-            _PUZZLE_DROP_TILE.sx, _PUZZLE_DROP_TILE.sy, tileSize.width, tileSize.height).data;
-        toDrawOnDrop = _PUZZLE_DRAG_IMG;
-    }
-
-    // TODO: there has to be a cleaner way to do this.
-    // Always have to redraw the drag tile (as either the original drag tile, or the drop tile).
-    // Ref: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/drawImage
-    try {
-        if (toDrawOnDrag instanceof Uint8ClampedArray) { // TODO: this is fucked up
-            const imageData = ctx2d.createImageData(_PUZZLE_TILE_WIDTH, _PUZZLE_TILE_HEIGHT);
-            ctx2d.putImageData(imageData, _PUZZLE_DROP_TILE.sx, _PUZZLE_DROP_TILE.sy);
-        } else {
-            ctx2d.drawImage(
-                toDrawOnDrag,
-                0,
-                0,
-                _PUZZLE_TILE_WIDTH,
-                _PUZZLE_TILE_HEIGHT,
-                _PUZZLE_DRAG_TILE.sx,
-                _PUZZLE_DRAG_TILE.sy,
-                _PUZZLE_TILE_WIDTH,
-                _PUZZLE_TILE_HEIGHT,
-            );
-        }
-    } catch (err) {
-        debugger // TODO
-    }
-
-    // Have to redraw the drop tile only if it is different than the drag tile.
-    if (toDrawOnDrop) {
-        try {
-            if (toDrawOnDrop instanceof Uint8ClampedArray) {
-                const imageData = ctx2d.createImageData(_PUZZLE_TILE_WIDTH, _PUZZLE_TILE_HEIGHT);
-                ctx2d.putImageData(imageData, _PUZZLE_DROP_TILE.sx, _PUZZLE_DROP_TILE.sy);
-            } else {
-                ctx2d.drawImage(
-                    toDrawOnDrop,
-                    0,
-                    0,
-                    _PUZZLE_TILE_WIDTH,
-                    _PUZZLE_TILE_HEIGHT,
-                    _PUZZLE_DROP_TILE.sx,
-                    _PUZZLE_DROP_TILE.sy,
-                    _PUZZLE_TILE_WIDTH,
-                    _PUZZLE_TILE_HEIGHT,
-                );
-            }
-        } catch (err) {
-            debugger
-        }
-    }
-    _PUZZLE_DRAG_TILE = undefined;
-    _PUZZLE_DROP_TILE = undefined;
-
-    // checkSolved(); // TODO
-    console.log('tile dropped'); // TODO: remove
-};
-
-// TODO: this isn't grabbing the right tiles. How do we determine which ones it should be grabbing based on heading?
 /**
-Redraw the 3D canvas as a 2D canvas so we can mess around with it.
-We have to extract the image data from the 3D view using Google Maps API.
-They make it impossible to extract directly from that canvas.
+  Redraw the 3D canvas as a 2D canvas so we can mess around with it.
+  We have to extract the image data from the 3D view using Google Maps API.
+  They make it impossible to extract directly from that canvas.
 */
 async function drawCanvas2d() {
     CANVAS_2D_IS_REDRAWING = true;
@@ -1765,6 +1784,7 @@ async function drawCanvas2d() {
         const pov = GOOGLE_STREETVIEW.getPov();
         const zoom = pov.zoom; // TODO: where is it getting the actual zoom level from?
 
+        // TODO: is this correct? Maybe need to scale the canvas on screen size or something? Or max it out, puzzle will be unsolvable if stuff goes off screen.
         // Calculate tile dimensions based on zoom level
         const tileSize = getTileSize();
         const nCols = Math.ceil(Math.pow(2, zoom + 1));
@@ -1803,7 +1823,6 @@ async function drawCanvas2d() {
                 const fovZoom = 3;
                 const tileUrl = `https://streetviewpixels-pa.googleapis.com/v1/tile?cb_client=apiv3&panoid=${panoID}&output=tile&x=${x}&y=${y}&zoom=${fovZoom}&nbt=1&fover=2`;
                 img.src = tileUrl;
-                console.log(tileUrl); // TODO: remove
             });
         };
 
@@ -1816,86 +1835,19 @@ async function drawCanvas2d() {
         }
         await Promise.all(tilePromises);
 
-        // Put 2D canvas on top of 3D and block pointer events to the 3D.
+        // Put 2D canvas on top of 3D and block pointer events to the 3D. This is up here so we can watch it draw the canvas in debug mode.
         const mapParent = canvas3d.parentElement.parentElement;
         mapParent.insertBefore(CANVAS_2D, mapParent.firstChild);
         CANVAS_2D_IS_REDRAWING = false;
-
-        clearCanvas2dEvents();
-
-        _CANVAS_2D_POINTERDOWN = CANVAS_2D.addEventListener('pointerdown', (evt) => {
-            onPuzzlePointerdown(evt);
-        });
-        _CANVAS_2D_MOUSEMOVE = CANVAS_2D.addEventListener('mousemove', (evt) => {
-            onPuzzleMousemove(evt);
-        });
-        _CANVAS_2D_MOUSEMOVE = CANVAS_2D.addEventListener('pointerup', (evt) => {
-            onPuzzlePointerup(evt);
-        });
-
+        addCanvas2dMousemove()
     } catch (err) {
         console.error(err);
+        CANVAS_2D_IS_REDRAWING = false;
         clearCanvas2d();
     }
 }
 
-const clipCanvas2d = () => { // After pasting tiled image data to 2D canvas, clip it to the dimensions of the 3D canvas.
-    const canvas3d = getBigMapCanvas();
-    if (!canvas3d || !CANVAS_2D) {
-        return;
-    }
-    const { width, height } = canvas3d;
-    const ctx2d = CANVAS_2D.getContext('2d');
-    const imageData = ctx2d.getImageData(0, 0, width, height);
-    Object.assign(CANVAS_2D, { width, height });
-    ctx2d.putImageData(imageData, 0, 0);
-
-
-
-
-
-
-/** TODO
-function resizeAndClipCanvas(sourceCanvas, targetWidth, targetHeight) {
-  // Create a new canvas for the result
-  const resultCanvas = document.createElement('canvas');
-  const ctx = resultCanvas.getContext('2d');
-
-  // Set the dimensions of the new canvas
-  resultCanvas.width = targetWidth;
-  resultCanvas.height = targetHeight;
-
-  // Calculate scale factors for both dimensions
-  const scaleX = targetWidth / sourceCanvas.width;
-  const scaleY = targetHeight / sourceCanvas.height;
-
-  // Use the larger scale factor to ensure the image fills the entire target area
-  const scale = Math.max(scaleX, scaleY);
-
-  // Calculate the scaled dimensions
-  const scaledWidth = sourceCanvas.width * scale;
-  const scaledHeight = sourceCanvas.height * scale;
-
-  // Calculate centering offsets to clip equally from both sides
-  const offsetX = (targetWidth - scaledWidth) / 2;
-  const offsetY = (targetHeight - scaledHeight) / 2;
-
-  // Draw the scaled and clipped image
-  ctx.drawImage(
-    sourceCanvas,
-    0, 0, sourceCanvas.width, sourceCanvas.height,  // source rectangle
-    offsetX, offsetY, scaledWidth, scaledHeight     // destination rectangle
-  );
-
-  return resultCanvas;
-}
-*/
-
-
-
-};
-
-const scatterCanvas2d = (nRows, nCols) => {
+const scatterCanvas2d = (nRows, nCols) => { // TODO: can maybe deal with width and height here.
     const ctx2d = CANVAS_2D.getContext('2d');
     const tileWidth = CANVAS_2D.width / nCols;
     const tileHeight = CANVAS_2D.height / nRows;
@@ -1904,8 +1856,8 @@ const scatterCanvas2d = (nRows, nCols) => {
     const tiles = [];
     for (let row = 0; row < nRows; row++) {
         for (let col = 0; col < nCols; col++) {
-            const sx = row * tileWidth;
-            const sy = col * tileHeight;
+            const sx = col * tileWidth;
+            const sy = row * tileHeight;
             const tile = ctx2d.getImageData(sx, sy, tileWidth, tileHeight);
             tiles.push({ imageData: tile, sx, sy, originalRow: row, originalCol: col });
         }
@@ -1937,6 +1889,223 @@ const scatterCanvas2d = (nRows, nCols) => {
     };
 };
 
+const pasteToDraggingImage = () => { // Paste image to temporary small canvas for dragging animation.
+    if (!_PUZZLE_DRAGGING_TILE) {
+        return;
+    }
+    if (!_PUZZLE_DRAGGING_CANVAS) {
+        _PUZZLE_DRAGGING_CANVAS = document.createElement('canvas');
+    }
+    if (!_PUZZLE_DRAGGING_IMG) {
+        _PUZZLE_DRAGGING_IMG = document.createElement('img');
+    }
+    const ctx2d = _PUZZLE_DRAGGING_CANVAS.getContext('2d');
+    const imageData = _PUZZLE_DRAGGING_TILE.imageData;
+    _PUZZLE_DRAGGING_CANVAS.width = imageData.width;
+    _PUZZLE_DRAGGING_CANVAS.height = imageData.height;
+    ctx2d.putImageData(imageData, 0, 0);
+    _PUZZLE_DRAGGING_IMG.src = _PUZZLE_DRAGGING_CANVAS.toDataURL(); // TODO: not working.
+};
+
+const getCurrentMouseTile = () => { // Tile that the mouse is currently over. Doesn't matter if user is dragging a tile or not.
+    if (!_CANVAS_2D_MOUSE_LOC || !_PUZZLE_TILES) {
+        return null;
+    }
+    const { x, y } = _CANVAS_2D_MOUSE_LOC;
+    if (x == null || y == null) {
+        return null;
+    }
+    for (const tile of _PUZZLE_TILES) {
+        const leftX = tile.sx;
+        const rightX = leftX + tile.imageData.width;
+        const topY = tile.sy;
+        const bottomY = topY + tile.imageData.height;
+        if (x >= leftX && x <= rightX && y >= topY && y <= bottomY) {
+            return tile;
+        }
+    }
+    return null;
+};
+
+const onDropTile = (evt) => { // When mouse is released, drop the dragged tile at the location, and swap them.
+    if (!_PUZZLE_DRAGGING_TILE || !_PUZZLE_CURRENT_DROP_TILE) {
+        console.error('Drag or drop tile is missing.');
+        _PUZZLE_DRAGGING_TILE = null;
+        _PUZZLE_CURRENT_DROP_TILE = null;
+        return;
+    }
+
+    // Swap the x and y indices of the dragging tile and the dropping tile.
+    const tmp = {
+        sx: _PUZZLE_DRAGGING_TILE.sx,
+        sy: _PUZZLE_DRAGGING_TILE.sy
+    };
+    _PUZZLE_DRAGGING_TILE.sx = _PUZZLE_CURRENT_DROP_TILE.sy;
+    _PUZZLE_DRAGGING_TILE.sy = _PUZZLE_CURRENT_DROP_TILE.sy;
+    _PUZZLE_CURRENT_DROP_TILE.sx = tmp.sx;
+    _PUZZLE_CURRENT_DROP_TILE.sy = tmp.sy;
+
+    // Draw the drag tile in the drop spot, and vice versa.
+    const ctx2d = CANVAS_2D.getContext('2d');
+    const tileSize = getTileSize();
+
+    let toDrawOnDrop; // imageData that we are going to draw on the tile that we drop on.
+    let toDrawOnDrag; // imageData for the tile we dragged from.
+
+    if (_PUZZLE_DRAGGING_TILE === _PUZZLE_CURRENT_DROP_TILE ) { // Dropped within the same tile as it was dragged from.
+        toDrawOnDrag = _PUZZLE_DRAGGING_IMG; // We dropped on the same tile we dragged from.
+        toDrawOnDrop = null; // No need to draw it twice.
+    } else {
+        toDrawOnDrag = ctx2d.getImageData(
+            _PUZZLE_CURRENT_DROP_TILE.sx, _PUZZLE_CURRENT_DROP_TILE.sy, tileSize.width, tileSize.height).data;
+        toDrawOnDrop = _PUZZLE_DRAGGING_IMG;
+    }
+
+    // Always have to redraw the drag tile.
+    ctx2d.drawImage(
+        toDrawOnDrag,
+        _PUZZLE_DRAGGING_TILE.sx,
+        _PUZZLE_DRAGGING_TILE.sy,
+        _PUZZLE_TILE_WIDTH,
+        _PUZZLE_TILE_HEIGHT,
+        _PUZZLE_DRAGGING_TILE.sx, // TODO: pick up here, I think this is wrong
+        _PUZZLE_DRAGGING_TILE.sy,
+        _PUZZLE_TILE_WIDTH,
+        _PUZZLE_TILE_HEIGHT,
+    );
+
+    // Have to redraw the drop tile only if it is different than the drag tile.
+    if (toDrawOnDrop) {
+        ctx2d.drawImage(
+            toDrawOnDrop,
+            _PUZZLE_CURRENT_DROP_TILE.sx,
+            _PUZZLE_CURRENT_DROP_TILE.sy,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT,
+            _PUZZLE_CURRENT_DROP_TILE.sx,
+            _PUZZLE_CURRENT_DROP_TILE.sy,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT,
+        );
+    }
+
+    _PUZZLE_DRAGGING_TILE = undefined;
+    _PUZZLE_CURRENT_DROP_TILE = undefined;
+
+    // checkSolved(); // TODO
+    console.log('tile dropped'); // TODO: remove
+};
+
+const onPuzzleMousemove = () => {
+    if (!CANVAS_2D || !_PUZZLE_DRAGGING_TILE) {
+        return; // User has not clicked yet. Mouse movements are tracked after first click.
+    }
+    const ctx2d = CANVAS_2D.getContext('2d');
+
+    _PUZZLE_CURRENT_DROP_TILE = undefined;
+    for (const tile of _PUZZLE_TILES) {
+        if (tile === _PUZZLE_DRAGGING_TILE) {
+            continue;
+        }
+        ctx2d.drawImage(
+            _PUZZLE_DRAGGING_IMG,
+            tile.sx,
+            tile.sy,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT,
+            tile.sx,
+            tile.sy,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT
+        );
+        _PUZZLE_CURRENT_DROP_TILE = getCurrentMouseTile();
+        if (!_PUZZLE_CURRENT_DROP_TILE) {
+            return;
+        }
+        ctx2d.save();
+        ctx2d.globalAlpha = 0.4;
+        ctx2d.fillStyle = _PUZZLE_HOVER_TINT;
+        ctx2d.fillRect(
+            _PUZZLE_CURRENT_DROP_TILE.sx,
+            _PUZZLE_CURRENT_DROP_TILE.sy,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT
+        );
+        ctx2d.restore();
+    }
+    ctx2d.save();
+    ctx2d.globalAlpha = 0.6;
+    ctx2d.drawImage(
+        _PUZZLE_DRAGGING_IMG,
+        _PUZZLE_DRAGGING_TILE.sx,
+        _PUZZLE_DRAGGING_TILE.sy,
+        _PUZZLE_TILE_WIDTH,
+        _PUZZLE_TILE_HEIGHT,
+        _CANVAS_2D_MOUSE_LOC .x - _PUZZLE_TILE_WIDTH / 2,
+        _CANVAS_2D_MOUSE_LOC .y - _PUZZLE_TILE_HEIGHT / 2,
+        _PUZZLE_TILE_WIDTH,
+        _PUZZLE_TILE_HEIGHT,
+    );
+    ctx2d.restore();
+};
+
+const removeCanvas2dListeners = () => {
+    if (!CANVAS_2D) {
+        return;
+    }
+    if (_CANVAS_2D_MOUSEDOWN) {
+        CANVAS_2D.removeEventListener(_CANVAS_2D_MOUSEDOWN);
+    }
+    if (_CANVAS_2D_MOUSEMOVE) {
+        CANVAS_2D.removeEventListener(_CANVAS_2D_MOUSEMOVE);
+    }
+    if (_CANVAS_2D_MOUSEUP) {
+        CANVAS_2D.removeEventListener(_CANVAS_2D_MOUSEUP);
+    }
+};
+
+const addCanvas2dListeners = () => {
+    if (!CANVAS_2D) {
+        return;
+    }
+    removeCanvas2dListeners();
+    _CANVAS_2D_MOUSEDOWN = CANVAS_2D.addEventListener('pointerup', _CANVAS_2D_MOUSEDOWN);
+    _CANVAS_2D_MOUSEMOVE = CANVAS_2D.addEventListener('mousemove', _CANVAS_2D_MOUSEDOWN);
+    _CANVAS_2D_MOUSEUP = CANVAS_2D.addEventListener('pointerup', _CANVAS_2D_MOUSEDOWN);
+};
+
+const onPuzzleClick = () => {
+    _PUZZLE_DRAGGING_TILE = getCurrentMouseTile();
+    _PUZZLE_CURRENT_DROP_TILE = _PUZZLE_DRAGGING_TILE; // Always same on initial click.
+    pasteToDraggingImage(); // Paste clicked tile to draggable canvas.
+
+    const ctx2d = CANVAS_2D.getContext('2d');
+    if (_PUZZLE_DRAGGING_TILE) {
+        ctx2d.clearRect(
+            _PUZZLE_DRAGGING_TILE.sx,
+            _PUZZLE_DRAGGING_TILE.sy,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT,
+        );
+        ctx2d.save();
+        ctx2d.globalAlpha = 0.9;
+        ctx2d.drawImage(
+            _PUZZLE_DRAGGING_IMG,
+            _PUZZLE_DRAGGING_TILE.sx,
+            _PUZZLE_DRAGGING_TILE.sy,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT,
+            _CANVAS_2D_MOUSE_LOC.x - _PUZZLE_TILE_WIDTH / 2,
+            _CANVAS_2D_MOUSE_LOC.y - _PUZZLE_TILE_HEIGHT / 2,
+            _PUZZLE_TILE_WIDTH,
+            _PUZZLE_TILE_HEIGHT,
+        );
+        ctx2d.restore();
+        CANVAS_2D.onpointermove = onPuzzleMousemove; // TODO: what happens if dropped on a button or mini map or something?
+        CANVAS_2D.onpointerup = onDropTile;
+    }
+};
+
 async function updatePuzzle(forceState = null) {
     const mod = MODS.puzzle;
     const active = updateMod(mod, forceState);
@@ -1944,15 +2113,19 @@ async function updatePuzzle(forceState = null) {
     clearCanvas2d();
 
     if (!active) {
-        clearCanvas2d();
         return;
     }
 
+    const nRows = getOption(mod, 'nRows');
+    const nCols = getOption(mod, 'nCols');
+
     async function makePuzzle() {
-        await drawCanvas2d();
-        clipCanvas2d();
-        const nRows = getOption(mod, 'nRows');
-        const nCols = getOption(mod, 'nCols');
+        try {
+            await drawCanvas2d();
+        } catch (err) {
+            console.error(err);
+            return;
+        }
         const scattered = scatterCanvas2d(nRows, nCols);
         if (!scattered) {
             return;
@@ -1961,6 +2134,7 @@ async function updatePuzzle(forceState = null) {
         _PUZZLE_TILE_WIDTH = scattered.tileWidth;
         _PUZZLE_TILE_HEIGHT = scattered.tileHeight;
     };
+
     await makePuzzle();
 
     if (!CANVAS_2D) {
@@ -1968,6 +2142,20 @@ async function updatePuzzle(forceState = null) {
         updateMod(mod, false);
         return;
     }
+
+    const ctx = CANVAS_2D.getContext('2d');
+
+    const checkSolved = () => { // TODO: decide how to handle when puzzle is solved.
+        const solved = false;
+        if (solved) {
+            document.onpointerdown = null;
+            document.onpointermove = null;
+            document.onpointerup = null;
+        }
+    }
+
+    CANVAS_2D.onpointerdown = onPuzzleClick;
+
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -2052,7 +2240,7 @@ const makeTiles = (nRows, nCols) => {
             evt.stopPropagation();
             onClickTile(evt);
         });
-        tile.addEventListener('POINTERDOWN', (evt) => {
+        tile.addEventListener('mousedown', (evt) => {
             evt.preventDefault();
             evt.stopPropagation();
         });
@@ -2066,6 +2254,7 @@ const makeTiles = (nRows, nCols) => {
     const bigMapCanvas = getBigMapCanvas();
     bigMapCanvas.parentElement.insertBefore(tileOverlay, bigMapCanvas.parentElement.firstChild);
 };
+
 
 const updateTileReveal = (forceState = null) => {
     const mod = MODS.tileReveal;
@@ -2224,7 +2413,7 @@ const getFilterStr = (mod) => { // Get string that can be applied to streetview 
         if (value == null) {
             continue
         }
-        filterStr += `${key}(${value}) `; // Requires units in value.
+        filterStr += `${key}(${value}) ` ; // Requires units in value.
     }
     filterStr = filterStr.trim();
     return filterStr;
@@ -2331,56 +2520,6 @@ const updateScratch = (forceState = null) => {
     const active = updateMod(mod, forceState);
 
     console.log('yo');
-
-    const obscureUnits = {
-        bc: 0.00847, // Barleycorn – Ancient English unit, about the size of a grain
-        finger: 0.1143, // Finger (cloth) – Used in measuring cloth width
-        h: 0.1016, // Hand – Common in horse height, 4 inches
-        nl: 0.05715, // Nail – 1/16th of a yard
-        shft: 0.1524, // Shaftment – Width of a fist + outstretched thumb
-        sp: 0.2286, // Span – Tip of thumb to tip of pinkie
-        cb: 0.4572, // Cubit – Elbow to middle fingertip
-        pR: 1.48, // Pace (Roman) – Two marching steps
-        pf: 0.3248, // Paris Foot – Old French foot (pied du roi)
-        palmo: 0.2225, // Palmo (Italian) – Palm width
-        xu: 1e-13, // Xunit – Used for x-ray and atomic scale wavelengths
-        tw: 1.76389e-5, // Twip – 1/20 of a point in typography
-        sm: 1.7018, // Smoot – Comical MIT unit based on Oliver Smoot
-        lnk: 0.201168, // Link – 1/100 of a Gunter's chain, used in surveying
-        rd: 5.0292, // Rod (Perch) – Surveyor's unit (16.5 feet)
-        ch: 20.1168, // Chain – Gunter’s chain, used in land measurement
-        ftm: 1.8288, // Fathom – Nautical depth, six feet
-        ell: 1.143, // Ell – Length of a man’s arm, used in cloth
-        ln: 0.002116, // Line – 1/12 of an inch, used in tailoring/jewelry
-        au: 1.496e11, // Astronomical Unit – Distance from Earth to Sun
-        ff: 91.44, // Football Field – American, endzone to endzone
-        sb: 0.17, // Subway Sandwich – Approx. 6 inches (standard "footlong")
-        bw: 30, // Blue Whale – Adult length, about 30 meters
-        ban: 0.18, // Banana – Average banana length
-        et: 330, // Eiffel Tower – Height from base to tip
-        tr: 21.336, // T. rex – Estimated length of a large adult
-        gzr: 1.8, // Giraffe – Adult, average height
-        lbh: 1.7, // LeBron Height – LeBron James is about 2.06m, this is ~average human height
-        css: 0.038, // Credit Card Short Side – 3.8cm
-        bld: 828, // Burj Khalifa – Tallest building, ~828 meters
-        mt: 8848.86, // Mount Everest – Peak above sea level
-        hp: 0.165, // Harry Potter – Book height (hardcover)
-        lk: 4.2, // Lightsaber – Typical blade length (fictional)
-        ht: 13.72, // School Bus – Full-size US bus
-        drk: 0.0127, // Dime Radius – US dime radius
-        sm: 1.7018, // Smoot – Classic MIT joke unit
-        gl: 2.5, // Great Lakes Average Depth – A fun "depth unit"
-        rnbw: 1e9, // Rainbow Unit – Entire electromagnetic visible spectrum length scale (silly)
-        cd: 0.12, // CD Diameter – Classic compact disc
-    };
-
-    const metersToUnit = (meters, unit) => {
-        const factor = obscureUnits[unit];
-        if (!factor) {
-            throw new Error(`Unknown unit: ${unit}`);
-        }
-        return meters / factor;
-    };
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -2433,9 +2572,9 @@ const bindButtons = () => {
 };
 
 const addButtons = () => { // Add mod buttons to the active round, with a little button to toggle them.
-    const bigMapContainer = getBigMapContainer();
+	const bigMapContainer = getBigMapContainer();
     const modContainer = getModDiv(); // Includes header and buttons.
-    if (!bigMapContainer || modContainer) { // Page not loaded, or modContainer is already rendered.
+	if (!bigMapContainer || modContainer) { // Page not loaded, or modContainer is already rendered.
         return;
     }
 
@@ -2470,10 +2609,10 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
 
     modsContainer.appendChild(headerContainer);
     modsContainer.appendChild(buttonContainer);
-    bigMapContainer.appendChild(modsContainer);
-    bindButtons();
+	bigMapContainer.appendChild(modsContainer);
+	bindButtons();
 
-    modMenuToggle.addEventListener('click', function () {
+    modMenuToggle.addEventListener('click', function() {
         if (buttonContainer.classList.contains('hidden')) {
             buttonContainer.classList.remove('hidden');
             modMenuToggle.textContent = '▼';
@@ -2583,7 +2722,6 @@ const _QUOTES = {
         `I said "A" "L" "B" "U" .... .... "QUERQUE" — Weird Al`,
         `Badgers? Badgers? We don't need no stinking badgers! — Raul Hernandez`,
         `Time to deliver a pizza ball! — Eric Andre`,
-        `There's always a bigger fish. — Qui-Gon Jinn`,
     ],
 
     jokes: [
@@ -2620,7 +2758,6 @@ const _QUOTES = {
         `The inventor of the glue used in Post-Its intended to make a very strong glue but accidentally made a very weak glue.`,
         `Popsicles were invented by an 11-year-old.`,
         `The plural of octopus has three accepted versions- octopuses, octopi, octopodes.`,
-        `In a room of 23 people, it is more likely than not that two people share the same birthday.`,
     ],
 
 };
@@ -2669,6 +2806,7 @@ window.addEventListener('load', () => {
     }
     clearCh_eatOverlay();
     const che_atOverlay = document.createElement('div'); // Opaque black div that covers everything while the page loads.
+    che_atOverlay.id = 'on-your-honor';
     Object.assign(che_atOverlay.style, { // Intentionally not in C SS to make it harder for people to figure out.
         height: '100vh',
         width: '100vw',
@@ -2728,11 +2866,11 @@ window.addEventListener('load', () => {
 });
 
 /**
-Click around the map *after* it is loaded and idle, and the screen is blacked out.
-This will be a callback in the google maps section of this script.
-This will completely mess up the repl ay file. We have 1 second to do this.
-Always end with a click at { lat: 0, lng: 0 }. This will be extremely obvious in r eplays, both for streaming and the actual re play files.
-This function is sloppy, but it doesn't really matter as long as we screw up the repl ay.
+  Click around the map *after* it is loaded and idle, and the screen is blacked out.
+  This will be a callback in the google maps section of this script.
+  This will completely mess up the repl ay file. We have 1 second to do this.
+  Always end with a click at { lat: 0, lng: 0 }. This will be extremely obvious in r eplays, both for streaming and the actual re play files.
+  This function is sloppy, but it doesn't really matter as long as we screw up the repl ay.
 */
 const clickGarbage = (nMilliseconds = 900) => {
     const nClicks = 20; // Approximately...
@@ -2759,38 +2897,38 @@ const clickGarbage = (nMilliseconds = 900) => {
 // Script injection, extracted from unityscript extracted from extenssr:
 // https://gitlab.com/nonreviad/extenssr/-/blob/main/src/injected_scripts/maps_api_injecter.ts
 const overrideOnLoad = (googleScript, observer, overrider) => {
-    const oldOnload = googleScript.onload;
-    googleScript.onload = (event) => {
-        const google = getGoogle();
-        if (google) {
-            observer.disconnect();
-            overrider(google);
-        }
-        if (oldOnload) {
-            oldOnload.call(googleScript, event);
-        }
-    }
+	const oldOnload = googleScript.onload;
+	googleScript.onload = (event) => {
+		const google = getGoogle();
+		if (google) {
+			observer.disconnect();
+			overrider(google);
+		}
+		if (oldOnload) {
+			oldOnload.call(googleScript, event);
+		}
+	}
 }
 
 const grabGoogleScript = (mutations) => {
-    for (const mutation of mutations) {
-        for (const newNode of mutation.addedNodes) {
-            const asScript = newNode;
-            if (asScript && asScript.src && asScript.src.startsWith('https://maps.googleapis.com/')) {
-                return asScript;
-            }
-        }
-    }
-    return null;
+	for (const mutation of mutations) {
+		for (const newNode of mutation.addedNodes) {
+			const asScript = newNode;
+			if (asScript && asScript.src && asScript.src.startsWith('https://maps.googleapis.com/')) {
+				return asScript;
+			}
+		}
+	}
+	return null;
 }
 
 const injecter = (overrider) => {
-    new MutationObserver((mutations, observer) => {
-        const googleScript = grabGoogleScript(mutations);
-        if (googleScript) {
-            overrideOnLoad(googleScript, observer, overrider);
-        }
-    }).observe(document.documentElement, { childList: true, subtree: true });
+	new MutationObserver((mutations, observer) => {
+		const googleScript = grabGoogleScript(mutations);
+		if (googleScript) {
+			overrideOnLoad(googleScript, observer, overrider);
+		}
+	}).observe(document.documentElement, { childList: true, subtree: true });
 }
 
 const initMods = () => { // Enable mods that were already enabled via localStorage.
@@ -2816,9 +2954,9 @@ _CHEAT_DETECTION = true; // I freaking dare you.
 
 const _getIsCheatingOrMaybeNotCheating = () => {
     const t = 30,
-        e = Math.floor(0.5 * t),
-        n = Math.floor(0.3 * t),
-        r = t - e - n;
+          e = Math.floor(0.5 * t),
+          n = Math.floor(0.3 * t),
+          r = t - e - n;
     const a = new Set();
     while (a.size < 8) {
         const x = Math.floor(100 * Math.random()) + 1;
@@ -2865,7 +3003,7 @@ const _YOURE_LOOKING_AT_MY_CODE = (v) => {
                 const e = [
                     () => Boolean(c.match(/.+/)),
                     () => [null, undefined, NaN, 0, '', false].includes(b),
-                    () => new Set(madeYouLook()).has([...Array(5)].map((_, i) => i).filter(x => x < 5).reduce((a, b) => a + (b === 0 ? 0 : 1), 0) + ([] + [])[1] || +!![] + +!![] + +!![] + +!![]),
+                    () => new Set(madeYouLook()).has([...Array(5)].map((_,i) => i).filter(x => x < 5).reduce((a,b) => a + (b === 0 ? 0 : 1), 0) + ([] + [])[1] || +!![] + +!![] + +!![] + +!![]),
                     () => Object.is(b, null)
                 ];
                 for (let f = 0; f < e.length; f++) {
@@ -2896,47 +3034,47 @@ document.addEventListener('DOMContentLoaded', (event) => {
         return; // Get outta 'ere
     }
 
-    injecter(() => {
-        const google = getGoogle();
-        if (!google) {
+	injecter(() => {
+		const google = getGoogle();
+		if (!google) {
             return;
         }
 
-        google.maps.StreetViewPanorama = class extends google.maps.StreetViewPanorama {
-            constructor(...args) {
-                super(...args);
-                GOOGLE_STREETVIEW = this;
-            }
-        }
+		google.maps.StreetViewPanorama = class extends google.maps.StreetViewPanorama {
+			constructor(...args) {
+				super(...args);
+				GOOGLE_STREETVIEW = this;
+			}
+		}
 
-        google.maps.Map = class extends google.maps.Map {
-            constructor(...args) {
-                super(...args);
+		google.maps.Map = class extends google.maps.Map {
+			constructor(...args) {
+				super(...args);
                 this.setRenderingType(google.maps.RenderingType.VECTOR); // Must be a vector map for some additional controls.
                 this.setHeadingInteractionEnabled(true);
                 this.setTiltInteractionEnabled(true);
 
-                GOOGLE_SVC = new google.maps.ImageMapType({
-                    getTileUrl: (point, zoom) => `https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i${zoom}!2i${point.x}!3i${point.y}!2i9!3x1!2m8!1e2!2ssvv!4m2!1scc!2s*211m3*211e2*212b1*213e2*212b1*214b1!4m2!1ssvl!2s*211b0*212b1!3m8!2sen!3sus!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e`,
-                    tileSize: new google.maps.Size(256, 256),
-                    maxZoom: 9,
-                    minZoom: 0,
-                });
-                google.maps.event.addListenerOnce(this, 'idle', () => { // Actions on initial guess map load.
+				GOOGLE_SVC = new google.maps.ImageMapType({
+					getTileUrl: (point, zoom) => `https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i${zoom}!2i${point.x}!3i${point.y}!2i9!3x1!2m8!1e2!2ssvv!4m2!1scc!2s*211m3*211e2*212b1*213e2*212b1*214b1!4m2!1ssvl!2s*211b0*212b1!3m8!2sen!3sus!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e`,
+					tileSize: new google.maps.Size(256, 256),
+					maxZoom: 9,
+					minZoom: 0,
+				});
+				google.maps.event.addListenerOnce(this, 'idle', () => { // Actions on initial guess map load.
                     initMods();
                     console.log(`Tpebop's mods initialized.`);
                     setTimeout(clearCh_eatOverlay, 1000);
                     clickGarbage(900);
-                });
+				});
                 google.maps.event.addListener(this, 'dragstart', () => {
-                    IS_DRAGGING_SMALL_MAP = true;
-                });
+					IS_DRAGGING_SMALL_MAP = true;
+				});
                 google.maps.event.addListener(this, 'dragend', () => {
-                    IS_DRAGGING_SMALL_MAP = false;
-                });
+					IS_DRAGGING_SMALL_MAP = false;
+				});
                 google.maps.event.addListener(this, 'click', (evt) => {
-                    onMapClick(evt);
-                });
+					onMapClick(evt);
+				});
 
                 if (DEBUG) {
                     this.addListener('contextmenu', (evt) => { // Add right click listener to guess map for debugging.
@@ -2951,9 +3089,9 @@ document.addEventListener('DOMContentLoaded', (event) => {
                     }
                 }
                 GOOGLE_MAP = this; // Store globally for use in other functions once this is instantiated.
-            }
-        }
-    });
+			}
+		}
+	});
 });
 
 GeoGuessrEventFramework.init().then(GEF => {
@@ -2976,8 +3114,8 @@ GeoGuessrEventFramework.init().then(GEF => {
         GG_CLICK = undefined;
     });
 
-    document.addEventListener('keydown', (evt) => { // Custom hotkeys.
-        if (document.activeElement.tagName === 'INPUT') {
+	document.addEventListener('keydown', (evt) => { // Custom hotkeys.
+		if (document.activeElement.tagName === 'INPUT') {
             return;
         }
         if (evt.key === ',' && GOOGLE_MAP && !isActive(MODS.zoomInOnly)) {
@@ -2992,14 +3130,14 @@ GeoGuessrEventFramework.init().then(GEF => {
             clearState();
             window.location.reload();
         }
-    });
+	});
 
 });
 
 loadState();
 
 const observer = new MutationObserver(() => { // TODO: this gets called way too much.
-    addButtons();
+	addButtons();
     // I think this is an anti-c h eat method from Geoguessr. It's annoying, so it's gone.
     const reactionsDiv = getGameReactionsDiv();
     if (reactionsDiv) {
@@ -3007,6 +3145,8 @@ const observer = new MutationObserver(() => { // TODO: this gets called way too 
     }
 });
 
+// TODO: revisit.
+observer.observe(document.body, { subtree: true, childList: true });
 observer.observe(document.querySelector('#__next'), { subtree: true, childList: true });
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -3026,297 +3166,298 @@ const flashlightBlur = getOption(MODS.flashlight, 'blur');
 
 const style = `
 
-  body: {
-      overflow: hidden;
-  }
+    body: {
+        overflow: hidden;
+    }
 
-  .hidden {
-      display: none !important;
-  }
+    .hidden {
+        display: none !important;
+    }
 
-  #gg-mods-container {
-      position: absolute;
-      top: 40px;
-      left: 20px;
-      z-index: 9;	display: flex;
-      flex-direction: column;
-      min-width: 175px;
-  }
+    #gg-mods-container {
+        position: absolute;
+        top: 40px;
+        left: 20px;
+        z-index: 9;
+        display: flex;
+        flex-direction: column;
+        min-width: 175px;
+    }
 
-  #gg-mods-header-container {
-      display: flex;
-      align-items: center;
-      font-size: 18px;
-      justify-content: space-between;
-  }
+    #gg-mods-header-container {
+        display: flex;
+        align-items: center;
+        font-size: 18px;
+        justify-content: space-between;
+    }
 
-  #gg-mods-header {
-      font-weight: bold;
-      text-shadow: ${headerShadow};
-      position: relative;
-  }
+    #gg-mods-header {
+        font-weight: bold;
+        text-shadow: ${headerShadow};
+        position: relative;
+    }
 
-  #gg-mods-container-toggle {
-      padding: 0;
-      font-size: 16px;
-      cursor: pointer;
-      text-shadow: ${headerShadow};
-  }
+    #gg-mods-container-toggle {
+        padding: 0;
+        font-size: 16px;
+        cursor: pointer;
+        text-shadow: ${headerShadow};
+    }
 
-  #gg-mods-button-container {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-top: 10px;
-  }
+    #gg-mods-button-container {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-top: 10px;
+    }
 
-  .gg-mod-button {
-      background: var(--ds-color-purple-100);
-      border-radius: 5px;
-      font-size: 14px;
-      cursor: pointer;
-      opacity: 0.9;
-      transition: opacity 0.2s;
-      padding: 4px 10px;
-  }
+    .gg-mod-button {
+        background: var(--ds-color-purple-100);
+        border-radius: 5px;
+        font-size: 14px;
+        cursor: pointer;
+        opacity: 0.9;
+        transition: opacity 0.2s;
+        padding: 4px 10px;
+    }
 
-  .gg-mod-button:hover {
-      opacity: 1;
-  }
+    .gg-mod-button:hover {
+        opacity: 1;
+    }
 
-  #gg-score-div {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      font-size: 60px;
-      color: white;
-      text-shadow: ${bodyShadow};
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-  }
+    #gg-score-div {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        font-size: 60px;
+        color: white;
+        text-shadow: ${bodyShadow};
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+    }
 
-  #gg-option-menu {
-      position: absolute;
-      left: 110%;
-      padding: 15px;
-      background: var(--ds-color-purple-100);
-      border-radius: 10px;
-      border: 2px solid black;
-      color: white;
-      font-size: 15px;
-      font-weight: bold;
-      text-shadow: ${bodyShadow};
-      z-index: 1;
-  }
+    #gg-option-menu {
+        position: absolute;
+        left: 110%;
+        padding: 15px;
+        background: var(--ds-color-purple-100);
+        border-radius: 10px;
+        border: 2px solid black;
+        color: white;
+        font-size: 15px;
+        font-weight: bold;
+        text-shadow: ${bodyShadow};
+        z-index: 1;
+    }
 
-  #gg-option-title {
-      padding-top: 5px;
-      padding-bottom: 12px;
-      text-align: center;
-      text-shadow: ${bodyShadow};
-      font-size: 18px;
-  }
+    #gg-option-title {
+        padding-top: 5px;
+        padding-bottom: 12px;
+        text-align: center;
+        text-shadow: ${bodyShadow};
+        font-size: 18px;
+    }
 
-  .gg-option-line {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-  }
+    .gg-option-line {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
 
-  .gg-option-label {
-      white-space: nowrap;
-      padding-right: 20px;
-  }
+    .gg-option-label {
+        white-space: nowrap;
+        padding-right: 20px;
+    }
 
-  .gg-option-input {
-      min-width: 70px;
-      max-width: 100px;
-      height: 25px;
-      border-radius: 20px;
-      margin: 5px 0;
-      border: none;
-  }
+    .gg-option-input {
+        min-width: 70px;
+        max-width: 100px;
+        height: 25px;
+        border-radius: 20px;
+        margin: 5px 0;
+        border: none;
+    }
 
-  .gg-option-button {
-      border-radius: 20px;
-      margin: 5px 0;
-      height: 30px;
-  }
+    .gg-option-button {
+        border-radius: 20px;
+        margin: 5px 0;
+        height: 30px;
+    }
 
-  #gg-option-form-div {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 20px;
-  }
+    #gg-option-form-div {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+    }
 
-  .gg-option-form-button {
-      width: 80px;
-      height: 25px;
-      border-radius: 15px;
-      color: white;
-      shadow: ${bodyShadow};
-      padding: 0;
-      cursor: pointer;
-  }
+    .gg-option-form-button {
+        width: 80px;
+        height: 25px;
+        border-radius: 15px;
+        color: white;
+        shadow: ${bodyShadow};
+        padding: 0;
+        cursor: pointer;
+    }
 
-  #gg-option-close {
-     background: red;
-  }
+    #gg-option-close {
+       background: red;
+    }
 
-  #gg-option-reset {
-      background: purple;
-      margin: 0 5px;
-  }
+    #gg-option-reset {
+        background: purple;
+        margin: 0 5px;
+    }
 
-  #gg-option-apply {
-     background: green;
-  }
+    #gg-option-apply {
+       background: green;
+    }
 
-  input::-webkit-outer-spin-button,
-  input::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-  }
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
 
-  input[type=number] {
-      -moz-appearance:textfield;
-  }
+    input[type=number] {
+        -moz-appearance:textfield;
+    }
 
-  #gg-flashlight-div {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 200%;
-      height: 200%;
-      padding: 5rem;
-      pointer-events: none;
+    #gg-flashlight-div {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 200%;
+        height: 200%;
+        padding: 5rem;
+        pointer-events: none;
 
-      overflow: hidden;
-      position: absolute;
-      z-index: 99999;
+        overflow: hidden;
+        position: absolute;
+        z-index: 99999;
 
-      --flashlight-y-pos: -50%;
-      --flashlight-x-pos: -50%;
-      --flashlight-inset: -300px;
-      --flashlight-radius: ${flashlightRadius}px;
-      --flashlight-blur: ${flashlightRadius + flashlightBlur}px;
-  }
+        --flashlight-y-pos: -50%;
+        --flashlight-x-pos: -50%;
+        --flashlight-inset: -300px;
+        --flashlight-radius: ${flashlightRadius}px;
+        --flashlight-blur: ${flashlightRadius + flashlightBlur}px;
+    }
 
-  #gg-flashlight-div::before {
-      content: "";
-      position: absolute;
-      inset: var(--flashlight-inset);
-      background-image: radial-gradient(circle, transparent 0%, rgba(47,52,2,0.4) var(--flashlight-radius), black var(--flashlight-blur), black 100%);
-      background-position: var(--flashlight-x-pos) var(--flashlight-y-pos);
-      background-repeat: no-repeat;
-      pointer-events: none;
-  }
+    #gg-flashlight-div::before {
+        content: "";
+        position: absolute;
+        inset: var(--flashlight-inset);
+        background-image: radial-gradient(circle, transparent 0%, rgba(47,52,2,0.4) var(--flashlight-radius), black var(--flashlight-blur), black 100%);
+        background-position: var(--flashlight-x-pos) var(--flashlight-y-pos);
+        background-repeat: no-repeat;
+        pointer-events: none;
+    }
 
-  #gg-flashlight-div::after {
-      content: "";
-      position: absolute;
-      transform: translate(var(--flashlight-x-pos), var(--flashlight-y-pos));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-  }
+    #gg-flashlight-div::after {
+        content: "";
+        position: absolute;
+        transform: translate(var(--flashlight-x-pos), var(--flashlight-y-pos));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+    }
 
-  #gg-lottery {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      position: absolute;
-      top: 13%;
-      left: 50%;
-      font-size: 30px;
-      color: white;
-      text-shadow: ${bodyShadow};
-      transform: translate(-50%, -50%);
-      background-color: rgba(0, 100, 0, 0.8);
-      padding: 0.5em;
-      border-radius: 10px;
-      z-index: 9999;
-  }
+    #gg-lottery {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: absolute;
+        top: 13%;
+        left: 50%;
+        font-size: 30px;
+        color: white;
+        text-shadow: ${bodyShadow};
+        transform: translate(-50%, -50%);
+        background-color: rgba(0, 100, 0, 0.8);
+        padding: 0.5em;
+        border-radius: 10px;
+        z-index: 9999;
+    }
 
-  #gg-lottery-counter-div {
-      display: flex;
-      justify-content: space-between;
-  }
+    #gg-lottery-counter-div {
+        display: flex;
+        justify-content: space-between;
+    }
 
-  #gg-lottery-counter {
-      padding-left: 0.5em;
-  }
+    #gg-lottery-counter {
+        padding-left: 0.5em;
+    }
 
-  #gg-lottery-button {
-      font-size: 25px;
-      margin-top: 0.5em;
-      border-radius: 10px;
-      padding: 5px 20px;
-      color: white;
-      background: black;
-      opacity: 75%;
-      cursor: pointer;
-  }
+    #gg-lottery-button {
+        font-size: 25px;
+        margin-top: 0.5em;
+        border-radius: 10px;
+        padding: 5px 20px;
+        color: white;
+        background: black;
+        opacity: 75%;
+        cursor: pointer;
+    }
 
-  #gg-guessmap-blocker {
-      width: 100%;
-      height: 100%;
-      position: absolute;
-      pointer-events: none;
-      z-index: 99999999;
-  }
+    #gg-guessmap-blocker {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        pointer-events: none;
+        z-index: 99999999;
+    }
 
-  /* TODO: can this be merged with the lottery CSS? */
-  #gg-tile-count {
-      display: flex;
-      justify-content: space-between;
-      position: absolute;
-      top: 13%;
-      left: 50%;
-      font-size: 30px;
-      color: white;
-      text-shadow: ${bodyShadow};
-      transform: translate(-50%, -50%);
-      align-items: center;
-      background-color: rgba(0, 100, 0, 0.8);
-      padding: 0.5em;
-      border-radius: 10px;
-      z-index: 9999;
-  }
+    /* TODO: can this be merged with the lottery CSS? */
+    #gg-tile-count {
+        display: flex;
+        justify-content: space-between;
+        position: absolute;
+        top: 13%;
+        left: 50%;
+        font-size: 30px;
+        color: white;
+        text-shadow: ${bodyShadow};
+        transform: translate(-50%, -50%);
+        align-items: center;
+        background-color: rgba(0, 100, 0, 0.8);
+        padding: 0.5em;
+        border-radius: 10px;
+        z-index: 9999;
+    }
 
-  #gg-tile-count-counter {
-      padding-left: 0.5em;
-      pointer-events: none;
-  }
+    #gg-tile-count-counter {
+        padding-left: 0.5em;
+        pointer-events: none;
+    }
 
-  #gg-tile-overlay {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
-      background: transparent;
-      display: grid;
-      z-index: 1000;
-      pointer-events: none;
-  }
+    #gg-tile-overlay {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        background: transparent;
+        display: grid;
+        z-index: 1000;
+        pointer-events: none;
+    }
 
-  .gg-tile-block {
-      background: black;
-      border: 1px solid #333;
-      cursor: pointer;
-      transition: opacity 0.3s ease;
-      pointer-events: all;
-  }
+    .gg-tile-block {
+        background: black;
+        border: 1px solid #333;
+        cursor: pointer;
+        transition: opacity 0.3s ease;
+        pointer-events: all;
+    }
 
-  .gg-tile-block:hover {
-      background: #222;
-  }
+    .gg-tile-block:hover {
+        background: #222;
+    }
 
-  .gg-tile-block.removed {
-      pointer-events: none;
-      background: transparent !important;
-      border: none;
-  }
+    .gg-tile-block.removed {
+        pointer-events: none;
+        background: transparent !important;
+        border: none;
+    }
 
 `;
 
@@ -3326,14 +3467,8 @@ GM_addStyle(style);
 
 
 /**
-TPEBOP'S NOTES
-- Make mods list collapsed by default.
-- Look into https://gitlab.com/nonreviad/extenssr/-/tree/main/src?ref_type=heads this is some legit stuff and can be a Chrome extension.
-- https://openuserjs.org/scripts/drparse/GeoFilter/source for messing around with colors and crap.
-- Figure out if it's detecting scripts; it's randomly triggering emotes.
-- Quotes seem to not be coming through randomly. Get some way too often.
-
-- V2:
-  - Modularize everything in a way that allows people to make their own mods, and disable stuff if they want.
-  - Main install script that just imports stuff, put on GreasyFork
+  TPEBOP'S NOTES
+  - Look into https://gitlab.com/nonreviad/extenssr/-/tree/main/src?ref_type=heads this is some legit stuff and can be a Chrome extension.
+  - https://openuserjs.org/scripts/drparse/GeoFilter/source for messing around with colors and crap.
+  - Figure out if it's detecting scripts; it's randomly triggering emotes.
 */
