@@ -4,15 +4,238 @@
 // @version      1.0
 // @author       tpebop
 // @match        *://*.geoguessr.com/*
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/gg_evt.js
 // @icon         https://www.google.com/s2/favicons?domain=geoguessr.com
 // @grant        unsafeWindow
 // @grant        GM_addStyle
 // @grant        GM_openInTab
 // @grant        GM.xmlHttpRequest
-// @grant        GM_xmlhttpRequest
 
 // ==/UserScript==
+
+// Seems to not work with ad blocker
+
+
+console.log('fuck you');
+
+
+// @   require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/gg_evt.js
+
+
+// Taken and modified from https://miraclewhips.dev/geoguessr-event-framework/geoguessr-event-framework.js
+
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator.throw(value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+const THE_WINDOW = unsafeWindow || window;
+(function () {
+    class GEF {
+        constructor() {
+            this.events = new EventTarget();
+            this.state = this.defaultState();
+            this.loadState();
+            this.initFetchEvents();
+            this.overrideFetch();
+            this.init();
+            THE_WINDOW.addEventListener('load', () => {
+                var _a, _b, _c;
+                if (location.pathname.startsWith("/challenge/")) {
+                    const data = (_c = (_b = (_a = THE_WINDOW === null || THE_WINDOW === void 0 ? void 0 : THE_WINDOW.__NEXT_DATA__) === null || _a === void 0 ? void 0 : _a.props) === null || _b === void 0 ? void 0 : _b.pageProps) === null || _c === void 0 ? void 0 : _c.gameSnapshot;
+                    if (!data || !data.round) {
+                        return;
+                    }
+                    THE_WINDOW.GEFFetchEvents.dispatchEvent(new CustomEvent('received_data', { detail: data }));
+                }
+            });
+            THE_WINDOW.GEFFetchEvents.addEventListener('received_data', (event) => {
+                this.parseData(event.detail);
+            });
+        }
+        initFetchEvents() {
+            if (THE_WINDOW.GEFFetchEvents !== undefined) {
+                return;
+            }
+            THE_WINDOW.GEFFetchEvents = new EventTarget();
+        }
+        overrideFetch() {
+            if (THE_WINDOW.fetch.isGEFFetch) {
+                return;
+            }
+            const default_fetch = THE_WINDOW.fetch;
+            THE_WINDOW.fetch = (function () {
+                return function (...args) {
+                    return __awaiter(this, void 0, void 0, function* () {
+                        const url = args[0].toString();
+                        if (/geoguessr.com\/api\/v3\/(games|challenges)\//.test(url) && url.indexOf('daily-challenge') === -1) {
+                            const result = yield default_fetch.apply(THE_WINDOW, args);
+                            const data = yield result.clone().json();
+                            if (!data.round) {
+                                return result;
+                            }
+                            THE_WINDOW.GEFFetchEvents.dispatchEvent(new CustomEvent('received_data', { detail: data }));
+                            return result;
+                        }
+                        return default_fetch.apply(THE_WINDOW, args);
+                    });
+                };
+            })();
+            THE_WINDOW.fetch.isGEFFetch = true;
+        }
+        init() {
+            return __awaiter(this, void 0, void 0, function* () {
+                if (!this.loadedPromise) {
+                    this.loadedPromise = Promise.resolve(this);
+                }
+                return yield this.loadedPromise;
+            });
+        }
+        defaultState() {
+            return {
+                current_game_id: '',
+                is_challenge_link: false,
+                current_round: 0,
+                round_in_progress: false,
+                game_in_progress: true,
+                total_score: { amount: 0, unit: 'points', percentage: 0 },
+                total_distance: {
+                    meters: { amount: 0, unit: 'km' },
+                    miles: { amount: 0, unit: 'miles' }
+                },
+                total_time: 0,
+                rounds: [],
+                map: { id: '', name: '' },
+            };
+        }
+        parseData(data) {
+            const finished = data.player.guesses.length == data.round;
+            if (finished) {
+                this.stopRound(data);
+            }
+            else {
+                this.startRound(data);
+            }
+        }
+        loadState() {
+            let data = window.localStorage.getItem('GeoGuessrEventFramework_STATE');
+            if (!data) {
+                return;
+            }
+            let dataJson = JSON.parse(data);
+            if (!dataJson) {
+                return;
+            }
+            Object.assign(this.state, this.defaultState(), dataJson);
+            this.saveState();
+        }
+        saveState() {
+            window.localStorage.setItem('GeoGuessrEventFramework_STATE', JSON.stringify(this.state));
+        }
+        hex2a(hexx) {
+            const hex = hexx.toString(); //force conversion
+            let str = '';
+            for (let i = 0; i < hex.length; i += 2) {
+                str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+            }
+            return str;
+        }
+        startRound(data) {
+            this.state.current_round = data.round;
+            this.state.round_in_progress = true;
+            this.state.game_in_progress = true;
+            this.state.current_game_id = data.token;
+            this.state.is_challenge_link = data.type == 'challenge';
+            this.state.rounds = data.rounds; // Modified to include current round
+            if (data) {
+                this.state.map = {
+                    id: data.map,
+                    name: data.mapName
+                };
+            }
+            this.saveState();
+            if (this.state.current_round === 1) {
+                this.events.dispatchEvent(new CustomEvent('game_start', { detail: this.state }));
+            }
+            this.events.dispatchEvent(new CustomEvent('round_start', { detail: this.state }));
+        }
+        stopRound(data) {
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5;
+            this.state.round_in_progress = false;
+            if (data) {
+                const r = data.rounds[this.state.current_round - 1];
+                const g = data.player.guesses[this.state.current_round - 1];
+                if (!r || !g) {
+                    return;
+                }
+                this.state.rounds[this.state.current_round - 1] = {
+                    location: {
+                        lat: r.lat,
+                        lng: r.lng,
+                        heading: r.heading,
+                        pitch: r.pitch,
+                        zoom: r.zoom,
+                        panoId: r.panoId ? this.hex2a(r.panoId) : undefined,
+                    },
+                    player_guess: {
+                        lat: g.lat,
+                        lng: g.lng,
+                    },
+                    score: {
+                        amount: parseFloat((_a = g === null || g === void 0 ? void 0 : g.roundScore) === null || _a === void 0 ? void 0 : _a.amount) || 0,
+                        unit: ((_b = g === null || g === void 0 ? void 0 : g.roundScore) === null || _b === void 0 ? void 0 : _b.unit) || 'points',
+                        percentage: ((_c = g === null || g === void 0 ? void 0 : g.roundScore) === null || _c === void 0 ? void 0 : _c.percentage) || 0,
+                    },
+                    distance: {
+                        meters: {
+                            amount: parseFloat((_e = (_d = g === null || g === void 0 ? void 0 : g.distance) === null || _d === void 0 ? void 0 : _d.meters) === null || _e === void 0 ? void 0 : _e.amount) || 0,
+                            unit: ((_g = (_f = g === null || g === void 0 ? void 0 : g.distance) === null || _f === void 0 ? void 0 : _f.meters) === null || _g === void 0 ? void 0 : _g.unit) || 'km',
+                        },
+                        miles: {
+                            amount: parseFloat((_j = (_h = g === null || g === void 0 ? void 0 : g.distance) === null || _h === void 0 ? void 0 : _h.miles) === null || _j === void 0 ? void 0 : _j.amount) || 0,
+                            unit: ((_l = (_k = g === null || g === void 0 ? void 0 : g.distance) === null || _k === void 0 ? void 0 : _k.miles) === null || _l === void 0 ? void 0 : _l.unit) || 'miles',
+                        },
+                    },
+                    time: g === null || g === void 0 ? void 0 : g.time
+                };
+                this.state.total_score = {
+                    amount: parseFloat((_o = (_m = data === null || data === void 0 ? void 0 : data.player) === null || _m === void 0 ? void 0 : _m.totalScore) === null || _o === void 0 ? void 0 : _o.amount) || 0,
+                    unit: ((_q = (_p = data === null || data === void 0 ? void 0 : data.player) === null || _p === void 0 ? void 0 : _p.totalScore) === null || _q === void 0 ? void 0 : _q.unit) || 'points',
+                    percentage: ((_s = (_r = data === null || data === void 0 ? void 0 : data.player) === null || _r === void 0 ? void 0 : _r.totalScore) === null || _s === void 0 ? void 0 : _s.percentage) || 0,
+                };
+                this.state.total_distance = {
+                    meters: {
+                        amount: parseFloat((_v = (_u = (_t = data === null || data === void 0 ? void 0 : data.player) === null || _t === void 0 ? void 0 : _t.totalDistance) === null || _u === void 0 ? void 0 : _u.meters) === null || _v === void 0 ? void 0 : _v.amount) || 0,
+                        unit: ((_y = (_x = (_w = data === null || data === void 0 ? void 0 : data.player) === null || _w === void 0 ? void 0 : _w.totalDistance) === null || _x === void 0 ? void 0 : _x.meters) === null || _y === void 0 ? void 0 : _y.unit) || 'km',
+                    },
+                    miles: {
+                        amount: parseFloat((_1 = (_0 = (_z = data === null || data === void 0 ? void 0 : data.player) === null || _z === void 0 ? void 0 : _z.totalDistance) === null || _0 === void 0 ? void 0 : _0.miles) === null || _1 === void 0 ? void 0 : _1.amount) || 0,
+                        unit: ((_4 = (_3 = (_2 = data === null || data === void 0 ? void 0 : data.player) === null || _2 === void 0 ? void 0 : _2.totalDistance) === null || _3 === void 0 ? void 0 : _3.miles) === null || _4 === void 0 ? void 0 : _4.unit) || 'miles',
+                    },
+                };
+                this.state.total_time = (_5 = data === null || data === void 0 ? void 0 : data.player) === null || _5 === void 0 ? void 0 : _5.totalTime;
+                this.state.map = {
+                    id: data.map,
+                    name: data.mapName
+                };
+            }
+            this.saveState();
+            this.events.dispatchEvent(new CustomEvent('round_end', { detail: this.state }));
+            if (this.state.current_round === 5) {
+                this.events.dispatchEvent(new CustomEvent('game_end', { detail: this.state }));
+            }
+        }
+    }
+    if (!THE_WINDOW.GeoGuessrEventFramework) {
+        THE_WINDOW.GeoGuessrEventFramework = new GEF();
+        console.log('GeoGuessr Event Framework initialised: https://github.com/miraclewhips/geoguessr-event-framework');
+    }
+})();
+
 
 /**
   USER NOTES
@@ -257,14 +480,6 @@ const MODS = {
         },
     },
 
-    userChallenges: {
-        show: false, // Incomplete idea.
-        key: 'user-challenges',
-        name: 'User Challenges',
-        tooltip: 'User challenges that a player must complete before making a guess.',
-        options: {}, // If you want to configure what categories or specific challenges are shown, go to _CHALLENGE_OPTIONS.
-    },
-
     scratch: {
         show: false, // Used for dev work.
         key: 'scratch',
@@ -392,6 +607,17 @@ let _CHEAT_DETECTION = true; // true to perform some actions that will make it o
 // DOM and state utility functions.
 // ===============================================================================================================================
 
+const tryMultiple = (selectors) => { // Different modes, different versions, GeoGuessr changing around stuff, etc.
+    let element;
+    for (const selector of selectors) {
+        const element = document.querySelector(selector);
+        if (element) {
+            return element;
+        }
+    }
+    return null;
+};
+
 const getGoogle = () => {
     return window.google || unsafeWindow.google;
 }
@@ -409,7 +635,11 @@ const getSmallMap = () => {
 };
 
 const getBigMapContainer = () => {
-    return document.querySelector(`div[class^="game_canvas__"]`);
+    const selectors = [
+        `div[class^="game_canvas__"]`,
+        `#panorama-container`,
+    ];
+    return tryMultiple(selectors);
 };
 
 const getBigMapCanvas = () => {
@@ -2200,80 +2430,6 @@ const updateDisplayOptions = (forceState = null) => {
 
 
 
-// MOD: User challenges.
-// ===============================================================================================================================
-
-// TODO:
-// - user must click a button that says they did the thing before it shows them the map.
-// - Need to separate stuff like solving equations from clicking on a border. Require a different message per category, e.g. I have done this thing
-// - Option to not have repeats per round. Need at least 5 things per thing.
-// - Option to sync randomzation to other user.
-// - Maybe use API key to detect if they violated a condition.
-// - Click on a city, river, whatever that starts with whatever or contains the letter whatever. Weight the letters?
-// - Weight the enabled challenges somehow?
-
-// Ideas that need more consideration
-// - figure out how to say X in Y language
-// - generate math equation
-
-// Here, you can disable categories. Copy the keys from _USER_CHALLENGES and set to false if you don't want them. All are enabled by default.
-const _ENABLED_CHALLENGES = {
-    indoor: true,
-};
-
-const _USER_CHALLENGES = {
-    getUpAndDoStuff: [
-        'Drink a small glass of water',
-        'Put on sunglasses',
-        'Go outside and come back inside',
-        'Find a rock and show it to the camera',
-        'Find leaf or blade of grass and show it to the camera',
-        'Put on sunglasses for this round',
-        'Find a spoon and show it to the camera',
-        'Find a fork and show it to the camera',
-        'Put on a different shirt',
-        'Find us a fruit or vegetable and show it to the camera',
-        'Either change your shoes, or put on shoes',
-        'Find a toothbrush and show it to the camera',
-    ],
-    doAtDesk: [
-        'Tell us a joke',
-        'Tell us a fun fact',
-        'Count to 30 out loud',
-
-    ],
-    mapChoices: [
-        'Click on water',
-        'Click on a border',
-        'Click on a country that is smaller than the actual country',
-        'Click on a country that is larger than the actual country',
-        'Click on the equator or the prime meridan',
-        'Click on the wrong country',
-    ],
-};
-
-const updateUserChallenges = (forceState = null) => {
-    const mod = MODS.userChallenges;
-    const active = updateMod(mod, forceState);
-
-    function getRandomIndex(arrayLength) {
-        const seed = Math.floor(Date.now() / 30000);
-        return Math.floor(((1664525 * seed + 1013904223) % 4294967296) / 4294967296 * arrayLength);
-    }
-
-    // Example usage:
-    const myArray = ['apple', 'banana', 'cherry', 'date', 'elderberry'];
-    const index = getRandomIndex(myArray.length);
-    console.log(`Selected: ${myArray[index]}`);
-
-    console.log('yo');
-};
-
-// -------------------------------------------------------------------------------------------------------------------------------
-
-
-
-
 // MOD: Scratch and test work.
 // ===============================================================================================================================
 
@@ -2306,7 +2462,6 @@ const _BINDINGS = [
     [MODS.puzzle, updatePuzzle],
     [MODS.tileReveal, updateTileReveal],
     [MODS.displayOptions, updateDisplayOptions],
-    [MODS.userChallenges, updateUserChallenges],
     [MODS.scratch, updateScratch],
 ];
 
@@ -2568,6 +2723,7 @@ window.addEventListener('load', () => {
     }
     clearCh_eatOverlay();
     const che_atOverlay = document.createElement('div'); // Opaque black div that covers everything while the page loads.
+    che_atOverlay.id = 'on-your-honor';
     Object.assign(che_atOverlay.style, { // Intentionally not in C SS to make it harder for people to figure out.
         height: '100vh',
         width: '100vw',
@@ -2906,6 +3062,8 @@ const observer = new MutationObserver(() => { // TODO: this gets called way too 
     }
 });
 
+// TODO: revisit.
+observer.observe(document.body, { subtree: true, childList: true });
 observer.observe(document.querySelector('#__next'), { subtree: true, childList: true });
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -2935,11 +3093,12 @@ const style = `
 
     #gg-mods-container {
         position: absolute;
+        width: 200px;
         top: 40px;
         left: 20px;
-        z-index: 9;	display: flex;
+        z-index: 9;
+        display: flex;
         flex-direction: column;
-        min-width: 175px;
     }
 
     #gg-mods-header-container {
