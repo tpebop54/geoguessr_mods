@@ -480,14 +480,6 @@ const MODS = {
         },
     },
 
-    userChallenges: {
-        show: false, // Incomplete idea.
-        key: 'user-challenges',
-        name: 'User Challenges',
-        tooltip: 'User challenges that a player must complete before making a guess.',
-        options: {}, // If you want to configure what categories or specific challenges are shown, go to _CHALLENGE_OPTIONS.
-    },
-
     scratch: {
         show: false, // Used for dev work.
         key: 'scratch',
@@ -2438,80 +2430,6 @@ const updateDisplayOptions = (forceState = null) => {
 
 
 
-// MOD: User challenges.
-// ===============================================================================================================================
-
-// TODO:
-// - user must click a button that says they did the thing before it shows them the map.
-// - Need to separate stuff like solving equations from clicking on a border. Require a different message per category, e.g. I have done this thing
-// - Option to not have repeats per round. Need at least 5 things per thing.
-// - Option to sync randomzation to other user.
-// - Maybe use API key to detect if they violated a condition.
-// - Click on a city, river, whatever that starts with whatever or contains the letter whatever. Weight the letters?
-// - Weight the enabled challenges somehow?
-
-// Ideas that need more consideration
-// - figure out how to say X in Y language
-// - generate math equation
-
-// Here, you can disable categories. Copy the keys from _USER_CHALLENGES and set to false if you don't want them. All are enabled by default.
-const _ENABLED_CHALLENGES = {
-    indoor: true,
-};
-
-const _USER_CHALLENGES = {
-    getUpAndDoStuff: [
-        'Drink a small glass of water',
-        'Put on sunglasses',
-        'Go outside and come back inside',
-        'Find a rock and show it to the camera',
-        'Find leaf or blade of grass and show it to the camera',
-        'Put on sunglasses for this round',
-        'Find a spoon and show it to the camera',
-        'Find a fork and show it to the camera',
-        'Put on a different shirt',
-        'Find us a fruit or vegetable and show it to the camera',
-        'Either change your shoes, or put on shoes',
-        'Find a toothbrush and show it to the camera',
-    ],
-    doAtDesk: [
-        'Tell us a joke',
-        'Tell us a fun fact',
-        'Count to 30 out loud',
-
-    ],
-    mapChoices: [
-        'Click on water',
-        'Click on a border',
-        'Click on a country that is smaller than the actual country',
-        'Click on a country that is larger than the actual country',
-        'Click on the equator or the prime meridan',
-        'Click on the wrong country',
-    ],
-};
-
-const updateUserChallenges = (forceState = null) => {
-    const mod = MODS.userChallenges;
-    const active = updateMod(mod, forceState);
-
-    function getRandomIndex(arrayLength) {
-        const seed = Math.floor(Date.now() / 30000);
-        return Math.floor(((1664525 * seed + 1013904223) % 4294967296) / 4294967296 * arrayLength);
-    }
-
-    // Example usage:
-    const myArray = ['apple', 'banana', 'cherry', 'date', 'elderberry'];
-    const index = getRandomIndex(myArray.length);
-    console.log(`Selected: ${myArray[index]}`);
-
-    console.log('yo');
-};
-
-// -------------------------------------------------------------------------------------------------------------------------------
-
-
-
-
 // MOD: Scratch and test work.
 // ===============================================================================================================================
 
@@ -2544,7 +2462,6 @@ const _BINDINGS = [
     [MODS.puzzle, updatePuzzle],
     [MODS.tileReveal, updateTileReveal],
     [MODS.displayOptions, updateDisplayOptions],
-    [MODS.userChallenges, updateUserChallenges],
     [MODS.scratch, updateScratch],
 ];
 
@@ -3176,12 +3093,12 @@ const style = `
 
     #gg-mods-container {
         position: absolute;
+        width: 200px;
         top: 40px;
         left: 20px;
         z-index: 9;
         display: flex;
         flex-direction: column;
-        min-width: 175px;
     }
 
     #gg-mods-header-container {
