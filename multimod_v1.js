@@ -6,239 +6,23 @@
 // @match        *://*.geoguessr.com/*
 // @icon         https://www.google.com/s2/favicons?domain=geoguessr.com
 // @grant        unsafeWindow
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/gg_evt.js
 // @grant        GM_addStyle
 // @grant        GM_openInTab
 // @grant        GM.xmlHttpRequest
 
 // ==/UserScript==
 
-// Seems to not work with ad blocker
 
-
-console.log('fuck you');
-
-
-// @   require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/gg_evt.js
-
-
-// Taken and modified from https://miraclewhips.dev/geoguessr-event-framework/geoguessr-event-framework.js
-
-
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator.throw(value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-const THE_WINDOW = unsafeWindow || window;
-(function () {
-    class GEF {
-        constructor() {
-            this.events = new EventTarget();
-            this.state = this.defaultState();
-            this.loadState();
-            this.initFetchEvents();
-            this.overrideFetch();
-            this.init();
-            THE_WINDOW.addEventListener('load', () => {
-                var _a, _b, _c;
-                if (location.pathname.startsWith("/challenge/")) {
-                    const data = (_c = (_b = (_a = THE_WINDOW === null || THE_WINDOW === void 0 ? void 0 : THE_WINDOW.__NEXT_DATA__) === null || _a === void 0 ? void 0 : _a.props) === null || _b === void 0 ? void 0 : _b.pageProps) === null || _c === void 0 ? void 0 : _c.gameSnapshot;
-                    if (!data || !data.round) {
-                        return;
-                    }
-                    THE_WINDOW.GEFFetchEvents.dispatchEvent(new CustomEvent('received_data', { detail: data }));
-                }
-            });
-            THE_WINDOW.GEFFetchEvents.addEventListener('received_data', (event) => {
-                this.parseData(event.detail);
-            });
-        }
-        initFetchEvents() {
-            if (THE_WINDOW.GEFFetchEvents !== undefined) {
-                return;
-            }
-            THE_WINDOW.GEFFetchEvents = new EventTarget();
-        }
-        overrideFetch() {
-            if (THE_WINDOW.fetch.isGEFFetch) {
-                return;
-            }
-            const default_fetch = THE_WINDOW.fetch;
-            THE_WINDOW.fetch = (function () {
-                return function (...args) {
-                    return __awaiter(this, void 0, void 0, function* () {
-                        const url = args[0].toString();
-                        if (/geoguessr.com\/api\/v3\/(games|challenges)\//.test(url) && url.indexOf('daily-challenge') === -1) {
-                            const result = yield default_fetch.apply(THE_WINDOW, args);
-                            const data = yield result.clone().json();
-                            if (!data.round) {
-                                return result;
-                            }
-                            THE_WINDOW.GEFFetchEvents.dispatchEvent(new CustomEvent('received_data', { detail: data }));
-                            return result;
-                        }
-                        return default_fetch.apply(THE_WINDOW, args);
-                    });
-                };
-            })();
-            THE_WINDOW.fetch.isGEFFetch = true;
-        }
-        init() {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (!this.loadedPromise) {
-                    this.loadedPromise = Promise.resolve(this);
-                }
-                return yield this.loadedPromise;
-            });
-        }
-        defaultState() {
-            return {
-                current_game_id: '',
-                is_challenge_link: false,
-                current_round: 0,
-                round_in_progress: false,
-                game_in_progress: true,
-                total_score: { amount: 0, unit: 'points', percentage: 0 },
-                total_distance: {
-                    meters: { amount: 0, unit: 'km' },
-                    miles: { amount: 0, unit: 'miles' }
-                },
-                total_time: 0,
-                rounds: [],
-                map: { id: '', name: '' },
-            };
-        }
-        parseData(data) {
-            const finished = data.player.guesses.length == data.round;
-            if (finished) {
-                this.stopRound(data);
-            }
-            else {
-                this.startRound(data);
-            }
-        }
-        loadState() {
-            let data = window.localStorage.getItem('GeoGuessrEventFramework_STATE');
-            if (!data) {
-                return;
-            }
-            let dataJson = JSON.parse(data);
-            if (!dataJson) {
-                return;
-            }
-            Object.assign(this.state, this.defaultState(), dataJson);
-            this.saveState();
-        }
-        saveState() {
-            window.localStorage.setItem('GeoGuessrEventFramework_STATE', JSON.stringify(this.state));
-        }
-        hex2a(hexx) {
-            const hex = hexx.toString(); //force conversion
-            let str = '';
-            for (let i = 0; i < hex.length; i += 2) {
-                str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
-            }
-            return str;
-        }
-        startRound(data) {
-            this.state.current_round = data.round;
-            this.state.round_in_progress = true;
-            this.state.game_in_progress = true;
-            this.state.current_game_id = data.token;
-            this.state.is_challenge_link = data.type == 'challenge';
-            this.state.rounds = data.rounds; // Modified to include current round
-            if (data) {
-                this.state.map = {
-                    id: data.map,
-                    name: data.mapName
-                };
-            }
-            this.saveState();
-            if (this.state.current_round === 1) {
-                this.events.dispatchEvent(new CustomEvent('game_start', { detail: this.state }));
-            }
-            this.events.dispatchEvent(new CustomEvent('round_start', { detail: this.state }));
-        }
-        stopRound(data) {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5;
-            this.state.round_in_progress = false;
-            if (data) {
-                const r = data.rounds[this.state.current_round - 1];
-                const g = data.player.guesses[this.state.current_round - 1];
-                if (!r || !g) {
-                    return;
-                }
-                this.state.rounds[this.state.current_round - 1] = {
-                    location: {
-                        lat: r.lat,
-                        lng: r.lng,
-                        heading: r.heading,
-                        pitch: r.pitch,
-                        zoom: r.zoom,
-                        panoId: r.panoId ? this.hex2a(r.panoId) : undefined,
-                    },
-                    player_guess: {
-                        lat: g.lat,
-                        lng: g.lng,
-                    },
-                    score: {
-                        amount: parseFloat((_a = g === null || g === void 0 ? void 0 : g.roundScore) === null || _a === void 0 ? void 0 : _a.amount) || 0,
-                        unit: ((_b = g === null || g === void 0 ? void 0 : g.roundScore) === null || _b === void 0 ? void 0 : _b.unit) || 'points',
-                        percentage: ((_c = g === null || g === void 0 ? void 0 : g.roundScore) === null || _c === void 0 ? void 0 : _c.percentage) || 0,
-                    },
-                    distance: {
-                        meters: {
-                            amount: parseFloat((_e = (_d = g === null || g === void 0 ? void 0 : g.distance) === null || _d === void 0 ? void 0 : _d.meters) === null || _e === void 0 ? void 0 : _e.amount) || 0,
-                            unit: ((_g = (_f = g === null || g === void 0 ? void 0 : g.distance) === null || _f === void 0 ? void 0 : _f.meters) === null || _g === void 0 ? void 0 : _g.unit) || 'km',
-                        },
-                        miles: {
-                            amount: parseFloat((_j = (_h = g === null || g === void 0 ? void 0 : g.distance) === null || _h === void 0 ? void 0 : _h.miles) === null || _j === void 0 ? void 0 : _j.amount) || 0,
-                            unit: ((_l = (_k = g === null || g === void 0 ? void 0 : g.distance) === null || _k === void 0 ? void 0 : _k.miles) === null || _l === void 0 ? void 0 : _l.unit) || 'miles',
-                        },
-                    },
-                    time: g === null || g === void 0 ? void 0 : g.time
-                };
-                this.state.total_score = {
-                    amount: parseFloat((_o = (_m = data === null || data === void 0 ? void 0 : data.player) === null || _m === void 0 ? void 0 : _m.totalScore) === null || _o === void 0 ? void 0 : _o.amount) || 0,
-                    unit: ((_q = (_p = data === null || data === void 0 ? void 0 : data.player) === null || _p === void 0 ? void 0 : _p.totalScore) === null || _q === void 0 ? void 0 : _q.unit) || 'points',
-                    percentage: ((_s = (_r = data === null || data === void 0 ? void 0 : data.player) === null || _r === void 0 ? void 0 : _r.totalScore) === null || _s === void 0 ? void 0 : _s.percentage) || 0,
-                };
-                this.state.total_distance = {
-                    meters: {
-                        amount: parseFloat((_v = (_u = (_t = data === null || data === void 0 ? void 0 : data.player) === null || _t === void 0 ? void 0 : _t.totalDistance) === null || _u === void 0 ? void 0 : _u.meters) === null || _v === void 0 ? void 0 : _v.amount) || 0,
-                        unit: ((_y = (_x = (_w = data === null || data === void 0 ? void 0 : data.player) === null || _w === void 0 ? void 0 : _w.totalDistance) === null || _x === void 0 ? void 0 : _x.meters) === null || _y === void 0 ? void 0 : _y.unit) || 'km',
-                    },
-                    miles: {
-                        amount: parseFloat((_1 = (_0 = (_z = data === null || data === void 0 ? void 0 : data.player) === null || _z === void 0 ? void 0 : _z.totalDistance) === null || _0 === void 0 ? void 0 : _0.miles) === null || _1 === void 0 ? void 0 : _1.amount) || 0,
-                        unit: ((_4 = (_3 = (_2 = data === null || data === void 0 ? void 0 : data.player) === null || _2 === void 0 ? void 0 : _2.totalDistance) === null || _3 === void 0 ? void 0 : _3.miles) === null || _4 === void 0 ? void 0 : _4.unit) || 'miles',
-                    },
-                };
-                this.state.total_time = (_5 = data === null || data === void 0 ? void 0 : data.player) === null || _5 === void 0 ? void 0 : _5.totalTime;
-                this.state.map = {
-                    id: data.map,
-                    name: data.mapName
-                };
-            }
-            this.saveState();
-            this.events.dispatchEvent(new CustomEvent('round_end', { detail: this.state }));
-            if (this.state.current_round === 5) {
-                this.events.dispatchEvent(new CustomEvent('game_end', { detail: this.state }));
-            }
-        }
-    }
-    if (!THE_WINDOW.GeoGuessrEventFramework) {
-        THE_WINDOW.GeoGuessrEventFramework = new GEF();
-        console.log('GeoGuessr Event Framework initialised: https://github.com/miraclewhips/geoguessr-event-framework');
-    }
-})();
-
+/**
+Bullshit I have to fix
+ - Tile reveal is still doing blink mode
+ - Some race condition with the map loading.
+*/
 
 /**
   USER NOTES
+    - Sadly, you have to disable ad blockers for this to work. I tried so hard to allow them.
     - When loading, you may occasionally have to refresh the page once or twice.
     - You can disable the quotes if you want via the SHOW_QUOTES variable. Blackout screen is non-negotiable.
     - If things go super bad, press "Alt Shift ." (period is actually a > with Shift active). This will disable all mods and refresh the page.
@@ -524,7 +308,7 @@ for (const mod of Object.values(MODS)) {
 const STATE_KEY = 'gg_state'; // Key in window.localStorage.
 
 const saveState = () => {
-	window.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
+    window.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
 };
 
 const clearState = () => {
@@ -576,7 +360,7 @@ let GG_CLICK; // { lat, lng } of latest map click.
 let GG_CUSTOM_MARKER; // Custom marker. This is not the user click marker. Can only use one at a time. Need to clear/move when used.
 let GG_GUESSMAP_BLOCKER; // Div that blocks events to the map. You can still open a debugger by right clicking the menu header.
 
-let IS_DRAGGING_SMALL_MAP = false; // true when user is actively dragging the guessMap. Some of the map events conflict with others.
+let _IS_DRAGGING_SMALL_MAP = false; // true when user is actively dragging the guessMap. Some of the map events conflict with others.
 
 // On page load, show random quotes, jokes, facts, etc. The blackout screen cannot be turned off without changing code.
 const SHOW_QUOTES = {
@@ -747,24 +531,38 @@ const setOption = (mod, key, value, save = true) => {
 };
 
 const isArrayOption = (mod, key) => {
-    if (!mod.options ||!mod.options[key]) {
+    if (!mod.options || !mod.options[key]) {
         return false;
     }
     return Array.isArray(mod.options[key].options);
 };
+
+let _OPTION_MENU; // TODO:revisit
+let _OPTION_MENU_DRAGGING = false;
+let _OPTION_MENU_DRAGGING_MOUSEDOWN;
+let _OPTION_MENU_DRAGGING_MOUSEMOVE;
+let _OPTION_MENU_DRAGGING_MOUSEUP;
+let _OPTION_MENU_DRAGGING_OFFSET_X; // Needed for offsetting the drag element from the client.
+let _OPTION_MENU_DRAGGING_OFFSET_Y;
 
 const makeOptionMenu = (mod) => {
     if (document.getElementById('gg-option-menu')) {
         return;
     }
 
-    let menu = document.createElement('div');
-    menu.id = 'gg-option-menu';
+    let _OPTION_MENU = document.createElement('div');
+    _OPTION_MENU.id = 'gg-option-menu';
 
-    const title = document.createElement('div');
-    title.id = 'gg-option-title';
-    title.innerHTML = `${mod.name} Options`;
-    menu.appendChild(title);
+    /* eslint-disable no-return-assign */
+    _OPTION_MENU.onmousedown = (evt) => {
+        _OPTION_MENU_DRAGGING = true;
+        _OPTION_MENU_DRAGGING_OFFSET_X = evt.clientX - _OPTION_MENU.offsetLeft;
+        _OPTION_MENU_DRAGGING_OFFSET_Y = evt.clientY - _OPTION_MENU.offsetTop;
+    };
+    document.onmousemove = (evt) => _OPTION_MENU_DRAGGING && (
+        _OPTION_MENU.style.left = evt.clientX - _OPTION_MENU_DRAGGING_OFFSET_X + 'px', _OPTION_MENU.style.top = evt.clientY - _OPTION_MENU_DRAGGING_OFFSET_Y + 'px');
+    document.onmouseup = () => _OPTION_MENU_DRAGGING = false;
+    /* eslint-enable no-return-assign */
 
     const defaults = getDefaultMod(mod).options || {};
 
@@ -813,7 +611,7 @@ const makeOptionMenu = (mod) => {
         lineDiv.appendChild(input);
         inputs.push([key, type, input]);
 
-        menu.appendChild(lineDiv);
+        _OPTION_MENU.appendChild(lineDiv);
     };
 
     const onReset = () => {
@@ -847,10 +645,10 @@ const makeOptionMenu = (mod) => {
     const formDiv = document.createElement('div');
     formDiv.id = 'gg-option-form-div';
     for (const [label, callback] of [
-            ['Close', onClose],
-            ['Reset', onReset],
-            ['Apply', onApply],
-        ]) {
+        ['Close', onClose],
+        ['Reset', onReset],
+        ['Apply', onApply],
+    ]) {
         const button = document.createElement('button');
         button.id = `gg-option-${label.toLowerCase()}`;
         button.classList.add('gg-option-label');
@@ -861,8 +659,8 @@ const makeOptionMenu = (mod) => {
     };
 
     const modDiv = getModDiv();
-    menu.appendChild(formDiv);
-    modDiv.appendChild(menu);
+    _OPTION_MENU.appendChild(formDiv);
+    modDiv.appendChild(_OPTION_MENU);
 };
 
 const updateMod = (mod, forceState = null) => {
@@ -979,7 +777,7 @@ const setMapCenter = (lat = null, lng = null, zoom = null) => { // All optional 
         lng = currentLng;
     }
     GOOGLE_MAP.setCenter({ lat, lng });
-    if (zoom != null && zoom !==currentZoom) {
+    if (zoom != null && zoom !== currentZoom) {
         GOOGLE_MAP.setZoom(zoom);
     }
 };
@@ -1203,7 +1001,7 @@ const addMarkerAt = (lat, lng, title = null) => {
         position: { lat, lng },
         map: GOOGLE_MAP,
         title: title == null ? '' : title,
-  });
+    });
 };
 
 const setGuessMapEvents = (enabled = true) => {
@@ -1246,7 +1044,7 @@ const setHeading = (nDegrees) => {
 };
 
 const doRotation = (nDegrees) => {
-    if (IS_DRAGGING_SMALL_MAP) {
+    if (_IS_DRAGGING_SMALL_MAP) {
         return; // Drag event gets cut by setHeading.
     }
     setHeading(GOOGLE_MAP.getHeading() + nDegrees);
@@ -1591,13 +1389,14 @@ const updateInFrame = (forceState = null) => {
 // MOD: Lottery.
 // ===============================================================================================================================
 
-let LOTTERY_DISPLAY; // Display elements for lottery mod. (counter and button).
-let LOTTERY_COUNT; // How many remaining guesses you have.
+let _LOTTERY_DISPLAY; // Display elements for lottery mod. (counter and button).
+let _LOTTERY_COUNT; // How many remaining guesses you have.
+let _LOTTERY_DRAGGING = false; // Makes lottery display draggable because it overlaps the menu.
 
 const removeLotteryDisplay = () => {
-    if (LOTTERY_DISPLAY) {
-        LOTTERY_DISPLAY.parentElement.removeChild(LOTTERY_DISPLAY);
-        LOTTERY_DISPLAY = undefined;
+    if (_LOTTERY_DISPLAY) {
+        _LOTTERY_DISPLAY.parentElement.removeChild(_LOTTERY_DISPLAY);
+        _LOTTERY_DISPLAY = undefined;
     }
 };
 
@@ -1607,12 +1406,18 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     const container = document.createElement('div'); // Contains the full lottery display.
     container.id = 'gg-lottery';
 
+    /* eslint-disable no-return-assign */
+    container.onmousedown = () => _LOTTERY_DRAGGING = true;
+    document.onmousemove = (evt) => _LOTTERY_DRAGGING && (container.style.left = evt.clientX - 50 + 'px', container.style.top = evt.clientY - 25 + 'px');
+    document.onmouseup = () => _LOTTERY_DRAGGING = false;
+    /* eslint-enable no-return-assign */
+
     // Set up display for the lottery counter and button.
     const counterLabel = document.createElement('div'); // Text label.
     counterLabel.textContent = 'Tokens remaining:';
     const counter = document.createElement('div'); // How many guesses you have left, will update each click.
     counter.id = 'gg-lottery-counter';
-    counter.innerText = LOTTERY_COUNT;
+    counter.innerText = _LOTTERY_COUNT;
     const counterDiv = document.createElement('div'); // Contains the above two items side by side.
     counterDiv.id = 'gg-lottery-counter-div';
     counterDiv.appendChild(counterLabel);
@@ -1626,11 +1431,11 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     container.appendChild(button);
     document.body.appendChild(container);
 
-    LOTTERY_DISPLAY = container;
+    _LOTTERY_DISPLAY = container;
 
     // Bind stuff.
     const onClick = () => {
-        if (LOTTERY_COUNT === 0) {
+        if (_LOTTERY_COUNT === 0) {
             return;
         }
         const mod = MODS.lottery;
@@ -1653,8 +1458,8 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
             maxLng = normalizedLng + nDegLng;
         }
         const { lat, lng } = getRandomLoc(minLat, maxLat, minLng, maxLng);
-        LOTTERY_COUNT -= 1;
-        counter.innerText = LOTTERY_COUNT;
+        _LOTTERY_COUNT -= 1;
+        counter.innerText = _LOTTERY_COUNT;
         clickAt(lat, lng);
         setMapCenter(lat, lng);
     };
@@ -1666,7 +1471,7 @@ const updateLottery = (forceState = null) => {
     const active = updateMod(mod, forceState);
 
     removeLotteryDisplay();
-    LOTTERY_COUNT = getOption(mod, 'nGuesses');
+    _LOTTERY_COUNT = getOption(mod, 'nGuesses');
 
     const smallMap = getSmallMap();
     if (active) {
@@ -1944,7 +1749,7 @@ const onDropTile = (evt) => { // When mouse is released, drop the dragged tile a
     let toDrawOnDrop; // imageData that we are going to draw on the tile that we drop on.
     let toDrawOnDrag; // imageData for the tile we dragged from.
 
-    if (_PUZZLE_DRAGGING_TILE === _PUZZLE_CURRENT_DROP_TILE ) { // Dropped within the same tile as it was dragged from.
+    if (_PUZZLE_DRAGGING_TILE === _PUZZLE_CURRENT_DROP_TILE) { // Dropped within the same tile as it was dragged from.
         toDrawOnDrag = _PUZZLE_DRAGGING_IMG; // We dropped on the same tile we dragged from.
         toDrawOnDrop = null; // No need to draw it twice.
     } else {
@@ -2033,8 +1838,8 @@ const onPuzzleMousemove = () => {
         _PUZZLE_DRAGGING_TILE.sy,
         _PUZZLE_TILE_WIDTH,
         _PUZZLE_TILE_HEIGHT,
-        _CANVAS_2D_MOUSE_LOC .x - _PUZZLE_TILE_WIDTH / 2,
-        _CANVAS_2D_MOUSE_LOC .y - _PUZZLE_TILE_HEIGHT / 2,
+        _CANVAS_2D_MOUSE_LOC.x - _PUZZLE_TILE_WIDTH / 2,
+        _CANVAS_2D_MOUSE_LOC.y - _PUZZLE_TILE_HEIGHT / 2,
         _PUZZLE_TILE_WIDTH,
         _PUZZLE_TILE_HEIGHT,
     );
@@ -2158,22 +1963,24 @@ async function updatePuzzle(forceState = null) {
 // MOD: Tile reveal.
 // ===============================================================================================================================
 
-let TILE_COUNT_DISPLAY; // Div for showing the number of remaining tiles.
-let TILE_COUNT; // How many remaining tiles the user has.
-let OVERLAY_TILES; // Opaque black tiles to overlay.
+let _TILE_COUNT_DISPLAY; // Div for showing the number of remaining tiles.
+let _TILE_COUNT; // How many remaining tiles the user has.
+let _OVERLAY_TILES; // Opaque black tiles to overlay.
+let _TILE_COUNT_DRAGGING = false;
+let _TILE_COUNT_DRAGGING_LISTENER;
 
 const getTileCount = () => { // Number of remaining clicks the user has.
-    TILE_COUNT = Math.round(Number(TILE_COUNT));
-    if (isNaN(TILE_COUNT)) {
-        TILE_COUNT = 0; // Don't let decimals or weird values mess up the logic here. -1 means infinite.
+    _TILE_COUNT = Math.round(Number(_TILE_COUNT));
+    if (isNaN(_TILE_COUNT)) {
+        _TILE_COUNT = 0; // Don't let decimals or weird values mess up the logic here. -1 means infinite.
     }
-    return TILE_COUNT;
+    return _TILE_COUNT;
 };
 
 const removeTileCounter = () => {
-    if (TILE_COUNT_DISPLAY) {
-        TILE_COUNT_DISPLAY.parentElement.removeChild(TILE_COUNT_DISPLAY);
-        TILE_COUNT_DISPLAY = undefined;
+    if (_TILE_COUNT_DISPLAY) {
+        _TILE_COUNT_DISPLAY.parentElement.removeChild(_TILE_COUNT_DISPLAY);
+        _TILE_COUNT_DISPLAY = undefined;
     }
 };
 
@@ -2182,6 +1989,17 @@ const makeTileCounter = () => { // Make the tile count display overlay.
 
     const container = document.createElement('div'); // Label and counter side by side.
     container.id = 'gg-tile-count';
+
+    /* eslint-disable no-return-assign */
+    container.onmousedown = () => _TILE_COUNT_DRAGGING = true;
+    document.onmousemove = (evt) => _TILE_COUNT_DRAGGING && (container.style.left = evt.clientX - 50 + 'px', container.style.top = evt.clientY - 25 + 'px');
+    container.onmouseup = () => {
+        _TILE_COUNT_DRAGGING = false;
+        document.removeEventListener(_TILE_COUNT_DRAGGING_LISTENER);
+        _TILE_COUNT_DRAGGING_LISTENER = null;
+    };
+    /* eslint-enable no-return-assign */
+
     const counterLabel = document.createElement('div'); // Text label.
     counterLabel.textContent = 'Tiles remaining:';
     const counter = document.createElement('div'); // How many tiles you have left, will update each click.
@@ -2191,7 +2009,7 @@ const makeTileCounter = () => { // Make the tile count display overlay.
     container.appendChild(counter);
     document.body.appendChild(container);
 
-    TILE_COUNT_DISPLAY = container;
+    _TILE_COUNT_DISPLAY = container;
 };
 
 const removeTiles = () => {
@@ -2207,11 +2025,11 @@ const onClickTile = (evt) => {
     evt.stopPropagation();
     evt.stopImmediatePropagation();
 
-    TILE_COUNT = getTileCount();
-    if (TILE_COUNT > 0) {
-        TILE_COUNT -= 1;
+    _TILE_COUNT = getTileCount();
+    if (_TILE_COUNT > 0) {
+        _TILE_COUNT -= 1;
         const counter = document.getElementById('gg-tile-count-counter');
-        counter.innerText = TILE_COUNT;
+        counter.innerText = _TILE_COUNT;
         tile.classList.add('removed');
     }
 };
@@ -2257,8 +2075,8 @@ const updateTileReveal = (forceState = null) => {
         const nCols = getOption(mod, 'nCols');
         makeTiles(nRows, nCols);
         makeTileCounter();
-        TILE_COUNT = getOption(mod, 'nClicks');
-        TILE_COUNT = getTileCount(); // Fix any weird inputs.
+        _TILE_COUNT = getOption(mod, 'nClicks');
+        _TILE_COUNT = getTileCount(); // Fix any weird inputs.
     } else {
         removeTiles();
         removeTileCounter();
@@ -2405,7 +2223,7 @@ const getFilterStr = (mod) => { // Get string that can be applied to streetview 
         if (value == null) {
             continue
         }
-        filterStr += `${key}(${value}) ` ; // Requires units in value.
+        filterStr += `${key}(${value}) `; // Requires units in value.
     }
     filterStr = filterStr.trim();
     return filterStr;
@@ -2489,9 +2307,9 @@ const bindButtons = () => {
 };
 
 const addButtons = () => { // Add mod buttons to the active round, with a little button to toggle them.
-	const bigMapContainer = getBigMapContainer();
+    const bigMapContainer = getBigMapContainer();
     const modContainer = getModDiv(); // Includes header and buttons.
-	if (!bigMapContainer || modContainer) { // Page not loaded, or modContainer is already rendered.
+    if (!bigMapContainer || modContainer) { // Page not loaded, or modContainer is already rendered.
         return;
     }
 
@@ -2526,10 +2344,10 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
 
     modsContainer.appendChild(headerContainer);
     modsContainer.appendChild(buttonContainer);
-	bigMapContainer.appendChild(modsContainer);
-	bindButtons();
+    bigMapContainer.appendChild(modsContainer);
+    bindButtons();
 
-    modMenuToggle.addEventListener('click', function() {
+    modMenuToggle.addEventListener('click', function () {
         if (buttonContainer.classList.contains('hidden')) {
             buttonContainer.classList.remove('hidden');
             modMenuToggle.textContent = '▼';
@@ -2814,38 +2632,38 @@ const clickGarbage = (nMilliseconds = 900) => {
 // Script injection, extracted from unityscript extracted from extenssr:
 // https://gitlab.com/nonreviad/extenssr/-/blob/main/src/injected_scripts/maps_api_injecter.ts
 const overrideOnLoad = (googleScript, observer, overrider) => {
-	const oldOnload = googleScript.onload;
-	googleScript.onload = (event) => {
-		const google = getGoogle();
-		if (google) {
-			observer.disconnect();
-			overrider(google);
-		}
-		if (oldOnload) {
-			oldOnload.call(googleScript, event);
-		}
-	}
+    const oldOnload = googleScript.onload;
+    googleScript.onload = (event) => {
+        const google = getGoogle();
+        if (google) {
+            observer.disconnect();
+            overrider(google);
+        }
+        if (oldOnload) {
+            oldOnload.call(googleScript, event);
+        }
+    }
 }
 
 const grabGoogleScript = (mutations) => {
-	for (const mutation of mutations) {
-		for (const newNode of mutation.addedNodes) {
-			const asScript = newNode;
-			if (asScript && asScript.src && asScript.src.startsWith('https://maps.googleapis.com/')) {
-				return asScript;
-			}
-		}
-	}
-	return null;
+    for (const mutation of mutations) {
+        for (const newNode of mutation.addedNodes) {
+            const asScript = newNode;
+            if (asScript && asScript.src && asScript.src.startsWith('https://maps.googleapis.com/')) {
+                return asScript;
+            }
+        }
+    }
+    return null;
 }
 
 const injecter = (overrider) => {
-	new MutationObserver((mutations, observer) => {
-		const googleScript = grabGoogleScript(mutations);
-		if (googleScript) {
-			overrideOnLoad(googleScript, observer, overrider);
-		}
-	}).observe(document.documentElement, { childList: true, subtree: true });
+    new MutationObserver((mutations, observer) => {
+        const googleScript = grabGoogleScript(mutations);
+        if (googleScript) {
+            overrideOnLoad(googleScript, observer, overrider);
+        }
+    }).observe(document.documentElement, { childList: true, subtree: true });
 }
 
 const initMods = () => { // Enable mods that were already enabled via localStorage.
@@ -2871,9 +2689,9 @@ _CHEAT_DETECTION = true; // I freaking dare you.
 
 const _getIsCheatingOrMaybeNotCheating = () => {
     const t = 30,
-          e = Math.floor(0.5 * t),
-          n = Math.floor(0.3 * t),
-          r = t - e - n;
+        e = Math.floor(0.5 * t),
+        n = Math.floor(0.3 * t),
+        r = t - e - n;
     const a = new Set();
     while (a.size < 8) {
         const x = Math.floor(100 * Math.random()) + 1;
@@ -2920,7 +2738,7 @@ const _YOURE_LOOKING_AT_MY_CODE = (v) => {
                 const e = [
                     () => Boolean(c.match(/.+/)),
                     () => [null, undefined, NaN, 0, '', false].includes(b),
-                    () => new Set(madeYouLook()).has([...Array(5)].map((_,i) => i).filter(x => x < 5).reduce((a,b) => a + (b === 0 ? 0 : 1), 0) + ([] + [])[1] || +!![] + +!![] + +!![] + +!![]),
+                    () => new Set(madeYouLook()).has([...Array(5)].map((_, i) => i).filter(x => x < 5).reduce((a, b) => a + (b === 0 ? 0 : 1), 0) + ([] + [])[1] || +!![] + +!![] + +!![] + +!![]),
                     () => Object.is(b, null)
                 ];
                 for (let f = 0; f < e.length; f++) {
@@ -2951,47 +2769,47 @@ document.addEventListener('DOMContentLoaded', (event) => {
         return; // Get outta 'ere
     }
 
-	injecter(() => {
-		const google = getGoogle();
-		if (!google) {
+    injecter(() => {
+        const google = getGoogle();
+        if (!google) {
             return;
         }
 
-		google.maps.StreetViewPanorama = class extends google.maps.StreetViewPanorama {
-			constructor(...args) {
-				super(...args);
-				GOOGLE_STREETVIEW = this;
-			}
-		}
+        google.maps.StreetViewPanorama = class extends google.maps.StreetViewPanorama {
+            constructor(...args) {
+                super(...args);
+                GOOGLE_STREETVIEW = this;
+            }
+        }
 
-		google.maps.Map = class extends google.maps.Map {
-			constructor(...args) {
-				super(...args);
+        google.maps.Map = class extends google.maps.Map {
+            constructor(...args) {
+                super(...args);
                 this.setRenderingType(google.maps.RenderingType.VECTOR); // Must be a vector map for some additional controls.
                 this.setHeadingInteractionEnabled(true);
                 this.setTiltInteractionEnabled(true);
 
-				GOOGLE_SVC = new google.maps.ImageMapType({
-					getTileUrl: (point, zoom) => `https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i${zoom}!2i${point.x}!3i${point.y}!2i9!3x1!2m8!1e2!2ssvv!4m2!1scc!2s*211m3*211e2*212b1*213e2*212b1*214b1!4m2!1ssvl!2s*211b0*212b1!3m8!2sen!3sus!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e`,
-					tileSize: new google.maps.Size(256, 256),
-					maxZoom: 9,
-					minZoom: 0,
-				});
-				google.maps.event.addListenerOnce(this, 'idle', () => { // Actions on initial guess map load.
+                GOOGLE_SVC = new google.maps.ImageMapType({
+                    getTileUrl: (point, zoom) => `https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i${zoom}!2i${point.x}!3i${point.y}!2i9!3x1!2m8!1e2!2ssvv!4m2!1scc!2s*211m3*211e2*212b1*213e2*212b1*214b1!4m2!1ssvl!2s*211b0*212b1!3m8!2sen!3sus!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e`,
+                    tileSize: new google.maps.Size(256, 256),
+                    maxZoom: 9,
+                    minZoom: 0,
+                });
+                google.maps.event.addListenerOnce(this, 'idle', () => { // Actions on initial guess map load.
                     initMods();
                     console.log(`Tpebop's mods initialized.`);
                     setTimeout(clearCh_eatOverlay, 1000);
                     clickGarbage(900);
-				});
+                });
                 google.maps.event.addListener(this, 'dragstart', () => {
-					IS_DRAGGING_SMALL_MAP = true;
-				});
+                    _IS_DRAGGING_SMALL_MAP = true;
+                });
                 google.maps.event.addListener(this, 'dragend', () => {
-					IS_DRAGGING_SMALL_MAP = false;
-				});
+                    _IS_DRAGGING_SMALL_MAP = false;
+                });
                 google.maps.event.addListener(this, 'click', (evt) => {
-					onMapClick(evt);
-				});
+                    onMapClick(evt);
+                });
 
                 if (DEBUG) {
                     this.addListener('contextmenu', (evt) => { // Add right click listener to guess map for debugging.
@@ -3006,9 +2824,9 @@ document.addEventListener('DOMContentLoaded', (event) => {
                     }
                 }
                 GOOGLE_MAP = this; // Store globally for use in other functions once this is instantiated.
-			}
-		}
-	});
+            }
+        }
+    });
 });
 
 GeoGuessrEventFramework.init().then(GEF => {
@@ -3031,8 +2849,8 @@ GeoGuessrEventFramework.init().then(GEF => {
         GG_CLICK = undefined;
     });
 
-	document.addEventListener('keydown', (evt) => { // Custom hotkeys.
-		if (document.activeElement.tagName === 'INPUT') {
+    document.addEventListener('keydown', (evt) => { // Custom hotkeys.
+        if (document.activeElement.tagName === 'INPUT') {
             return;
         }
         if (evt.key === ',' && GOOGLE_MAP && !isActive(MODS.zoomInOnly)) {
@@ -3047,14 +2865,14 @@ GeoGuessrEventFramework.init().then(GEF => {
             clearState();
             window.location.reload();
         }
-	});
+    });
 
 });
 
 loadState();
 
 const observer = new MutationObserver(() => { // TODO: this gets called way too much.
-	addButtons();
+    addButtons();
     // I think this is an anti-c h eat method from Geoguessr. It's annoying, so it's gone.
     const reactionsDiv = getGameReactionsDiv();
     if (reactionsDiv) {
@@ -3156,6 +2974,7 @@ const style = `
     #gg-option-menu {
         position: absolute;
         left: 110%;
+        min-width: 300px;
         padding: 15px;
         background: var(--ds-color-purple-100);
         border-radius: 10px;
@@ -3165,6 +2984,7 @@ const style = `
         font-weight: bold;
         text-shadow: ${bodyShadow};
         z-index: 1;
+        cursor: move;
     }
 
     #gg-option-title {
@@ -3283,6 +3103,7 @@ const style = `
     #gg-lottery {
         display: flex;
         flex-direction: column;
+        width: 330px;
         align-items: center;
         position: absolute;
         top: 13%;
@@ -3341,6 +3162,8 @@ const style = `
         padding: 0.5em;
         border-radius: 10px;
         z-index: 9999;
+        overflow: hidden;
+        width: 275px;
     }
 
     #gg-tile-count-counter {
