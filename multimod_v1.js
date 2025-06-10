@@ -3067,45 +3067,48 @@ document.addEventListener('DOMContentLoaded', (event) => {
             onMapClick(evt);
         });
 
-
         // We need to wait for both the big map and the small map to both be idle before we can trigger events.
         // Otherwise, we hit race conditions and it makes the code flaky. Check frequently with a timeout so we don't brick the site.
-        const isMapIdle = (mapObject) => {
-            if (!mapObject) return false;
-
+        // TODO: this is fragile. Need to reconsider how to do this.
+        const isMapReady = (map) => {
+            if (!map) {
+                return false;
+            }
             try {
-                // Try to access map properties - if these work without issues, map is idle
-                mapObject.getCenter();
-                mapObject.getZoom();
-                mapObject.getBounds();
-                return true;
-            } catch (error) {
+                if (map.constructor === google.maps.Map) {
+                    const mapBounds = map.getBounds();
+                    const mapDiv = map.getDiv();
+                    return mapBounds && mapDiv;
+                }
+                if (map.constructor === google.maps.StreetViewPanorama) {
+                    const loc = map.getLocation();
+                    const visible = map.getVisible();
+                    return loc && visible;
+                }
+            } catch (err) {
+                console.log('Error checking map readiness:', err);
                 return false;
             }
         };
-
         const waitForMapsToLoad = (callback, intervalMs = 100, timeout = 5000) => {
             const startTime = Date.now();
 
             const checkInterval = setInterval(() => {
-                // Check if both maps exist and are idle
-                if (GOOGLE_MAP && GOOGLE_STREETVIEW &&
-                    isMapIdle(GOOGLE_MAP) &&
-                    isMapIdle(GOOGLE_STREETVIEW)) {
+                const map2dReady = GOOGLE_MAP && isMapReady(GOOGLE_MAP);
+                const map3dReady = GOOGLE_STREETVIEW && isMapReady(GOOGLE_STREETVIEW);
 
+                if (map2dReady && map3dReady) {
                     clearInterval(checkInterval);
                     callback();
                     return;
                 }
 
-                // Check for timeout
                 if (Date.now() - startTime > timeout) {
                     clearInterval(checkInterval);
-                    console.warn('Timeout: Maps did not become idle within expected time');
+                    console.warn('Timeout: Maps did not become ready within expected time');
                 }
             }, intervalMs);
         };
-
         waitForMapsToLoad(initMods);
     });
 });
