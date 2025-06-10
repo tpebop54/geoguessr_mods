@@ -6,7 +6,6 @@
 // @match        *://*.geoguessr.com/*
 // @icon         https://www.google.com/s2/favicons?domain=geoguessr.com
 // @grant        unsafeWindow
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/gg_evt.js
 // @grant        GM_addStyle
 // @grant        GM_openInTab
 // @grant        GM.xmlHttpRequest
@@ -16,9 +15,240 @@
 
 /**
 Bullshit I have to fix
+ - Seems to be some issue with gg_evt loading first.
  - Tile reveal is still doing blink mode
  - Some race condition with the map loading.
+ - Show score shit is not working in duels.
 */
+
+
+
+
+
+
+// Taken and modified from https://miraclewhips.dev/geoguessr-event-framework/geoguessr-event-framework.js
+
+//// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/gg_evt.js
+
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator.throw(value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+const THE_WINDOW = unsafeWindow || window;
+(function () {
+    class GEF {
+        constructor() {
+            this.events = new EventTarget();
+            this.state = this.defaultState();
+            this.loadState();
+            this.initFetchEvents();
+            this.overrideFetch();
+            this.init();
+            THE_WINDOW.addEventListener('load', () => {
+                var _a, _b, _c;
+                if (location.pathname.startsWith("/challenge/")) {
+                    const data = (_c = (_b = (_a = THE_WINDOW === null || THE_WINDOW === void 0 ? void 0 : THE_WINDOW.__NEXT_DATA__) === null || _a === void 0 ? void 0 : _a.props) === null || _b === void 0 ? void 0 : _b.pageProps) === null || _c === void 0 ? void 0 : _c.gameSnapshot;
+                    if (!data || !data.round) {
+                        return;
+                    }
+                    THE_WINDOW.GEFFetchEvents.dispatchEvent(new CustomEvent('received_data', { detail: data }));
+                }
+            });
+            THE_WINDOW.GEFFetchEvents.addEventListener('received_data', (event) => {
+                this.parseData(event.detail);
+            });
+        }
+        initFetchEvents() {
+            if (THE_WINDOW.GEFFetchEvents !== undefined) {
+                return;
+            }
+            THE_WINDOW.GEFFetchEvents = new EventTarget();
+        }
+        overrideFetch() {
+            if (THE_WINDOW.fetch.isGEFFetch) {
+                return;
+            }
+            const default_fetch = THE_WINDOW.fetch;
+            THE_WINDOW.fetch = (function () {
+                return function (...args) {
+                    return __awaiter(this, void 0, void 0, function* () {
+                        const url = args[0].toString();
+                        if (/geoguessr.com\/api\/v3\/(games|challenges)\//.test(url) && url.indexOf('daily-challenge') === -1) {
+                            const result = yield default_fetch.apply(THE_WINDOW, args);
+                            const data = yield result.clone().json();
+                            if (!data.round) {
+                                return result;
+                            }
+                            THE_WINDOW.GEFFetchEvents.dispatchEvent(new CustomEvent('received_data', { detail: data }));
+                            return result;
+                        }
+                        return default_fetch.apply(THE_WINDOW, args);
+                    });
+                };
+            })();
+            THE_WINDOW.fetch.isGEFFetch = true;
+        }
+        init() {
+            return __awaiter(this, void 0, void 0, function* () {
+                if (!this.loadedPromise) {
+                    this.loadedPromise = Promise.resolve(this);
+                }
+                return yield this.loadedPromise;
+            });
+        }
+        defaultState() {
+            return {
+                current_game_id: '',
+                is_challenge_link: false,
+                current_round: 0,
+                round_in_progress: false,
+                game_in_progress: true,
+                total_score: { amount: 0, unit: 'points', percentage: 0 },
+                total_distance: {
+                    meters: { amount: 0, unit: 'km' },
+                    miles: { amount: 0, unit: 'miles' }
+                },
+                total_time: 0,
+                rounds: [],
+                map: { id: '', name: '' },
+            };
+        }
+        parseData(data) {
+            const finished = data.player.guesses.length == data.round;
+            if (finished) {
+                this.stopRound(data);
+            }
+            else {
+                this.startRound(data);
+            }
+        }
+        loadState() {
+            let data = window.localStorage.getItem('GeoGuessrEventFramework_STATE');
+            if (!data) {
+                return;
+            }
+            let dataJson = JSON.parse(data);
+            if (!dataJson) {
+                return;
+            }
+            Object.assign(this.state, this.defaultState(), dataJson);
+            this.saveState();
+        }
+        saveState() {
+            window.localStorage.setItem('GeoGuessrEventFramework_STATE', JSON.stringify(this.state));
+        }
+        hex2a(hexx) {
+            const hex = hexx.toString(); //force conversion
+            let str = '';
+            for (let i = 0; i < hex.length; i += 2) {
+                str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+            }
+            return str;
+        }
+        startRound(data) {
+            this.state.current_round = data.round;
+            this.state.round_in_progress = true;
+            this.state.game_in_progress = true;
+            this.state.current_game_id = data.token;
+            this.state.is_challenge_link = data.type == 'challenge';
+            this.state.rounds = data.rounds; // Modified to include current round
+            if (data) {
+                this.state.map = {
+                    id: data.map,
+                    name: data.mapName
+                };
+            }
+            this.saveState();
+            if (this.state.current_round === 1) {
+                this.events.dispatchEvent(new CustomEvent('game_start', { detail: this.state }));
+            }
+            this.events.dispatchEvent(new CustomEvent('round_start', { detail: this.state }));
+        }
+        stopRound(data) {
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5;
+            this.state.round_in_progress = false;
+            if (data) {
+                const r = data.rounds[this.state.current_round - 1];
+                const g = data.player.guesses[this.state.current_round - 1];
+                if (!r || !g) {
+                    return;
+                }
+                this.state.rounds[this.state.current_round - 1] = {
+                    location: {
+                        lat: r.lat,
+                        lng: r.lng,
+                        heading: r.heading,
+                        pitch: r.pitch,
+                        zoom: r.zoom,
+                        panoId: r.panoId ? this.hex2a(r.panoId) : undefined,
+                    },
+                    player_guess: {
+                        lat: g.lat,
+                        lng: g.lng,
+                    },
+                    score: {
+                        amount: parseFloat((_a = g === null || g === void 0 ? void 0 : g.roundScore) === null || _a === void 0 ? void 0 : _a.amount) || 0,
+                        unit: ((_b = g === null || g === void 0 ? void 0 : g.roundScore) === null || _b === void 0 ? void 0 : _b.unit) || 'points',
+                        percentage: ((_c = g === null || g === void 0 ? void 0 : g.roundScore) === null || _c === void 0 ? void 0 : _c.percentage) || 0,
+                    },
+                    distance: {
+                        meters: {
+                            amount: parseFloat((_e = (_d = g === null || g === void 0 ? void 0 : g.distance) === null || _d === void 0 ? void 0 : _d.meters) === null || _e === void 0 ? void 0 : _e.amount) || 0,
+                            unit: ((_g = (_f = g === null || g === void 0 ? void 0 : g.distance) === null || _f === void 0 ? void 0 : _f.meters) === null || _g === void 0 ? void 0 : _g.unit) || 'km',
+                        },
+                        miles: {
+                            amount: parseFloat((_j = (_h = g === null || g === void 0 ? void 0 : g.distance) === null || _h === void 0 ? void 0 : _h.miles) === null || _j === void 0 ? void 0 : _j.amount) || 0,
+                            unit: ((_l = (_k = g === null || g === void 0 ? void 0 : g.distance) === null || _k === void 0 ? void 0 : _k.miles) === null || _l === void 0 ? void 0 : _l.unit) || 'miles',
+                        },
+                    },
+                    time: g === null || g === void 0 ? void 0 : g.time
+                };
+                this.state.total_score = {
+                    amount: parseFloat((_o = (_m = data === null || data === void 0 ? void 0 : data.player) === null || _m === void 0 ? void 0 : _m.totalScore) === null || _o === void 0 ? void 0 : _o.amount) || 0,
+                    unit: ((_q = (_p = data === null || data === void 0 ? void 0 : data.player) === null || _p === void 0 ? void 0 : _p.totalScore) === null || _q === void 0 ? void 0 : _q.unit) || 'points',
+                    percentage: ((_s = (_r = data === null || data === void 0 ? void 0 : data.player) === null || _r === void 0 ? void 0 : _r.totalScore) === null || _s === void 0 ? void 0 : _s.percentage) || 0,
+                };
+                this.state.total_distance = {
+                    meters: {
+                        amount: parseFloat((_v = (_u = (_t = data === null || data === void 0 ? void 0 : data.player) === null || _t === void 0 ? void 0 : _t.totalDistance) === null || _u === void 0 ? void 0 : _u.meters) === null || _v === void 0 ? void 0 : _v.amount) || 0,
+                        unit: ((_y = (_x = (_w = data === null || data === void 0 ? void 0 : data.player) === null || _w === void 0 ? void 0 : _w.totalDistance) === null || _x === void 0 ? void 0 : _x.meters) === null || _y === void 0 ? void 0 : _y.unit) || 'km',
+                    },
+                    miles: {
+                        amount: parseFloat((_1 = (_0 = (_z = data === null || data === void 0 ? void 0 : data.player) === null || _z === void 0 ? void 0 : _z.totalDistance) === null || _0 === void 0 ? void 0 : _0.miles) === null || _1 === void 0 ? void 0 : _1.amount) || 0,
+                        unit: ((_4 = (_3 = (_2 = data === null || data === void 0 ? void 0 : data.player) === null || _2 === void 0 ? void 0 : _2.totalDistance) === null || _3 === void 0 ? void 0 : _3.miles) === null || _4 === void 0 ? void 0 : _4.unit) || 'miles',
+                    },
+                };
+                this.state.total_time = (_5 = data === null || data === void 0 ? void 0 : data.player) === null || _5 === void 0 ? void 0 : _5.totalTime;
+                this.state.map = {
+                    id: data.map,
+                    name: data.mapName
+                };
+            }
+            this.saveState();
+            this.events.dispatchEvent(new CustomEvent('round_end', { detail: this.state }));
+            if (this.state.current_round === 5) {
+                this.events.dispatchEvent(new CustomEvent('game_end', { detail: this.state }));
+            }
+        }
+    }
+    if (!THE_WINDOW.GeoGuessrEventFramework) {
+        THE_WINDOW.GeoGuessrEventFramework = new GEF();
+        console.log('GeoGuessr Event Framework initialised: https://github.com/miraclewhips/geoguessr-event-framework');
+    }
+})();
+
+
+
+
+
+
+
 
 /**
   USER NOTES
@@ -382,6 +612,7 @@ let SCORE_FUNC;
 const UPDATE_CALLBACKS = {};
 
 let _CHEAT_DETECTION = true; // true to perform some actions that will make it obvious that a user is using this mod pack.
+let _MODS_LOADED = false;
 
 // -------------------------------------------------------------------------------------------------------------------------------
 
@@ -554,14 +785,18 @@ const makeOptionMenu = (mod) => {
     _OPTION_MENU.id = 'gg-option-menu';
 
     /* eslint-disable no-return-assign */
-    _OPTION_MENU.onmousedown = (evt) => {
+    _OPTION_MENU_DRAGGING_MOUSEDOWN = _OPTION_MENU.addEventListener('mousedown', (evt) => {
         _OPTION_MENU_DRAGGING = true;
         _OPTION_MENU_DRAGGING_OFFSET_X = evt.clientX - _OPTION_MENU.offsetLeft;
         _OPTION_MENU_DRAGGING_OFFSET_Y = evt.clientY - _OPTION_MENU.offsetTop;
+    });
+    _OPTION_MENU_DRAGGING_MOUSEMOVE = _OPTION_MENU.addEventListener('mousemove', (evt) => {
+        _OPTION_MENU_DRAGGING && (
+            _OPTION_MENU.style.left = evt.clientX - _OPTION_MENU_DRAGGING_OFFSET_X + 'px', _OPTION_MENU.style.top = evt.clientY - _OPTION_MENU_DRAGGING_OFFSET_Y + 'px');
+    });
+    _OPTION_MENU_DRAGGING_MOUSEUP = (evt) => {
+        _OPTION_MENU_DRAGGING = false;
     };
-    document.onmousemove = (evt) => _OPTION_MENU_DRAGGING && (
-        _OPTION_MENU.style.left = evt.clientX - _OPTION_MENU_DRAGGING_OFFSET_X + 'px', _OPTION_MENU.style.top = evt.clientY - _OPTION_MENU_DRAGGING_OFFSET_Y + 'px');
-    document.onmouseup = () => _OPTION_MENU_DRAGGING = false;
     /* eslint-enable no-return-assign */
 
     const defaults = getDefaultMod(mod).options || {};
@@ -663,12 +898,19 @@ const makeOptionMenu = (mod) => {
     modDiv.appendChild(_OPTION_MENU);
 };
 
+// TODO: must figure this one out. Trevor, I need you to step it up. Fuck you Matt.
 const updateMod = (mod, forceState = null) => {
+    /** TODO: revisit
     if (!GOOGLE_MAP) {
         const err = `Map did not load properly for the script. Try refreshing the page and making sure the map loads fully before you do anything. Reload the page in a new tab if this fails.`;
         window.alert(err);
         throw new Error(err);
     }
+    */
+    if (!_MODS_LOADED) {
+        return;
+    }
+
     const previousState = isActive(mod);
     const newState = forceState != null ? forceState : !previousState;
 
@@ -2037,6 +2279,11 @@ const onClickTile = (evt) => {
 const makeTiles = (nRows, nCols) => {
     removeTiles();
 
+    const bigMapCanvas = getBigMapCanvas();
+    if (!bigMapCanvas) {
+        return;
+    }
+
     const tileOverlay = document.createElement('div');
     tileOverlay.id = 'gg-tile-overlay';
     tileOverlay.style.gridTemplateRows = `repeat(${nRows}, 1fr)`;
@@ -2061,10 +2308,8 @@ const makeTiles = (nRows, nCols) => {
         tileOverlay.appendChild(tile);
     }
 
-    const bigMapCanvas = getBigMapCanvas();
     bigMapCanvas.parentElement.insertBefore(tileOverlay, bigMapCanvas.parentElement.firstChild);
 };
-
 
 const updateTileReveal = (forceState = null) => {
     const mod = MODS.tileReveal;
@@ -2288,6 +2533,9 @@ const closePopup = (evt) => { // Always close the popup menu when disabling a mo
 };
 
 const bindButtons = () => {
+    if (_MODS_LOADED) {
+        return;
+    }
     for (const [mod, callback] of _BINDINGS) {
         if (!mod.show) {
             continue;
@@ -2300,62 +2548,69 @@ const bindButtons = () => {
         }
         // If option menu is open, close it. If enabling a mod, open the option menu.
         button.addEventListener('click', () => {
-            closeOptionMenu(); // Synchronous.
-            setTimeout(callback, 0); // Async, must happen after closing menu.
+            closeOptionMenu();
+            callback();
         });
     }
+    _MODS_LOADED = true;
 };
 
 const addButtons = () => { // Add mod buttons to the active round, with a little button to toggle them.
-    const bigMapContainer = getBigMapContainer();
-    const modContainer = getModDiv(); // Includes header and buttons.
-    if (!bigMapContainer || modContainer) { // Page not loaded, or modContainer is already rendered.
-        return;
-    }
-
-    const modsContainer = document.createElement('div'); // Header and buttons.
-    modsContainer.id = 'gg-mods-container';
-
-    const headerContainer = document.createElement('div'); // Header and button toggle.
-    headerContainer.id = 'gg-mods-header-container';
-    const headerText = document.createElement('div');
-    headerText.id = 'gg-mods-header';
-    headerText.textContent = `TPEBOP'S MODS`;
-    const modMenuToggle = document.createElement('button');
-    modMenuToggle.id = 'gg-mods-container-toggle';
-    modMenuToggle.textContent = '▼'; // TODO: load from localStorage.
-    headerContainer.appendChild(headerText);
-    headerContainer.appendChild(modMenuToggle);
-
-    const buttonContainer = document.createElement('div'); // Mod buttons.
-    buttonContainer.id = 'gg-mods-button-container';
-
-    for (const mod of Object.values(MODS)) {
-        if (!mod.show) {
-            continue;
+    try {
+        const bigMapContainer = getBigMapContainer();
+        const modContainer = getModDiv(); // Includes header and buttons.
+        if (!bigMapContainer || modContainer) { // Page not loaded, or modContainer is already rendered.
+            return;
         }
-        const modButton = document.createElement('div');
-        modButton.id = getButtonID(mod);
-        modButton.classList.add('gg-mod-button');
-        modButton.title = mod.tooltip;
-        modButton.textContent = getButtonText(mod);
-        buttonContainer.appendChild(modButton);
-    }
 
-    modsContainer.appendChild(headerContainer);
-    modsContainer.appendChild(buttonContainer);
-    bigMapContainer.appendChild(modsContainer);
-    bindButtons();
+        const modsContainer = document.createElement('div'); // Header and buttons.
+        modsContainer.id = 'gg-mods-container';
 
-    modMenuToggle.addEventListener('click', function () {
-        if (buttonContainer.classList.contains('hidden')) {
-            buttonContainer.classList.remove('hidden');
-            modMenuToggle.textContent = '▼';
-        } else {
-            buttonContainer.classList.add('hidden');
-            modMenuToggle.textContent = '▶';
+        const headerContainer = document.createElement('div'); // Header and button toggle.
+        headerContainer.id = 'gg-mods-header-container';
+        const headerText = document.createElement('div');
+        headerText.id = 'gg-mods-header';
+        headerText.textContent = `TPEBOP'S MODS`;
+        const modMenuToggle = document.createElement('button');
+        modMenuToggle.id = 'gg-mods-container-toggle';
+        modMenuToggle.textContent = '▼'; // TODO: load from localStorage.
+        headerContainer.appendChild(headerText);
+        headerContainer.appendChild(modMenuToggle);
+
+        const buttonContainer = document.createElement('div'); // Mod buttons.
+        buttonContainer.id = 'gg-mods-button-container';
+
+        for (const mod of Object.values(MODS)) {
+            if (!mod.show) {
+                continue;
+            }
+            const modButton = document.createElement('div');
+            modButton.id = getButtonID(mod);
+            modButton.classList.add('gg-mod-button');
+            modButton.title = mod.tooltip;
+            modButton.textContent = getButtonText(mod);
+            buttonContainer.appendChild(modButton);
         }
-    });
+
+        modsContainer.appendChild(headerContainer);
+        modsContainer.appendChild(buttonContainer);
+        bigMapContainer.appendChild(modsContainer);
+        bindButtons();
+
+        modMenuToggle.addEventListener('click', function () {
+            if (buttonContainer.classList.contains('hidden')) {
+                buttonContainer.classList.remove('hidden');
+                modMenuToggle.textContent = '▼';
+            } else {
+                buttonContainer.classList.add('hidden');
+                modMenuToggle.textContent = '▶';
+            }
+        });
+        return true;
+    } catch (err) {
+        console.error(err);
+        return false;
+    }
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -2789,26 +3044,12 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 this.setHeadingInteractionEnabled(true);
                 this.setTiltInteractionEnabled(true);
 
+                // Problem is here. StreetView isn't loaded by the time the mini map is.
                 GOOGLE_SVC = new google.maps.ImageMapType({
                     getTileUrl: (point, zoom) => `https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i${zoom}!2i${point.x}!3i${point.y}!2i9!3x1!2m8!1e2!2ssvv!4m2!1scc!2s*211m3*211e2*212b1*213e2*212b1*214b1!4m2!1ssvl!2s*211b0*212b1!3m8!2sen!3sus!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e`,
                     tileSize: new google.maps.Size(256, 256),
                     maxZoom: 9,
                     minZoom: 0,
-                });
-                google.maps.event.addListenerOnce(this, 'idle', () => { // Actions on initial guess map load.
-                    initMods();
-                    console.log(`Tpebop's mods initialized.`);
-                    setTimeout(clearCh_eatOverlay, 1000);
-                    clickGarbage(900);
-                });
-                google.maps.event.addListener(this, 'dragstart', () => {
-                    _IS_DRAGGING_SMALL_MAP = true;
-                });
-                google.maps.event.addListener(this, 'dragend', () => {
-                    _IS_DRAGGING_SMALL_MAP = false;
-                });
-                google.maps.event.addListener(this, 'click', (evt) => {
-                    onMapClick(evt);
                 });
 
                 if (DEBUG) {
@@ -2826,6 +3067,22 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 GOOGLE_MAP = this; // Store globally for use in other functions once this is instantiated.
             }
         }
+
+        google.maps.event.addListenerOnce(this, 'idle', () => { // Actions on initial guess map load.
+            console.log(`Tpebop's mods initialized.`);
+            initMods();
+            setTimeout(clearCh_eatOverlay, 1000);
+            clickGarbage(900);
+        });
+        google.maps.event.addListener(this, 'dragstart', () => {
+            _IS_DRAGGING_SMALL_MAP = true;
+        });
+        google.maps.event.addListener(this, 'dragend', () => {
+            _IS_DRAGGING_SMALL_MAP = false;
+        });
+        google.maps.event.addListener(this, 'click', (evt) => {
+            onMapClick(evt);
+        });
     });
 });
 
@@ -2872,16 +3129,15 @@ GeoGuessrEventFramework.init().then(GEF => {
 loadState();
 
 const observer = new MutationObserver(() => { // TODO: this gets called way too much.
-    addButtons();
+    const buttonsAdded = addButtons();
     // I think this is an anti-c h eat method from Geoguessr. It's annoying, so it's gone.
     const reactionsDiv = getGameReactionsDiv();
     if (reactionsDiv) {
         reactionsDiv.parentElement.removeChild(reactionsDiv);
     }
+    return buttonsAdded; // TODO: clean up
 });
 
-// TODO: revisit.
-observer.observe(document.body, { subtree: true, childList: true });
 observer.observe(document.querySelector('#__next'), { subtree: true, childList: true });
 
 // -------------------------------------------------------------------------------------------------------------------------------
