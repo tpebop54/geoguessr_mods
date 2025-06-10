@@ -19,6 +19,7 @@ Bullshit I have to fix
  - Tile reveal is still doing blink mode
  - Some race condition with the map loading.
  - Show score shit is not working in duels.
+ - Tile counter does not reset on new round.
 */
 
 
@@ -842,7 +843,7 @@ const makeOptionMenu = (mod) => {
     };
 
     const onReset = () => {
-            input.value = getDefaultOption(mod, key);
+        input.value = getDefaultOption(mod, key);
     };
 
     const onClose = () => {
