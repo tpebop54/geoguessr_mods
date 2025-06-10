@@ -2528,10 +2528,6 @@ const _BINDINGS = [
     [MODS.scratch, updateScratch],
 ];
 
-const closePopup = (evt) => { // Always close the popup menu when disabling a mod.
-
-};
-
 const bindButtons = () => {
     if (_MODS_LOADED) {
         return;
@@ -3014,6 +3010,26 @@ const _YOURE_LOOKING_AT_MY_CODE = (v) => {
     }
 };
 
+// TODO: race condition between big map and mini map. Also this doesn't work.
+const initGoogle = () => {
+    GOOGLE_SVC = new google.maps.ImageMapType({
+        getTileUrl: (point, zoom) => `https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i${zoom}!2i${point.x}!3i${point.y}!2i9!3x1!2m8!1e2!2ssvv!4m2!1scc!2s*211m3*211e2*212b1*213e2*212b1*214b1!4m2!1ssvl!2s*211b0*212b1!3m8!2sen!3sus!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e`,
+        tileSize: new google.maps.Size(256, 256),
+        maxZoom: 9,
+        minZoom: 0,
+    });
+    if (DEBUG) {
+        this.addListener('contextmenu', (evt) => { // Add right click listener to guess map for debugging.
+            debugMap(this, evt);
+        });
+        const modHeader = document.querySelector('#tpebops-mods-header');
+        modHeader.addEventListener('contextmenu', (evt) => {
+            evt.preventDefault();
+            debugMap(this, evt);
+        });
+    }
+};
+
 document.addEventListener('DOMContentLoaded', (event) => {
 
     if (!_CHEAT_DETECTION) {
@@ -3043,37 +3059,32 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 this.setRenderingType(google.maps.RenderingType.VECTOR); // Must be a vector map for some additional controls.
                 this.setHeadingInteractionEnabled(true);
                 this.setTiltInteractionEnabled(true);
-
-                // Problem is here. StreetView isn't loaded by the time the mini map is.
-                GOOGLE_SVC = new google.maps.ImageMapType({
-                    getTileUrl: (point, zoom) => `https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i${zoom}!2i${point.x}!3i${point.y}!2i9!3x1!2m8!1e2!2ssvv!4m2!1scc!2s*211m3*211e2*212b1*213e2*212b1*214b1!4m2!1ssvl!2s*211b0*212b1!3m8!2sen!3sus!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e`,
-                    tileSize: new google.maps.Size(256, 256),
-                    maxZoom: 9,
-                    minZoom: 0,
-                });
-
-                if (DEBUG) {
-                    this.addListener('contextmenu', (evt) => { // Add right click listener to guess map for debugging.
-                        debugMap(this, evt);
-                    });
-                    const modHeader = document.querySelector('#tpebops-mods-header');
-                    if (modHeader) {
-                        modHeader.addEventListener('contextmenu', (evt) => {
-                            evt.preventDefault();
-                            debugMap(this, evt);
-                        });
-                    }
-                }
                 GOOGLE_MAP = this; // Store globally for use in other functions once this is instantiated.
             }
         }
 
-        google.maps.event.addListenerOnce(this, 'idle', () => { // Actions on initial guess map load.
+        // We need to wait for both the big map and the small map to be idle before we can trigger events.
+        // Otherwise, we hit race conditions and it makes the code flaky.
+        const createIdlePromise = (mapObject) => {
+            return new Promise((resolve) => {
+                const listener = mapObject.addListener('idle', () => {
+                    google.maps.event.removeListener(listener);
+                    resolve();
+                });
+            });
+        };
+
+        Promise.all([
+            createIdlePromise(map),
+            createIdlePromise(streetViewPanorama)
+        ]).then(() => {
             console.log(`Tpebop's mods initialized.`);
+            initGoogle();
             initMods();
             setTimeout(clearCh_eatOverlay, 1000);
             clickGarbage(900);
         });
+
         google.maps.event.addListener(this, 'dragstart', () => {
             _IS_DRAGGING_SMALL_MAP = true;
         });
