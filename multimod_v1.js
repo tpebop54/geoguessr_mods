@@ -22,10 +22,6 @@ Bullshit I have to fix
 */
 
 
-
-
-
-
 // Taken and modified from https://miraclewhips.dev/geoguessr-event-framework/geoguessr-event-framework.js
 
 //// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/gg_evt.js
@@ -242,10 +238,6 @@ const THE_WINDOW = unsafeWindow || window;
         console.log('GeoGuessr Event Framework initialised: https://github.com/miraclewhips/geoguessr-event-framework');
     }
 })();
-
-
-
-
 
 
 
@@ -3042,7 +3034,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
         return; // Get outta 'ere
     }
     injecter(() => {
-        console.log('god damn fucking shit');
+        console.log('god damn fucking shit'); // TODO: remove
 
         const google = getGoogle();
         if (!google) {
@@ -3064,7 +3056,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 super(...args);
                 GOOGLE_STREETVIEW = this;
             }
-        }
+        };
 
         google.maps.event.addListener(this, 'dragstart', () => {
             _IS_DRAGGING_SMALL_MAP = true;
@@ -3086,25 +3078,34 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 });
             });
         };
-        const waitForMapsToLoad = (callback, intervalMs, timeout) => {
+
+        const waitForMapsToLoad = (callback, intervalMs = 100, timeout = 5000) => {
+            let promisesCreated = false;
+
             const checkInterval = setInterval(() => {
-                if (GOOGLE_MAP && GOOGLE_STREETVIEW) {
+                if (GOOGLE_MAP && GOOGLE_STREETVIEW && !promisesCreated) {
+                    promisesCreated = true; // Prevent multiple promise creation
+                    clearInterval(checkInterval); // Clear immediately after finding maps
+
                     Promise.all([
                         createIdlePromise(GOOGLE_MAP),
                         createIdlePromise(GOOGLE_STREETVIEW)
                     ]).then(() => {
                         callback();
-                        clearInterval(checkInterval);
                     }).catch((error) => {
                         console.error('Error waiting for maps to be idle:', error);
                     });
                 }
             }, intervalMs);
-            setTimeout(() => { // No infinite loop.
-                clearInterval(checkInterval);
-                console.warn('Timeout: Maps did not load within expected time');
+
+            setTimeout(() => {
+                if (!promisesCreated) {
+                    clearInterval(checkInterval);
+                    console.warn('Timeout: Maps did not load within expected time');
+                }
             }, timeout);
         };
+
         waitForMapsToLoad(initMods, 100, 5000);
     });
 });
