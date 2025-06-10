@@ -3069,56 +3069,40 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
         // We need to wait for both the big map and the small map to both be idle before we can trigger events.
         // Otherwise, we hit race conditions and it makes the code flaky. Check frequently with a timeout so we don't brick the site.
-        const ensureMapIdle = (mapObject) => {
-            return new Promise((resolve) => {
-                if (!mapObject) {
-                    resolve();
-                    return;
-                }
+        const isMapIdle = (mapObject) => {
+            if (!mapObject) return false;
 
-                const listener = mapObject.addListener('idle', () => {
-                    google.maps.event.removeListener(listener);
-                    resolve();
-                });
-
-                // Force an idle event by making a minimal change
-                setTimeout(() => {
-                    try {
-                        // This will trigger idle event regardless of current state
-                        mapObject.panBy(0, 0);
-                    } catch (error) {
-                        // If this fails, the idle event will still fire when map is ready
-                        console.log('Map not ready for panBy, waiting for natural idle event');
-                    }
-                }, 50);
-            });
+            try {
+                // Try to access map properties - if these work without issues, map is idle
+                mapObject.getCenter();
+                mapObject.getZoom();
+                mapObject.getBounds();
+                return true;
+            } catch (error) {
+                return false;
+            }
         };
 
         const waitForMapsToLoad = (callback, intervalMs = 100, timeout = 5000) => {
-            let promisesCreated = false;
+            const startTime = Date.now();
 
             const checkInterval = setInterval(() => {
-                if (GOOGLE_MAP && GOOGLE_STREETVIEW && !promisesCreated) {
-                    promisesCreated = true;
-                    clearInterval(checkInterval);
+                // Check if both maps exist and are idle
+                if (GOOGLE_MAP && GOOGLE_STREETVIEW &&
+                    isMapIdle(GOOGLE_MAP) &&
+                    isMapIdle(GOOGLE_STREETVIEW)) {
 
-                    Promise.all([
-                        ensureMapIdle(GOOGLE_MAP),
-                        ensureMapIdle(GOOGLE_STREETVIEW)
-                    ]).then(() => {
-                        callback();
-                    }).catch((error) => {
-                        console.error('Error waiting for maps to be idle:', error);
-                    });
+                    clearInterval(checkInterval);
+                    callback();
+                    return;
+                }
+
+                // Check for timeout
+                if (Date.now() - startTime > timeout) {
+                    clearInterval(checkInterval);
+                    console.warn('Timeout: Maps did not become idle within expected time');
                 }
             }, intervalMs);
-
-            setTimeout(() => {
-                if (!promisesCreated) {
-                    clearInterval(checkInterval);
-                    console.warn('Timeout: Maps did not load within expected time');
-                }
-            }, timeout);
         };
 
         waitForMapsToLoad(initMods);
