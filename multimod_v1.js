@@ -2896,7 +2896,7 @@ const grabGoogleScript = (mutations) => {
         }
     }
     return null;
-}
+};;
 
 const injecter = (overrider) => {
     new MutationObserver((mutations, observer) => {
@@ -2905,7 +2905,7 @@ const injecter = (overrider) => {
             overrideOnLoad(googleScript, observer, overrider);
         }
     }).observe(document.documentElement, { childList: true, subtree: true });
-}
+};
 
 const initMods = () => { // Enable mods that were already enabled via localStorage.
     for (const [mod, callback] of _BINDINGS) {
@@ -3023,8 +3023,8 @@ let _MAP_LOAD_INTERVAL; // Dealing with race condition between big map and mini 
 
 
 document.addEventListener('DOMContentLoaded', (event) => {
-    console.log('fuck you');
 
+    console.log('fuck you');
 
 
     if (!_CHEAT_DETECTION) {
@@ -3034,8 +3034,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
         return; // Get outta 'ere
     }
     injecter(() => {
-        console.log('god damn fucking shit'); // TODO: remove
-
         const google = getGoogle();
         if (!google) {
             return;
@@ -3068,14 +3066,31 @@ document.addEventListener('DOMContentLoaded', (event) => {
             onMapClick(evt);
         });
 
+
         // We need to wait for both the big map and the small map to both be idle before we can trigger events.
         // Otherwise, we hit race conditions and it makes the code flaky. Check frequently with a timeout so we don't brick the site.
-        const createIdlePromise = (mapObject) => {
+        const ensureMapIdle = (mapObject) => {
             return new Promise((resolve) => {
+                if (!mapObject) {
+                    resolve();
+                    return;
+                }
+
                 const listener = mapObject.addListener('idle', () => {
                     google.maps.event.removeListener(listener);
                     resolve();
                 });
+
+                // Force an idle event by making a minimal change
+                setTimeout(() => {
+                    try {
+                        // This will trigger idle event regardless of current state
+                        mapObject.panBy(0, 0);
+                    } catch (error) {
+                        // If this fails, the idle event will still fire when map is ready
+                        console.log('Map not ready for panBy, waiting for natural idle event');
+                    }
+                }, 50);
             });
         };
 
@@ -3084,12 +3099,12 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
             const checkInterval = setInterval(() => {
                 if (GOOGLE_MAP && GOOGLE_STREETVIEW && !promisesCreated) {
-                    promisesCreated = true; // Prevent multiple promise creation
-                    clearInterval(checkInterval); // Clear immediately after finding maps
+                    promisesCreated = true;
+                    clearInterval(checkInterval);
 
                     Promise.all([
-                        createIdlePromise(GOOGLE_MAP),
-                        createIdlePromise(GOOGLE_STREETVIEW)
+                        ensureMapIdle(GOOGLE_MAP),
+                        ensureMapIdle(GOOGLE_STREETVIEW)
                     ]).then(() => {
                         callback();
                     }).catch((error) => {
@@ -3106,7 +3121,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
             }, timeout);
         };
 
-        waitForMapsToLoad(initMods, 100, 5000);
+        waitForMapsToLoad(initMods);
     });
 });
 
