@@ -850,9 +850,7 @@ const makeOptionMenu = (mod) => {
     };
 
     const onReset = () => {
-        for (const [key, type, input] of inputs) {
             input.value = getDefaultOption(mod, key);
-        }
     };
 
     const onClose = () => {
@@ -1433,7 +1431,7 @@ const updateFlashlight = (forceState = null) => {
         flashlight.parentElement.removeChild(flashlight);
     }
     if (FLASHLIGHT_MOUSEMOVE) {
-        body.removeEventListener(FLASHLIGHT_MOUSEMOVE);
+        body.removeEventListener('mousemove', FLASHLIGHT_MOUSEMOVE);
     }
 
     if (active) {
@@ -2237,7 +2235,7 @@ const makeTileCounter = () => { // Make the tile count display overlay.
     document.onmousemove = (evt) => _TILE_COUNT_DRAGGING && (container.style.left = evt.clientX - 50 + 'px', container.style.top = evt.clientY - 25 + 'px');
     container.onmouseup = () => {
         _TILE_COUNT_DRAGGING = false;
-        document.removeEventListener(_TILE_COUNT_DRAGGING_LISTENER);
+        document.removeEventListener('mousemove', _TILE_COUNT_DRAGGING_LISTENER);
         _TILE_COUNT_DRAGGING_LISTENER = null;
     };
     /* eslint-enable no-return-assign */
@@ -2672,7 +2670,7 @@ const _QUOTES = {
         `You cannot believe now that you'll ever feel better. But this is not true. You are sure to be happy again. Knowing this, truly believing it, will make you less miserable now. — Abraham Lincoln`,
         `Do not stand at my grave and cry, I am not there, I did not die. — Mary Frye`,
         `To live is to suffer. To survive is to find meaning in the suffering. — Friedrich Nietzsche`,
-        `Of all sad words of tongue or pen, the saddest are these, 'It might have been. — John Greenleaf Whittier`,
+        `Of all sad words of tongue or pen, the saddest are these, "It might have been." — John Greenleaf Whittier`,
         `If you try to please audiences, uncritically accepting their tastes, it can only mean that you have no respect for them. — Andrei Tarkovsky`,
         `In the end… We only regret the chances we didn’t take. — Lewis Carroll`,
         `There’s no feeling more intense than starting over. Starting over is harder than starting up. — Bennett Foddy`,
@@ -3031,17 +3029,21 @@ const initGoogle = () => {
 
 let _MAP_LOAD_INTERVAL; // Dealing with race condition between big map and mini map idle.
 
+
 document.addEventListener('DOMContentLoaded', (event) => {
+    console.log('fuck you');
+
+
 
     if (!_CHEAT_DETECTION) {
         return; // Get outta 'ere
     }
-
     if (_YOURE_LOOKING_AT_MY_CODE()) {
         return; // Get outta 'ere
     }
-
     injecter(() => {
+        console.log('god damn fucking shit');
+
         const google = getGoogle();
         if (!google) {
             return;
@@ -3075,7 +3077,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
         });
 
         // We need to wait for both the big map and the small map to both be idle before we can trigger events.
-        // Otherwise, we hit race conditions and it makes the code flaky.
+        // Otherwise, we hit race conditions and it makes the code flaky. Check frequently with a timeout so we don't brick the site.
         const createIdlePromise = (mapObject) => {
             return new Promise((resolve) => {
                 const listener = mapObject.addListener('idle', () => {
@@ -3084,31 +3086,26 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 });
             });
         };
-
-        const waitForMapsToLoad = () => {
+        const waitForMapsToLoad = (callback, intervalMs, timeout) => {
             const checkInterval = setInterval(() => {
                 if (GOOGLE_MAP && GOOGLE_STREETVIEW) {
                     Promise.all([
                         createIdlePromise(GOOGLE_MAP),
                         createIdlePromise(GOOGLE_STREETVIEW)
                     ]).then(() => {
-                        clearInterval(checkInterval);
                         callback();
+                        clearInterval(checkInterval);
                     }).catch((error) => {
                         console.error('Error waiting for maps to be idle:', error);
                     });
                 }
-            }, 100);
+            }, intervalMs);
             setTimeout(() => { // No infinite loop.
                 clearInterval(checkInterval);
                 console.warn('Timeout: Maps did not load within expected time');
-            }, 3000);
+            }, timeout);
         };
-
-        waitForMapsToLoad(GOOGLE_MAP, GOOGLE_STREETVIEW, () => {
-            initMods();
-        }, 100); // Check every 100ms.
-
+        waitForMapsToLoad(initMods, 100, 5000);
     });
 });
 
@@ -3265,7 +3262,8 @@ const style = `
         font-size: 15px;
         font-weight: bold;
         text-shadow: ${bodyShadow};
-        z-index: 1;
+        z-index: 9999;
+        overflow: hidden
         cursor: move;
     }
 
@@ -3428,7 +3426,7 @@ const style = `
         z-index: 99999999;
     }
 
-    /* TODO: can this be merged with the lottery CSS? */
+    /* TODO: can this be merged with the lottery CSS? and also some of it with gg-option-menu */
     #gg-tile-count {
         display: flex;
         justify-content: space-between;
