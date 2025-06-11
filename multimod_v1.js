@@ -2836,25 +2836,27 @@ onDomReady(() => {
                 this.setHeadingInteractionEnabled(true);
                 this.setTiltInteractionEnabled(true);
                 GOOGLE_MAP = this; // Store globally for use in other functions once this is instantiated.
+
+                // Add event listeners to THIS map instance
+                google.maps.event.addListener(this, 'dragstart', () => {
+                    IS_DRAGGING_SMALL_MAP = true;
+                });
+                google.maps.event.addListener(this, 'dragend', () => {
+                    IS_DRAGGING_SMALL_MAP = false;
+                });
+                google.maps.event.addListener(this, 'click', (evt) => {
+                    onMapClick(evt);
+                });
             }
         }
+
         google.maps.StreetViewPanorama = class extends google.maps.StreetViewPanorama {
             constructor(...args) {
                 super(...args);
                 GOOGLE_STREETVIEW = this;
             }
         };
-        google.maps.event.addListener(this, 'dragstart', () => {
-            _IS_DRAGGING_SMALL_MAP = true;
-        });
-        google.maps.event.addListener(this, 'dragend', () => {
-            _IS_DRAGGING_SMALL_MAP = false;
-        });
-        google.maps.event.addListener(this, 'click', (evt) => {
-            onMapClick(evt);
-        });
 
-        // We need to wait for both the big map and the small map to both be idle before we can trigger events. TODO: still flaky.
         const isMapReady = (map) => {
             if (!map) {
                 return false;
@@ -2875,25 +2877,24 @@ onDomReady(() => {
                 return false;
             }
         };
+
         const waitForMapsToLoad = (callback, intervalMs = 100, timeout = 5000) => {
             const startTime = Date.now();
-
             const checkInterval = setInterval(() => {
                 const map2dReady = GOOGLE_MAP && isMapReady(GOOGLE_MAP);
                 const map3dReady = GOOGLE_STREETVIEW && isMapReady(GOOGLE_STREETVIEW);
-
                 if (map2dReady && map3dReady) {
                     clearInterval(checkInterval);
                     callback();
                     return;
                 }
-
                 if (Date.now() - startTime > timeout) {
                     clearInterval(checkInterval);
                     console.warn('Timeout: Maps did not become ready within expected time');
                 }
             }, intervalMs);
         };
+
         waitForMapsToLoad(initMods);
         initGoogle();
     });
