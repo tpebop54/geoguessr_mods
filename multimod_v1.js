@@ -10,6 +10,8 @@
 // @grant        GM_addStyle
 // @grant        GM_openInTab
 // @grant        GM.xmlHttpRequest
+// @updateURL    https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/multimod_v1.js
+// @downloadURL  https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/multimod_v1.js
 
 // ==/UserScript==
 
@@ -404,9 +406,13 @@ const tryMultiple = (selectors) => { // Different modes, different versions, Geo
     return null;
 };
 
-const getGoogle = () => {
+const getGoogle = () => { // Used to interact with the panorama and mini-map.
     return window.google || unsafeWindow.google;
-}
+};
+
+const getGGHeader = () => {
+    return document.querySelector('img[alt="GeoGuessr"]');
+};
 
 const getGameContent = () => {
     return document.querySelector('div[class^="game_content__"]');
