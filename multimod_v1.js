@@ -3001,6 +3001,7 @@ const _YOURE_LOOKING_AT_MY_CODE = (v) => {
     }
 };
 
+// TODO: header is not getting set up properly
 const initGoogle = () => {
     GOOGLE_SVC = new google.maps.ImageMapType({
         getTileUrl: (point, zoom) => `https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i${zoom}!2i${point.x}!3i${point.y}!2i9!3x1!2m8!1e2!2ssvv!4m2!1scc!2s*211m3*211e2*212b1*213e2*212b1*214b1!4m2!1ssvl!2s*211b0*212b1!3m8!2sen!3sus!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e`,
@@ -3008,11 +3009,12 @@ const initGoogle = () => {
         maxZoom: 9,
         minZoom: 0,
     });
-    if (DEBUG) {
-        this.addListener('contextmenu', (evt) => { // Add right click listener to guess map for debugging.
+    const smallMapContainer = getSmallMapContainer();
+    if (DEBUG && smallMapContainer) {
+        smallMapContainer.addEventListener('contextmenu', (evt) => { // Add right click listener to guess map for debugging.
             debugMap(this, evt);
         });
-        const modHeader = document.querySelector('#tpebops-mods-header');
+        const modHeader = document.querySelector('#gg-mods-header');
         modHeader.addEventListener('contextmenu', (evt) => {
             evt.preventDefault();
             debugMap(this, evt);
@@ -3020,14 +3022,15 @@ const initGoogle = () => {
     }
 };
 
-let _MAP_LOAD_INTERVAL; // Dealing with race condition between big map and mini map idle.
+const onDomReady = (callback) => {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', callback);
+    } else {
+        callback();
+    }
+};
 
-
-document.addEventListener('DOMContentLoaded', (event) => {
-
-    console.log('fuck you');
-
-
+onDomReady(() => {
     if (!_CHEAT_DETECTION) {
         return; // Get outta 'ere
     }
@@ -3039,7 +3042,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
         if (!google) {
             return;
         }
-
         google.maps.Map = class extends google.maps.Map {
             constructor(...args) {
                 super(...args);
@@ -3049,14 +3051,12 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 GOOGLE_MAP = this; // Store globally for use in other functions once this is instantiated.
             }
         }
-
         google.maps.StreetViewPanorama = class extends google.maps.StreetViewPanorama {
             constructor(...args) {
                 super(...args);
                 GOOGLE_STREETVIEW = this;
             }
         };
-
         google.maps.event.addListener(this, 'dragstart', () => {
             _IS_DRAGGING_SMALL_MAP = true;
         });
@@ -3067,9 +3067,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
             onMapClick(evt);
         });
 
-        // We need to wait for both the big map and the small map to both be idle before we can trigger events.
-        // Otherwise, we hit race conditions and it makes the code flaky. Check frequently with a timeout so we don't brick the site.
-        // TODO: this is fragile. Need to reconsider how to do this.
+        // We need to wait for both the big map and the small map to both be idle before we can trigger events. TODO: still flaky.
         const isMapReady = (map) => {
             if (!map) {
                 return false;
@@ -3110,11 +3108,12 @@ document.addEventListener('DOMContentLoaded', (event) => {
             }, intervalMs);
         };
         waitForMapsToLoad(initMods);
+        initGoogle();
     });
 });
 
-GeoGuessrEventFramework.init().then(GEF => {
 
+GeoGuessrEventFramework.init().then(GEF => {
     GEF.events.addEventListener('round_start', (evt) => {
         window.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
         try {
@@ -3127,12 +3126,10 @@ GeoGuessrEventFramework.init().then(GEF => {
             console.err(err);
         }
     });
-
     GEF.events.addEventListener('round_end', (evt) => {
         GG_ROUND = undefined;
         GG_CLICK = undefined;
     });
-
     document.addEventListener('keydown', (evt) => { // Custom hotkeys.
         if (document.activeElement.tagName === 'INPUT') {
             return;
