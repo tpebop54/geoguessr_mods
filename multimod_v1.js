@@ -10,8 +10,6 @@
 // @grant        GM_openInTab
 // @grant        GM.xmlHttpRequest
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/gg_evt.js
-// @updateURL    https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/multimod_v1.js
-// @downloadURL  https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/multimod_v1.js
 
 // ==/UserScript==
 
