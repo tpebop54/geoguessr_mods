@@ -5,11 +5,11 @@
 // @author       tpebop
 // @match        *://*.geoguessr.com/*
 // @icon         https://www.google.com/s2/favicons?domain=geoguessr.com
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/gg_evt.js
 // @grant        unsafeWindow
 // @grant        GM_addStyle
 // @grant        GM_openInTab
 // @grant        GM.xmlHttpRequest
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/gg_evt.js
 // @updateURL    https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/multimod_v1.js
 // @downloadURL  https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/multimod_v1.js
 
@@ -17,9 +17,9 @@
 
 
 /**
-Bullshit I have to fix
- - GeoGuessr header is gone in duels on Opera, and fucked up in Chrome.
- - Show score shit is not working in duels.
+Must fix.
+ - GeoGuessr header thing is messed up in Chrome and Opera.
+ - Show score is not working in duels. /live-challenge. Disabling those in prod until I can figure out why.
 */
 
 
@@ -83,8 +83,8 @@ const MODS = {
         },
     },
 
-    zoomInOnly: {
-        show: true,
+    zoomInOnly: { // This one is alright, but just not really good content quality. Try it out if you want!
+        show: false,
         key: 'zoom-in-only',
         name: 'Zoom In Only',
         tooltip: 'You can only zoom inward.',
@@ -92,7 +92,7 @@ const MODS = {
     },
 
     showScore: {
-        show: true,
+        show: false, // Doesn't work in duels.
         key: 'show-score',
         name: 'Show Score',
         tooltip: 'Shows the would-be score of each click.',
@@ -139,7 +139,7 @@ const MODS = {
     },
 
     bopIt: {
-        show: true,
+        show: false, // Doesn't work in duels.
         key: 'bop-it',
         name: 'Bop It',
         tooltip: `Bop It mode where it tells you the intercardinal direction you need to go from your click. You'll figure it out...`,
@@ -154,7 +154,7 @@ const MODS = {
     },
 
     inFrame: {
-        show: true,
+        show: false, // Doesn't work in duels.
         key: 'in-frame',
         name: 'Show In-Frame',
         tooltip: 'Shows if the location is in or out of your current guess map view.',
@@ -230,8 +230,7 @@ const MODS = {
         },
     },
 
-    // Miscellaneous display options that don't deserve a full button.
-    displayOptions: {
+    displayOptions: { // Miscellaneous display options that don't deserve a full button.
         show: true,
         key: 'display-preferences',
         name: 'Display Preferences',
@@ -545,7 +544,7 @@ const isArrayOption = (mod, key) => {
     return Array.isArray(mod.options[key].options);
 };
 
-let _OPTION_MENU; // TODO:revisit
+let _OPTION_MENU;
 let _OPTION_MENU_DRAGGING = false;
 let _OPTION_MENU_DRAGGING_MOUSEDOWN;
 let _OPTION_MENU_DRAGGING_MOUSEMOVE;
@@ -571,9 +570,11 @@ const makeOptionMenu = (mod) => {
         _OPTION_MENU_DRAGGING && (
             _OPTION_MENU.style.left = evt.clientX - _OPTION_MENU_DRAGGING_OFFSET_X + 'px', _OPTION_MENU.style.top = evt.clientY - _OPTION_MENU_DRAGGING_OFFSET_Y + 'px');
     });
-    _OPTION_MENU_DRAGGING_MOUSEUP = (evt) => {
+    _OPTION_MENU_DRAGGING_MOUSEUP = _OPTION_MENU.addEventListener('mouseup', (evt) => {
         _OPTION_MENU_DRAGGING = false;
-    };
+        _OPTION_MENU_DRAGGING_OFFSET_X = undefined;
+        _OPTION_MENU_DRAGGING_OFFSET_Y = undefined;
+    });
     /* eslint-enable no-return-assign */
 
     const defaults = getDefaultMod(mod).options || {};
@@ -673,15 +674,7 @@ const makeOptionMenu = (mod) => {
     modDiv.appendChild(_OPTION_MENU);
 };
 
-// TODO: must figure this one out. Trevor, I need you to step it up. Fuck you Matt.
 const updateMod = (mod, forceState = null) => {
-    /** TODO: revisit
-    if (!GOOGLE_MAP) {
-        const err = `Map did not load properly for the script. Try refreshing the page and making sure the map loads fully before you do anything. Reload the page in a new tab if this fails.`;
-        window.alert(err);
-        throw new Error(err);
-    }
-    */
     if (!_MODS_LOADED) {
         return;
     }
@@ -1519,7 +1512,6 @@ const updateLottery = (forceState = null) => {
 */
 
 // TODO
-// - block tiling until first render.
 // - add option to make to actual puzzle.
 // - disable moving and panning and zooming. Need to update note at top.
 // - what happens if it's solved on start? reshuffle automatically?
@@ -1782,7 +1774,6 @@ const onDropTile = (evt) => { // When mouse is released, drop the dragged tile a
         _PUZZLE_DRAGGING_TILE.sy,
         _PUZZLE_TILE_WIDTH,
         _PUZZLE_TILE_HEIGHT,
-        _PUZZLE_DRAGGING_TILE.sx, // TODO: pick up here, I think this is wrong
         _PUZZLE_DRAGGING_TILE.sy,
         _PUZZLE_TILE_WIDTH,
         _PUZZLE_TILE_HEIGHT,
@@ -2708,7 +2699,6 @@ const onMapClick = (evt) => {
     const lng = evt.latLng.lng();
     GG_CLICK = { lat, lng };
     const event = new CustomEvent('map_click', { detail: GG_CLICK });
-    /* eslint-disable no-undef */
     document.dispatchEvent(event, { bubbles: true });
 };
 
@@ -2788,7 +2778,6 @@ const _YOURE_LOOKING_AT_MY_CODE = (v) => {
     }
 };
 
-// TODO: header is not getting set up properly
 const initGoogle = () => {
     GOOGLE_SVC = new google.maps.ImageMapType({
         getTileUrl: (point, zoom) => `https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i${zoom}!2i${point.x}!3i${point.y}!2i9!3x1!2m8!1e2!2ssvv!4m2!1scc!2s*211m3*211e2*212b1*213e2*212b1*214b1!4m2!1ssvl!2s*211b0*212b1!3m8!2sen!3sus!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e`,
@@ -2839,10 +2828,10 @@ onDomReady(() => {
 
                 // Add event listeners to THIS map instance
                 google.maps.event.addListener(this, 'dragstart', () => {
-                    IS_DRAGGING_SMALL_MAP = true;
+                    _IS_DRAGGING_SMALL_MAP = true;
                 });
                 google.maps.event.addListener(this, 'dragend', () => {
-                    IS_DRAGGING_SMALL_MAP = false;
+                    _IS_DRAGGING_SMALL_MAP = false;
                 });
                 google.maps.event.addListener(this, 'click', (evt) => {
                     onMapClick(evt);
@@ -2900,7 +2889,7 @@ onDomReady(() => {
     });
 });
 
-
+/* eslint-disable no-undef */
 GeoGuessrEventFramework.init().then(GEF => {
     GEF.events.addEventListener('round_start', (evt) => {
         window.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
@@ -2939,14 +2928,14 @@ GeoGuessrEventFramework.init().then(GEF => {
 
 loadState();
 
-const observer = new MutationObserver(() => { // TODO: this gets called way too much.
+const observer = new MutationObserver(() => {
     const buttonsAdded = addButtons();
     // I think this is an anti-c h eat method from Geoguessr. It's annoying, so it's gone.
     const reactionsDiv = getGameReactionsDiv();
     if (reactionsDiv) {
         reactionsDiv.parentElement.removeChild(reactionsDiv);
     }
-    return buttonsAdded; // TODO: clean up
+    return buttonsAdded;
 });
 
 observer.observe(document.querySelector('#__next'), { subtree: true, childList: true });
@@ -3051,7 +3040,7 @@ const style = `
         font-weight: bold;
         text-shadow: ${bodyShadow};
         z-index: 9999;
-        overflow: hidden
+        overflow: hidden;
         cursor: move;
     }
 
