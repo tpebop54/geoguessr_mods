@@ -163,7 +163,7 @@ const MODS = {
     },
 
     lottery: {
-        show: true,
+        show: false, // This is broken for duels. Need lat lng for the margins.
         key: 'lottery',
         name: 'Lottery',
         tooltip: 'Get a random guess and you have to decide if you want it or not.',
@@ -231,7 +231,7 @@ const MODS = {
     },
 
     displayOptions: { // Miscellaneous display options that don't deserve a full button.
-        show: true,
+        show: false, // Broken in duels.
         key: 'display-preferences',
         name: 'Display Preferences',
         tooltip: 'Various display options for page elements, colors, etc. Does not mess with gameplay.',
@@ -3206,21 +3206,20 @@ const style = `
     /* TODO: can this be merged with the lottery CSS? and also some of it with gg-option-menu */
     #gg-tile-count {
         display: flex;
-        justify-content: space-between;
         position: absolute;
-        top: 13%;
-        left: 50%;
-        font-size: 30px;
-        color: white;
-        text-shadow: ${bodyShadow};
-        transform: translate(-50%, -50%);
-        align-items: center;
-        background-color: rgba(0, 100, 0, 0.8);
-        padding: 0.5em;
+        left: 110%;
+        min-width: 300px;
+        padding: 15px;
+        background: var(--ds-color-purple-100);
         border-radius: 10px;
+        border: 2px solid black;
+        color: white;
+        font-size: 15px;
+        font-weight: bold;
+        text-shadow: ${bodyShadow};
         z-index: 9999;
         overflow: hidden;
-        width: 275px;
+        cursor: move;
     }
 
     #gg-tile-count-counter {
