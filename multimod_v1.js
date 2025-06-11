@@ -5,21 +5,19 @@
 // @author       tpebop
 // @match        *://*.geoguessr.com/*
 // @icon         https://www.google.com/s2/favicons?domain=geoguessr.com
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/gg_evt.js
 // @grant        unsafeWindow
 // @grant        GM_addStyle
 // @grant        GM_openInTab
 // @grant        GM.xmlHttpRequest
-// @updateURL    https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/multimod_v1.js
-// @downloadURL  https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/multimod_v1.js
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/gg_evt.js
 
 // ==/UserScript==
 
 
 /**
-Bullshit I have to fix
- - GeoGuessr header is gone in duels on Opera, and fucked up in Chrome.
- - Show score shit is not working in duels.
+Must fix.
+ - GeoGuessr header thing is messed up in Chrome and Opera.
+ - Show score is not working in duels. /live-challenge. Disabling those in prod until I can figure out why.
 */
 
 
@@ -83,8 +81,8 @@ const MODS = {
         },
     },
 
-    zoomInOnly: {
-        show: true,
+    zoomInOnly: { // This one is alright, but just not really good content quality. Try it out if you want!
+        show: false,
         key: 'zoom-in-only',
         name: 'Zoom In Only',
         tooltip: 'You can only zoom inward.',
@@ -92,7 +90,7 @@ const MODS = {
     },
 
     showScore: {
-        show: true,
+        show: false, // Doesn't work in duels.
         key: 'show-score',
         name: 'Show Score',
         tooltip: 'Shows the would-be score of each click.',
@@ -139,7 +137,7 @@ const MODS = {
     },
 
     bopIt: {
-        show: true,
+        show: false, // Doesn't work in duels.
         key: 'bop-it',
         name: 'Bop It',
         tooltip: `Bop It mode where it tells you the intercardinal direction you need to go from your click. You'll figure it out...`,
@@ -154,7 +152,7 @@ const MODS = {
     },
 
     inFrame: {
-        show: true,
+        show: false, // Doesn't work in duels.
         key: 'in-frame',
         name: 'Show In-Frame',
         tooltip: 'Shows if the location is in or out of your current guess map view.',
@@ -163,7 +161,7 @@ const MODS = {
     },
 
     lottery: {
-        show: true,
+        show: false, // This is broken for duels. Need lat lng for the margins.
         key: 'lottery',
         name: 'Lottery',
         tooltip: 'Get a random guess and you have to decide if you want it or not.',
@@ -230,9 +228,8 @@ const MODS = {
         },
     },
 
-    // Miscellaneous display options that don't deserve a full button.
-    displayOptions: {
-        show: true,
+    displayOptions: { // Miscellaneous display options that don't deserve a full button.
+        show: false, // Broken in duels.
         key: 'display-preferences',
         name: 'Display Preferences',
         tooltip: 'Various display options for page elements, colors, etc. Does not mess with gameplay.',
@@ -545,7 +542,7 @@ const isArrayOption = (mod, key) => {
     return Array.isArray(mod.options[key].options);
 };
 
-let _OPTION_MENU; // TODO:revisit
+let _OPTION_MENU;
 let _OPTION_MENU_DRAGGING = false;
 let _OPTION_MENU_DRAGGING_MOUSEDOWN;
 let _OPTION_MENU_DRAGGING_MOUSEMOVE;
@@ -571,9 +568,11 @@ const makeOptionMenu = (mod) => {
         _OPTION_MENU_DRAGGING && (
             _OPTION_MENU.style.left = evt.clientX - _OPTION_MENU_DRAGGING_OFFSET_X + 'px', _OPTION_MENU.style.top = evt.clientY - _OPTION_MENU_DRAGGING_OFFSET_Y + 'px');
     });
-    _OPTION_MENU_DRAGGING_MOUSEUP = (evt) => {
+    _OPTION_MENU_DRAGGING_MOUSEUP = _OPTION_MENU.addEventListener('mouseup', (evt) => {
         _OPTION_MENU_DRAGGING = false;
-    };
+        _OPTION_MENU_DRAGGING_OFFSET_X = undefined;
+        _OPTION_MENU_DRAGGING_OFFSET_Y = undefined;
+    });
     /* eslint-enable no-return-assign */
 
     const defaults = getDefaultMod(mod).options || {};
@@ -673,15 +672,7 @@ const makeOptionMenu = (mod) => {
     modDiv.appendChild(_OPTION_MENU);
 };
 
-// TODO: must figure this one out. Trevor, I need you to step it up. Fuck you Matt.
 const updateMod = (mod, forceState = null) => {
-    /** TODO: revisit
-    if (!GOOGLE_MAP) {
-        const err = `Map did not load properly for the script. Try refreshing the page and making sure the map loads fully before you do anything. Reload the page in a new tab if this fails.`;
-        window.alert(err);
-        throw new Error(err);
-    }
-    */
     if (!_MODS_LOADED) {
         return;
     }
@@ -1519,7 +1510,6 @@ const updateLottery = (forceState = null) => {
 */
 
 // TODO
-// - block tiling until first render.
 // - add option to make to actual puzzle.
 // - disable moving and panning and zooming. Need to update note at top.
 // - what happens if it's solved on start? reshuffle automatically?
@@ -1782,7 +1772,6 @@ const onDropTile = (evt) => { // When mouse is released, drop the dragged tile a
         _PUZZLE_DRAGGING_TILE.sy,
         _PUZZLE_TILE_WIDTH,
         _PUZZLE_TILE_HEIGHT,
-        _PUZZLE_DRAGGING_TILE.sx, // TODO: pick up here, I think this is wrong
         _PUZZLE_DRAGGING_TILE.sy,
         _PUZZLE_TILE_WIDTH,
         _PUZZLE_TILE_HEIGHT,
@@ -2708,7 +2697,6 @@ const onMapClick = (evt) => {
     const lng = evt.latLng.lng();
     GG_CLICK = { lat, lng };
     const event = new CustomEvent('map_click', { detail: GG_CLICK });
-    /* eslint-disable no-undef */
     document.dispatchEvent(event, { bubbles: true });
 };
 
@@ -2788,7 +2776,6 @@ const _YOURE_LOOKING_AT_MY_CODE = (v) => {
     }
 };
 
-// TODO: header is not getting set up properly
 const initGoogle = () => {
     GOOGLE_SVC = new google.maps.ImageMapType({
         getTileUrl: (point, zoom) => `https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i${zoom}!2i${point.x}!3i${point.y}!2i9!3x1!2m8!1e2!2ssvv!4m2!1scc!2s*211m3*211e2*212b1*213e2*212b1*214b1!4m2!1ssvl!2s*211b0*212b1!3m8!2sen!3sus!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e`,
@@ -2836,25 +2823,27 @@ onDomReady(() => {
                 this.setHeadingInteractionEnabled(true);
                 this.setTiltInteractionEnabled(true);
                 GOOGLE_MAP = this; // Store globally for use in other functions once this is instantiated.
+
+                // Add event listeners to THIS map instance
+                google.maps.event.addListener(this, 'dragstart', () => {
+                    _IS_DRAGGING_SMALL_MAP = true;
+                });
+                google.maps.event.addListener(this, 'dragend', () => {
+                    _IS_DRAGGING_SMALL_MAP = false;
+                });
+                google.maps.event.addListener(this, 'click', (evt) => {
+                    onMapClick(evt);
+                });
             }
         }
+
         google.maps.StreetViewPanorama = class extends google.maps.StreetViewPanorama {
             constructor(...args) {
                 super(...args);
                 GOOGLE_STREETVIEW = this;
             }
         };
-        google.maps.event.addListener(this, 'dragstart', () => {
-            _IS_DRAGGING_SMALL_MAP = true;
-        });
-        google.maps.event.addListener(this, 'dragend', () => {
-            _IS_DRAGGING_SMALL_MAP = false;
-        });
-        google.maps.event.addListener(this, 'click', (evt) => {
-            onMapClick(evt);
-        });
 
-        // We need to wait for both the big map and the small map to both be idle before we can trigger events. TODO: still flaky.
         const isMapReady = (map) => {
             if (!map) {
                 return false;
@@ -2875,31 +2864,30 @@ onDomReady(() => {
                 return false;
             }
         };
+
         const waitForMapsToLoad = (callback, intervalMs = 100, timeout = 5000) => {
             const startTime = Date.now();
-
             const checkInterval = setInterval(() => {
                 const map2dReady = GOOGLE_MAP && isMapReady(GOOGLE_MAP);
                 const map3dReady = GOOGLE_STREETVIEW && isMapReady(GOOGLE_STREETVIEW);
-
                 if (map2dReady && map3dReady) {
                     clearInterval(checkInterval);
                     callback();
                     return;
                 }
-
                 if (Date.now() - startTime > timeout) {
                     clearInterval(checkInterval);
                     console.warn('Timeout: Maps did not become ready within expected time');
                 }
             }, intervalMs);
         };
+
         waitForMapsToLoad(initMods);
         initGoogle();
     });
 });
 
-
+/* eslint-disable no-undef */
 GeoGuessrEventFramework.init().then(GEF => {
     GEF.events.addEventListener('round_start', (evt) => {
         window.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
@@ -2938,14 +2926,14 @@ GeoGuessrEventFramework.init().then(GEF => {
 
 loadState();
 
-const observer = new MutationObserver(() => { // TODO: this gets called way too much.
+const observer = new MutationObserver(() => {
     const buttonsAdded = addButtons();
     // I think this is an anti-c h eat method from Geoguessr. It's annoying, so it's gone.
     const reactionsDiv = getGameReactionsDiv();
     if (reactionsDiv) {
         reactionsDiv.parentElement.removeChild(reactionsDiv);
     }
-    return buttonsAdded; // TODO: clean up
+    return buttonsAdded;
 });
 
 observer.observe(document.querySelector('#__next'), { subtree: true, childList: true });
@@ -3050,7 +3038,7 @@ const style = `
         font-weight: bold;
         text-shadow: ${bodyShadow};
         z-index: 9999;
-        overflow: hidden
+        overflow: hidden;
         cursor: move;
     }
 
@@ -3216,21 +3204,20 @@ const style = `
     /* TODO: can this be merged with the lottery CSS? and also some of it with gg-option-menu */
     #gg-tile-count {
         display: flex;
-        justify-content: space-between;
         position: absolute;
-        top: 13%;
-        left: 50%;
-        font-size: 30px;
-        color: white;
-        text-shadow: ${bodyShadow};
-        transform: translate(-50%, -50%);
-        align-items: center;
-        background-color: rgba(0, 100, 0, 0.8);
-        padding: 0.5em;
+        left: 110%;
+        min-width: 300px;
+        padding: 15px;
+        background: var(--ds-color-purple-100);
         border-radius: 10px;
+        border: 2px solid black;
+        color: white;
+        font-size: 15px;
+        font-weight: bold;
+        text-shadow: ${bodyShadow};
         z-index: 9999;
         overflow: hidden;
-        width: 275px;
+        cursor: move;
     }
 
     #gg-tile-count-counter {
