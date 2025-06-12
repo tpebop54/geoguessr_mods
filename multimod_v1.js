@@ -17,6 +17,7 @@
 /**
   TECHNICAL DEBT
    - GeoGuessr header thing is messed up in Chrome and Opera.
+   - Make a way to make anything draggable, stuff gets in the way of stuff.
    - Show score is not working in duels. /live-challenge. Disabling those in prod until I can figure out why.
 */
 
@@ -2019,7 +2020,7 @@ const makeTileCounter = () => { // Make the tile count display overlay.
         document.removeEventListener('mousemove', _TILE_COUNT_DRAGGING_LISTENER);
         _TILE_COUNT_DRAGGING_LISTENER = null;
     };
-    /* eslint-enable no-return-assign */
+    /* eslint-disable no-return-assign */
 
     const counterLabel = document.createElement('div'); // Text label.
     counterLabel.textContent = 'Tiles remaining:';
@@ -2427,20 +2428,6 @@ const _QUOTES = {
         `Do not go where the path may lead, go instead where there is no path and leave a trail. — Ralph Waldo Emerson`,
         `Those who mind don't matter, those who matter don't mind. — Dr. Seuss`,
         `Never stop never stopping.`,
-
-        /** Turning these off for now because I don't know if bias toward certain languages would be an issue, and I can't do every language. Safer to just do English until I think about it more.
-
-        // German.
-        `Träume nicht dein Leben, sondern lebe deinen Traum.`,
-        `Auch der weiteste Weg beginnt mit einem ersten Schritt. — Laozi`
-        `Man entdeckt keine neuen Erdteile, ohne den Mut zu haben, alte Küsten aus den Augen zu verlieren. — André Gide`,
-        `Es ist nicht wenig Zeit, die wir haben, sondern es ist viel Zeit, die wir nicht nutzen. — Seneca`
-
-        // Polish.
-        `Największą mądrością jest umieć cieszyć się chwilą. — Stanisław Lem`,
-        `Lepiej zapalić świecę, niż przeklinać ciemność. — Jerzy Popiełuszko`,
-
-        */
     ],
 
     heavy: [
@@ -2789,6 +2776,12 @@ const _YOURE_LOOKING_AT_MY_CODE = (v) => {
 };
 
 const initGoogle = () => {
+    const google = getGoogle();
+    if (!google) {
+        const err = 'Google was not initialized proeprly. Refresh the page.';
+        throw new Error(err);
+        window.alert(err);
+    }
     GOOGLE_SVC = new google.maps.ImageMapType({
         getTileUrl: (point, zoom) => `https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i${zoom}!2i${point.x}!3i${point.y}!2i9!3x1!2m8!1e2!2ssvv!4m2!1scc!2s*211m3*211e2*212b1*213e2*212b1*214b1!4m2!1ssvl!2s*211b0*212b1!3m8!2sen!3sus!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e`,
         tileSize: new google.maps.Size(256, 256),
@@ -3214,23 +3207,24 @@ const style = `
     }
 
     /* TODO: can this be merged with the lottery CSS? and also some of it with gg-option-menu */
-    #gg-tile-count {
-        display: flex;
-        position: absolute;
-        left: 110%;
-        min-width: 300px;
-        padding: 15px;
-        background: var(--ds-color-purple-100);
-        border-radius: 10px;
-        border: 2px solid black;
-        color: white;
-        font-size: 15px;
-        font-weight: bold;
-        text-shadow: ${bodyShadow};
-        z-index: 9999;
-        overflow: hidden;
-        cursor: move;
-    }
+#gg-tile-count {
+    position: fixed;  /* Changed from absolute to fixed for screen overlay */
+    top: 50%;         /* Center vertically */
+    left: 50%;        /* Center horizontally */
+    transform: translate(-50%, -50%);  /* Offset by half width/height for true centering */
+    min-width: 300px;
+    padding: 15px;
+    background: var(--ds-color-purple-100);
+    border-radius: 10px;
+    border: 2px solid black;
+    color: white;
+    font-size: 15px;
+    font-weight: bold;
+    text-shadow: ${bodyShadow};
+    z-index: 9999;
+    overflow: hidden;
+    cursor: move;
+}
 
     #gg-tile-count-counter {
         padding-left: 0.5em;
