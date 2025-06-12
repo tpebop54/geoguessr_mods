@@ -15,9 +15,9 @@
 
 
 /**
-Must fix.
- - GeoGuessr header thing is messed up in Chrome and Opera.
- - Show score is not working in duels. /live-challenge. Disabling those in prod until I can figure out why.
+  TECHNICAL DEBT
+   - GeoGuessr header thing is messed up in Chrome and Opera.
+   - Show score is not working in duels. /live-challenge. Disabling those in prod until I can figure out why.
 */
 
 
@@ -229,7 +229,7 @@ const MODS = {
     },
 
     displayOptions: { // Miscellaneous display options that don't deserve a full button.
-        show: false, // Broken in duels.
+        show: true, // Broken in duels.
         key: 'display-preferences',
         name: 'Display Preferences',
         tooltip: 'Various display options for page elements, colors, etc. Does not mess with gameplay.',
@@ -407,8 +407,12 @@ const getGoogle = () => { // Used to interact with the panorama and mini-map.
     return window.google || unsafeWindow.google;
 };
 
-const getGGHeader = () => {
+const getGGHeader = () => { // GG icon header in upper left.
     return document.querySelector('img[alt="GeoGuessr"]');
+};
+
+const getNonProHeader = () => { // Header that shows for non-pro accounts.
+    return document.querySelector('div[class^="ticket-bar-view_root__"]');
 };
 
 const getGameContent = () => {
@@ -440,7 +444,11 @@ const getBigMapCanvas = () => {
 };
 
 const getGameControlsDiv = () => {
-    return document.querySelector(`aside[class^="game_controls__"]`);
+    const selectors = [
+        `aside[class^="game_controls__"]`,
+        `aside[class^="game-panorama_controls__"]`,
+    ];
+    return tryMultiple(selectors);
 };
 
 const getZoomControlsDiv = () => {
@@ -452,7 +460,11 @@ const getGameStatusDiv = () => {
 };
 
 const getGameReactionsDiv = () => {
-    return document.querySelector(`div[class^="game-reactions_root__"]`);
+    const selectors = [
+        `div[class^="game-reactions_root__"]`,
+        `div[class^="chat-input_root__"]`,
+    ];
+    return tryMultiple(selectors);
 };
 
 const getAllGmnoPrints = () => {
