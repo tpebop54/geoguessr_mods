@@ -393,7 +393,7 @@ let _MODS_LOADED = false;
 // DOM and state utility functions.
 // ===============================================================================================================================
 
-const tryMultiple = (selectors) => { // Different modes, different versions, GeoGuessr changing around stuff, etc.
+const _tryMultiple = (selectors) => { // Different modes, different versions, GeoGuessr changing around stuff, etc.
     let element;
     for (const selector of selectors) {
         const element = document.querySelector(selector);
@@ -433,7 +433,7 @@ const getBigMapContainer = () => {
         `div[class^="game_canvas__"]`,
         `#panorama-container`,
     ];
-    return tryMultiple(selectors);
+    return _tryMultiple(selectors);
 };
 
 const getBigMapCanvas = () => {
@@ -449,7 +449,7 @@ const getGameControlsDiv = () => {
         `aside[class^="game_controls__"]`,
         `aside[class^="game-panorama_controls__"]`,
     ];
-    return tryMultiple(selectors);
+    return _tryMultiple(selectors);
 };
 
 const getZoomControlsDiv = () => {
@@ -465,7 +465,7 @@ const getGameReactionsDiv = () => {
         `div[class^="game-reactions_root__"]`,
         `div[class^="chat-input_root__"]`,
     ];
-    return tryMultiple(selectors);
+    return _tryMultiple(selectors);
 };
 
 const getAllGmnoPrints = () => {
@@ -488,12 +488,12 @@ const getOptionMenu = () => {
     return document.getElementById('gg-option-menu');
 };
 
-const getButtonID = (mod) => {
+const getModButtonId = (mod) => {
     return `gg-opt-${mod.key}`;
 };
 
 const getDropdownID = (mod, key) => { // Dropdown element for mod+option.
-    return `${getButtonID(mod)}-${key}`;
+    return `${getModButtonId(mod)}-${key}`;
 };
 
 const getButtonText = (mod) => {
@@ -502,11 +502,11 @@ const getButtonText = (mod) => {
     return text;
 };
 
-const getButton = (mod) => {
-    return document.querySelector(`#${getButtonID(mod)}`);
+const getModButton = (mod) => {
+    return document.querySelector(`#${getModButtonId(mod)}`);
 };
 
-const isActive = (mod) => {
+const isModActive = (mod) => {
     return !!mod.active;
 };
 
@@ -639,6 +639,9 @@ const makeOptionMenu = (mod) => {
     };
 
     const onReset = () => {
+        for (const key of Object.entries(mod.options)) {
+            setOption(mod, key, getDefaultOption(mod, key));
+        }
         input.value = getDefaultOption(mod, key);
     };
 
@@ -690,7 +693,7 @@ const updateMod = (mod, forceState = null) => {
         return;
     }
 
-    const previousState = isActive(mod);
+    const previousState = isModActive(mod);
     const newState = forceState != null ? forceState : !previousState;
 
     // If there are configurable options for this mod, open a popup.
@@ -702,7 +705,7 @@ const updateMod = (mod, forceState = null) => {
     }
 
     mod.active = newState;
-    getButton(mod).textContent = getButtonText(mod);
+    getModButton(mod).textContent = getButtonText(mod);
 
     saveState();
     return newState;
@@ -2317,7 +2320,7 @@ const bindButtons = () => {
             continue;
         }
         UPDATE_CALLBACKS[mod.key] = callback;
-        const button = getButton(mod);
+        const button = getModButton(mod);
         if (!button) {
             console.error(`Mod ${mod.key} not found.`);
             continue;
@@ -2361,7 +2364,7 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
                 continue;
             }
             const modButton = document.createElement('div');
-            modButton.id = getButtonID(mod);
+            modButton.id = getModButtonId(mod);
             modButton.classList.add('gg-mod-button');
             modButton.title = mod.tooltip;
             modButton.textContent = getButtonText(mod);
@@ -2685,7 +2688,7 @@ const injecter = (overrider) => {
 
 const initMods = () => { // Enable mods that were already enabled via localStorage.
     for (const [mod, callback] of _BINDINGS) {
-        if (mod.show && isActive(mod)) {
+        if (mod.show && isModActive(mod)) {
             callback(true);
         }
     }
@@ -2914,7 +2917,7 @@ GeoGuessrEventFramework.init().then(GEF => {
         if (document.activeElement.tagName === 'INPUT') {
             return;
         }
-        if (evt.key === ',' && GOOGLE_MAP && !isActive(MODS.zoomInOnly)) {
+        if (evt.key === ',' && GOOGLE_MAP && !isModActive(MODS.zoomInOnly)) {
             GOOGLE_MAP.setZoom(GOOGLE_MAP.getZoom() - 0.6);
         }
         if (evt.key === '.' && GOOGLE_MAP) {
@@ -3207,24 +3210,24 @@ const style = `
     }
 
     /* TODO: can this be merged with the lottery CSS? and also some of it with gg-option-menu */
-#gg-tile-count {
-    position: fixed;  /* Changed from absolute to fixed for screen overlay */
-    top: 50%;         /* Center vertically */
-    left: 50%;        /* Center horizontally */
-    transform: translate(-50%, -50%);  /* Offset by half width/height for true centering */
-    min-width: 300px;
-    padding: 15px;
-    background: var(--ds-color-purple-100);
-    border-radius: 10px;
-    border: 2px solid black;
-    color: white;
-    font-size: 15px;
-    font-weight: bold;
-    text-shadow: ${bodyShadow};
-    z-index: 9999;
-    overflow: hidden;
-    cursor: move;
-}
+    #gg-tile-count {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        min-width: 300px;
+        padding: 15px;
+        background: var(--ds-color-purple-100);
+        border-radius: 10px;
+        border: 2px solid black;
+        color: white;
+        font-size: 15px;
+        font-weight: bold;
+        text-shadow: ${bodyShadow};
+        z-index: 9999;
+        overflow: hidden;
+        cursor: move;
+    }
 
     #gg-tile-count-counter {
         padding-left: 0.5em;
