@@ -408,6 +408,10 @@ const getGoogle = () => { // Used to interact with the panorama and mini-map.
     return window.google || unsafeWindow.google;
 };
 
+const getTicketBar = () => { // Top header.This shows up for unregistered players to display that they need an account.
+    return document.querySelector('div[class^="ticket-bar-view_"]');
+};
+
 const getGGHeader = () => { // GG icon header in upper left.
     return document.querySelector('img[alt="GeoGuessr"]');
 };
@@ -2727,6 +2731,23 @@ const onDomReady = (callback) => {
     }
 };
 
+/**
+ Some formatting is different between modes and browsers.
+ Things in here are likely to change over time. C
+ */
+const fixFormatting = () => {
+    const ticketBar = getTicketBar();
+    if (ticketBar) {
+        const ggHeader = getGGHeader();
+        if (ggHeader) {
+            Object.assign(ggHeader.style, {
+                postion: 'absolute',
+                top: '-35px',
+            });
+        }
+    };
+};
+
 onDomReady(() => {
     if (!_CHEAT_DETECTION) {
         return; // Get outta 'ere
@@ -2734,6 +2755,7 @@ onDomReady(() => {
     if (_YOURE_LOOKING_AT_MY_CODE()) {
         return; // Get outta 'ere
     }
+    fixFormatting();
     injecter(() => {
         const google = getGoogle();
         if (!google) {
