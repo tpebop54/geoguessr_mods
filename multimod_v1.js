@@ -2741,7 +2741,7 @@ const fixFormatting = () => {
         const ggHeader = getGGHeader();
         if (ggHeader) {
             Object.assign(ggHeader.style, {
-                postion: 'absolute',
+                position: 'absolute',
                 top: '-35px',
             });
         }
