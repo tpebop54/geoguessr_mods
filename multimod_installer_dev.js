@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Tpebop's Geoguessr MultiMod Installer
+// @name         Tpebop's Geoguessr MultiMod Installer Dev
 // @description  Various mods to make the game interesting in various ways
 // @version      1.0
 // @author       tpebop
