@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         gg_coordinate_extractor
-// @description  Get map location by extracting map info in a robust way
+// @name         Scratch
+// @description  Scratch
 // @version      1.0
 // @author       tpebop
 // @match        *://*.geoguessr.com/*
@@ -13,7 +13,7 @@
 // ==/UserScript==
 
 
-// Combined Coordinate Detection Script
+// Thank you AI :(
 // Listens for page loading events and extracts coordinates with country codes
 
 class CoordinateDetector {
@@ -23,27 +23,21 @@ class CoordinateDetector {
         this.isMonitoring = false;
     }
 
-    // Add callback for when coordinates are detected
-    onCoordinatesDetected(callback) {
+    onCoordinatesDetected(callback) { // Add callback for when coordinates are detected
         this.callbacks.push(callback);
     }
 
-    // Start monitoring for coordinates
     startMonitoring() {
         if (this.isMonitoring) return;
 
         this.isMonitoring = true;
         this.setupNetworkInterception();
-        console.log('Coordinate monitoring started');
     }
 
-    // Stop monitoring
     stopMonitoring() {
         this.isMonitoring = false;
-        console.log('Coordinate monitoring stopped');
     }
 
-    // Setup network request interception
     setupNetworkInterception() {
         const self = this;
 
@@ -78,9 +72,7 @@ class CoordinateDetector {
                     const data = await clonedResponse.json();
                     self.analyzeResponseForCoordinates(data);
                 }
-            } catch (e) {
-                // Ignore errors
-            }
+            } catch (e) { }
 
             return response;
         };
@@ -318,19 +310,15 @@ class CoordinateDetector {
 function initCoordinateDetection() {
     const detector = new CoordinateDetector();
 
-    // Add custom callback if needed
     detector.onCoordinatesDetected((coordinates) => {
-        // Custom logic here
-        // Example: send to external API, store in local storage, etc.
-        console.log('Custom handler received:', coordinates);
+        const customEvent = new CustomEvent('ggCoordinates', {
+            detail: { message: 'Hello from custom event!' }
+        });
+        document.dispatchEvent(customEvent);
     });
 
-    // Start monitoring
     detector.startMonitoring();
-
-    // Make available globally
-    window.coordinateDetector = detector;
-
+    window.coordinateDetector = detector; // Make available globally
     return detector;
 }
 
