@@ -308,7 +308,7 @@ function initCoordinateDetection() {
 
     detector.onCoordinatesDetected((coordinates) => {
         const customEvent = new CustomEvent('ggCoordinates', {
-            detail: { message: 'Hello from custom event!' }
+            detail: coordinates,
         });
         document.dispatchEvent(customEvent);
     });
