@@ -280,10 +280,9 @@ class CoordinateDetector {
 
         // Simple output format
         const output = {
-            latitude: coordinates.lat,
-            longitude: coordinates.lng,
+            lat: coordinates.lat,
+            lng: coordinates.lng,
             countryCode: coordinates.countryCode || 'Unknown',
-            timestamp: new Date().toISOString()
         };
 
         console.log('🌍 Coordinates detected:', output);
