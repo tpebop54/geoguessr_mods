@@ -278,21 +278,16 @@ class CoordinateDetector {
 
         this.currentLocation = coordinates;
 
-        // Simple output format
-        const output = {
+        const coords = {
             lat: coordinates.lat,
             lng: coordinates.lng,
             countryCode: coordinates.countryCode || 'Unknown',
         };
 
-        console.log('🌍 Coordinates detected:', output);
-        console.log(`📍 Location: ${output.latitude}, ${output.longitude}`);
-        console.log(`🏳️ Country: ${output.countryCode}`);
-
         // Notify all callbacks
         this.callbacks.forEach(callback => {
             try {
-                callback(output);
+                callback(coords);
             } catch (e) {
                 console.error('Error in coordinate callback:', e);
             }
