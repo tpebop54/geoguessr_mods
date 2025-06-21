@@ -726,13 +726,16 @@ const mapClickListener = (func, enable = true) => {
     }
 };
 
-const disableMods = (mods) => {
+const disableMods = (mods, forceHide = false) => {
     if (!Array.isArray(mods)) {
         mods = [mods];
     }
     for (const mod of mods) {
         try {
             updateMod(mod, false);
+            if (forceHide) {
+                mod.show = false;
+            }
         } catch (err) {
             console.error(err);
         }
@@ -2411,6 +2414,20 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
     }
 };
 
+/**
+ Some mods currently don't work with competitive games.
+ Disable those conditionally. This will be fixed in the future.
+ */
+const disableModsAsNeeded = () => {
+    const pathname = window.location.pathname;
+    if (pathname.indexOf('live-challenge') !== -1) {
+        disableMods([
+            MODS.showScore,
+            MODS.bopIt,
+        ], true);
+    }
+};
+
 // -------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -2569,6 +2586,7 @@ const clearCh_eatOverlay = () => {
 let _CH_EA_AT_DE_TE_CT_IO_N = 'on your honor';
 
 window.addEventListener('load', () => {
+    disableModsAsNeeded();
     if (_CH_EA_AT_DE_TE_CT_IO_N || !_CH_EA_AT_DE_TE_CT_IO_N) {
         // Yeah, yeah. If you made it this far in the c ode, you can c h eat if you really want. You'll get caught.
     }
@@ -2816,7 +2834,7 @@ const onDomReady = (callback) => {
 
 /**
  Some formatting is different between modes and browsers.
- Things in here are likely to change over time. C
+ Things in here are likely to change over time.
  */
 const fixFormatting = () => {
     const ticketBar = getTicketBar();
@@ -2830,6 +2848,7 @@ const fixFormatting = () => {
         }
     };
 };
+
 
 const addDebugger = () => {
     const smallMapContainer = getSmallMapContainer();
