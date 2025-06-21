@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         Scratch
-// @description  Scratch
+// @name         GG Coordinate Extractor
+// @description  GG Coordinate Extractor
 // @version      1.0
 // @author       tpebop
 // @match        *://*.geoguessr.com/*
