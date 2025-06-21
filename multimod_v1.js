@@ -20,7 +20,8 @@
 /**
   TECHNICAL DEBT
    - GeoGuessr header thing is messed up in Chrome and Opera.
-   - Figure out GG_ROUND vs GG_LOC interaction.
+   - Disable certain mods when actual location cannot be found.
+   - Sometimes the click events are being blocked on the button menu, but then it works if you refresh.
 */
 
 
@@ -93,7 +94,7 @@ const MODS = {
     },
 
     showScore: {
-        show: false, // Doesn't work in duels.
+        show: true,
         key: 'show-score',
         name: 'Show Score',
         tooltip: 'Shows the would-be score of each click.',
@@ -140,7 +141,7 @@ const MODS = {
     },
 
     bopIt: {
-        show: false, // Doesn't work in duels.
+        show: true,
         key: 'bop-it',
         name: 'Bop It',
         tooltip: `Bop It mode where it tells you the intercardinal direction you need to go from your click. You'll figure it out...`,
@@ -378,7 +379,7 @@ const SHOW_QUOTES = {
 /**
   SCORE_FUNC is a function used to display the overlay that shows how well you clicked (score, direction, whatever).
   This can only be used by one mod at a time, so in mods that use it we have to use disableOtherScoreModes to disable the other ones.
-  It uses GG_ROUND and GG_CLICK to determine how well you clicked. SCORE_FUNC can be globally set for the active mod.
+  It uses GG_ROUND, GG_LOC, and GG_CLICK to determine how well you clicked. SCORE_FUNC can be globally set for the active mod.
   By default, it will give the 0-5000 score, but some mods override it.
 */
 let SCORE_FUNC;
@@ -771,10 +772,11 @@ const closeOptionMenu = () => {
 // ===============================================================================================================================
 
 const getActualLoc = () => {
-    if (!GG_ROUND) {
+    const actual = GG_ROUND || GG_LOC; // These are extracted in different ways. May need to clean it up at some point.
+    if (!GG_ROUND && !GG_CLICK) {
         return undefined;
     }
-    const loc = { lat: GG_ROUND.lat, lng: GG_ROUND.lng };
+    const loc = { lat: actual.lat, lng: actual.lng };
     return loc;
 };
 
@@ -831,10 +833,10 @@ const getHeading = (p1, p2) => {
 };
 
 const getScore = () => {
-    if (!GG_CLICK || !GG_ROUND) {
+    const actual = getActualLoc();
+    if (!actual) {
         return;
     }
-    const actual = getActualLoc();
     const guess = GG_CLICK;
     const dist = getDistance(actual, guess);
 
@@ -1304,7 +1306,8 @@ const updateBopIt = (forceState = null) => {
     const active = updateMod(mod, forceState);
 
     const getBopIt = () => {
-        const heading = getHeading(GG_CLICK, GG_ROUND);
+        const actual = getActualLoc();
+        const heading = getHeading(GG_CLICK, actual);
         const direction = getCardinalDirection(heading, 1);
         const score = getScore();
         const bopThreshold = Number(getOption(mod, 'threshold'));
@@ -2849,7 +2852,6 @@ onDomReady(() => {
     }
     fixFormatting();
     document.addEventListener('ggCoordinates', (evt) => {
-        debugger;
         GG_LOC = evt.detail;
     });
     injecter(() => {
@@ -2863,7 +2865,7 @@ onDomReady(() => {
                 this.setRenderingType(google.maps.RenderingType.VECTOR); // Must be a vector map for some additional controls.
                 this.setHeadingInteractionEnabled(true);
                 this.setTiltInteractionEnabled(true);
-                GOOGLE_MAP = this; // Store globally for use in other functions once this is instantiated.
+                GOOGLE_MAP = this; // This is used for map functions that have nothing to do with the active map. GG_MAP is used for the active round.
 
                 // Add event listeners to THIS map instance
                 google.maps.event.addListener(this, 'dragstart', () => {
@@ -2929,7 +2931,7 @@ onDomReady(() => {
 });
 
 /* eslint-disable no-undef */
-GeoGuessrEventFramework.init().then(GEF => {
+GeoGuessrEventFramework.init().then(GEF => { // Note: GG_MAP is the min-map, GOOGLE_MAP is used for pulling funtionality from Google's map functions.
     GEF.events.addEventListener('round_start', (evt) => {
         window.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
         try {
