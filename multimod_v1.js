@@ -9,16 +9,18 @@
 // @grant        GM_addStyle
 // @grant        GM_openInTab
 // @grant        GM.xmlHttpRequest
+// @updateURL    https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/multimod_v1.js
+// @downloadURL  https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/multimod_v1.js
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/gg_evt.js
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/gg_coordinate_extractor.js
 
 // ==/UserScript==
 
 
 /**
   TECHNICAL DEBT
-   - GeoGuessr header thing is messed up in Chrome and Opera.
-   - Make a way to make anything draggable, stuff gets in the way of stuff.
-   - Show score is not working in duels. /live-challenge. Disabling those in prod until I can figure out why.
+   - Disable certain mods when actual location cannot be found.
+   - Sometimes the click events are being blocked on the button menu, but then it works if you refresh.
 */
 
 
@@ -26,7 +28,7 @@
   USER NOTES
     - Sadly, you have to disable ad blockers for this to work. I tried so hard to allow them, but it blocks stuff at a level that I can't undo with TamperMonkey. Sorry.
     - When loading, you may occasionally have to refresh the page once or twice.
-    - You can disable the quotes if you want via the SHOW_QUOTES variable. Blackout screen is non-negotiable.
+    - You can disable the quotes if you want via the SHOW_QUOTES variable. Blackout screen is non-negotiable, it's needed to make sure everything loads.
     - If things go super bad, press "Alt Shift ." (period is actually a > with Shift active). This will disable all mods and refresh the page.
     - If you want to toggle a mod, change 'show' to true or false for it in MODS.
 /*
@@ -91,7 +93,7 @@ const MODS = {
     },
 
     showScore: {
-        show: false, // Doesn't work in duels.
+        show: true,
         key: 'show-score',
         name: 'Show Score',
         tooltip: 'Shows the would-be score of each click.',
@@ -138,7 +140,7 @@ const MODS = {
     },
 
     bopIt: {
-        show: false, // Doesn't work in duels.
+        show: true,
         key: 'bop-it',
         name: 'Bop It',
         tooltip: `Bop It mode where it tells you the intercardinal direction you need to go from your click. You'll figure it out...`,
@@ -356,6 +358,7 @@ const loadState = () => { // Load state from local storage if it exists, else us
 };
 
 let GG_ROUND; // Current round information. This gets set on round start, and deleted on round end.
+let GG_LOC; // This is intercepted from Google Maps API. It contains the lat, lng, and countryCode.
 let GG_MAP; // Current map info.
 let GG_CLICK; // { lat, lng } of latest map click.
 let GG_CUSTOM_MARKER; // Custom marker. This is not the user click marker. Can only use one at a time. Need to clear/move when used.
@@ -375,7 +378,7 @@ const SHOW_QUOTES = {
 /**
   SCORE_FUNC is a function used to display the overlay that shows how well you clicked (score, direction, whatever).
   This can only be used by one mod at a time, so in mods that use it we have to use disableOtherScoreModes to disable the other ones.
-  It uses GG_ROUND and GG_CLICK to determine how well you clicked. SCORE_FUNC can be globally set for the active mod.
+  It uses GG_ROUND, GG_LOC, and GG_CLICK to determine how well you clicked. SCORE_FUNC can be globally set for the active mod.
   By default, it will give the 0-5000 score, but some mods override it.
 */
 let SCORE_FUNC;
@@ -723,13 +726,16 @@ const mapClickListener = (func, enable = true) => {
     }
 };
 
-const disableMods = (mods) => {
+const disableMods = (mods, forceHide = false) => {
     if (!Array.isArray(mods)) {
         mods = [mods];
     }
     for (const mod of mods) {
         try {
             updateMod(mod, false);
+            if (forceHide) {
+                mod.show = false;
+            }
         } catch (err) {
             console.error(err);
         }
@@ -768,10 +774,11 @@ const closeOptionMenu = () => {
 // ===============================================================================================================================
 
 const getActualLoc = () => {
-    if (!GG_ROUND) {
+    const actual = GG_ROUND || GG_LOC; // These are extracted in different ways. May need to clean it up at some point.
+    if (!GG_ROUND && !GG_CLICK) {
         return undefined;
     }
-    const loc = { lat: GG_ROUND.lat, lng: GG_ROUND.lng };
+    const loc = { lat: actual.lat, lng: actual.lng };
     return loc;
 };
 
@@ -828,10 +835,10 @@ const getHeading = (p1, p2) => {
 };
 
 const getScore = () => {
-    if (!GG_CLICK || !GG_ROUND) {
+    const actual = getActualLoc();
+    if (!actual) {
         return;
     }
-    const actual = getActualLoc();
     const guess = GG_CLICK;
     const dist = getDistance(actual, guess);
 
@@ -1301,7 +1308,8 @@ const updateBopIt = (forceState = null) => {
     const active = updateMod(mod, forceState);
 
     const getBopIt = () => {
-        const heading = getHeading(GG_CLICK, GG_ROUND);
+        const actual = getActualLoc();
+        const heading = getHeading(GG_CLICK, actual);
         const direction = getCardinalDirection(heading, 1);
         const score = getScore();
         const bopThreshold = Number(getOption(mod, 'threshold'));
@@ -2406,6 +2414,20 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
     }
 };
 
+/**
+ Some mods currently don't work with competitive games.
+ Disable those conditionally. This will be fixed in the future.
+ */
+const disableModsAsNeeded = () => {
+    const pathname = window.location.pathname;
+    if (pathname.indexOf('live-challenge') !== -1) {
+        disableMods([
+            MODS.showScore,
+            MODS.bopIt,
+        ], true);
+    }
+};
+
 // -------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -2564,6 +2586,7 @@ const clearCh_eatOverlay = () => {
 let _CH_EA_AT_DE_TE_CT_IO_N = 'on your honor';
 
 window.addEventListener('load', () => {
+    disableModsAsNeeded();
     if (_CH_EA_AT_DE_TE_CT_IO_N || !_CH_EA_AT_DE_TE_CT_IO_N) {
         // Yeah, yeah. If you made it this far in the c ode, you can c h eat if you really want. You'll get caught.
     }
@@ -2799,17 +2822,6 @@ const initGoogle = () => {
         maxZoom: 9,
         minZoom: 0,
     });
-    const smallMapContainer = getSmallMapContainer();
-    if (DEBUG && smallMapContainer) {
-        smallMapContainer.addEventListener('contextmenu', (evt) => { // Add right click listener to guess map for debugging.
-            debugMap(this, evt);
-        });
-        const modHeader = document.querySelector('#gg-mods-header');
-        modHeader.addEventListener('contextmenu', (evt) => {
-            evt.preventDefault();
-            debugMap(this, evt);
-        });
-    }
 };
 
 const onDomReady = (callback) => {
@@ -2822,7 +2834,7 @@ const onDomReady = (callback) => {
 
 /**
  Some formatting is different between modes and browsers.
- Things in here are likely to change over time. C
+ Things in here are likely to change over time.
  */
 const fixFormatting = () => {
     const ticketBar = getTicketBar();
@@ -2837,6 +2849,22 @@ const fixFormatting = () => {
     };
 };
 
+
+const addDebugger = () => {
+    const smallMapContainer = getSmallMapContainer();
+    if (smallMapContainer) {
+        smallMapContainer.addEventListener('contextmenu', (evt) => {
+            debugMap(this, evt);
+        });
+    }
+    const modHeader = document.querySelector('#gg-mods-header');
+    if (modHeader) {
+        modHeader.addEventListener('contextmenu', (evt) => {
+            debugMap(this, evt);
+        });
+    }
+};
+
 onDomReady(() => {
     if (!_CHEAT_DETECTION) {
         return; // Get outta 'ere
@@ -2844,7 +2872,9 @@ onDomReady(() => {
     if (_YOURE_LOOKING_AT_MY_CODE()) {
         return; // Get outta 'ere
     }
-    fixFormatting();
+    document.addEventListener('ggCoordinates', (evt) => { // Used for duels.
+        GG_LOC = evt.detail;
+    });
     injecter(() => {
         const google = getGoogle();
         if (!google) {
@@ -2856,7 +2886,7 @@ onDomReady(() => {
                 this.setRenderingType(google.maps.RenderingType.VECTOR); // Must be a vector map for some additional controls.
                 this.setHeadingInteractionEnabled(true);
                 this.setTiltInteractionEnabled(true);
-                GOOGLE_MAP = this; // Store globally for use in other functions once this is instantiated.
+                GOOGLE_MAP = this; // This is used for map functions that have nothing to do with the active map. GG_MAP is used for the active round.
 
                 // Add event listeners to THIS map instance
                 google.maps.event.addListener(this, 'dragstart', () => {
@@ -2917,12 +2947,18 @@ onDomReady(() => {
         };
 
         waitForMapsToLoad(initMods);
+        waitForMapsToLoad(() => {
+            fixFormatting();
+            if (DEBUG) {
+                addDebugger();
+            }
+        });
         initGoogle();
     });
 });
 
 /* eslint-disable no-undef */
-GeoGuessrEventFramework.init().then(GEF => {
+GeoGuessrEventFramework.init().then(GEF => { // Note: GG_MAP is the min-map, GOOGLE_MAP is used for pulling funtionality from Google's map functions.
     GEF.events.addEventListener('round_start', (evt) => {
         window.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
         try {

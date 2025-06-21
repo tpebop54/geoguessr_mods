@@ -5,6 +5,7 @@
 // @author       tpebop
 // @match        *://*.geoguessr.com/*
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/gg_evt.js
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/gg_coordinate_extractor.js
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/multimod_v1.js
 // @updateURL    https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/multimod_v1.js
 // @downloadURL  https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/multimod_v1.js
