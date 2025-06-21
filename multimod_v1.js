@@ -2853,10 +2853,6 @@ onDomReady(() => {
     if (_YOURE_LOOKING_AT_MY_CODE()) {
         return; // Get outta 'ere
     }
-    fixFormatting();
-    if (DEBUG) {
-        addDebugger();
-    }
     document.addEventListener('ggCoordinates', (evt) => { // Used for duels.
         GG_LOC = evt.detail;
     });
@@ -2932,6 +2928,12 @@ onDomReady(() => {
         };
 
         waitForMapsToLoad(initMods);
+        waitForMapsToLoad(() => {
+            fixFormatting();
+            if (DEBUG) {
+                addDebugger();
+            }
+        });
         initGoogle();
     });
 });
