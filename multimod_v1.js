@@ -19,7 +19,6 @@
 
 /**
   TECHNICAL DEBT
-   - GeoGuessr header thing is messed up in Chrome and Opera.
    - Disable certain mods when actual location cannot be found.
    - Sometimes the click events are being blocked on the button menu, but then it works if you refresh.
 */
@@ -29,7 +28,7 @@
   USER NOTES
     - Sadly, you have to disable ad blockers for this to work. I tried so hard to allow them, but it blocks stuff at a level that I can't undo with TamperMonkey. Sorry.
     - When loading, you may occasionally have to refresh the page once or twice.
-    - You can disable the quotes if you want via the SHOW_QUOTES variable. Blackout screen is non-negotiable.
+    - You can disable the quotes if you want via the SHOW_QUOTES variable. Blackout screen is non-negotiable, it's needed to make sure everything loads.
     - If things go super bad, press "Alt Shift ." (period is actually a > with Shift active). This will disable all mods and refresh the page.
     - If you want to toggle a mod, change 'show' to true or false for it in MODS.
 /*
@@ -2805,17 +2804,6 @@ const initGoogle = () => {
         maxZoom: 9,
         minZoom: 0,
     });
-    const smallMapContainer = getSmallMapContainer();
-    if (DEBUG && smallMapContainer) {
-        smallMapContainer.addEventListener('contextmenu', (evt) => { // Add right click listener to guess map for debugging.
-            debugMap(this, evt);
-        });
-        const modHeader = document.querySelector('#gg-mods-header');
-        modHeader.addEventListener('contextmenu', (evt) => {
-            evt.preventDefault();
-            debugMap(this, evt);
-        });
-    }
 };
 
 const onDomReady = (callback) => {
@@ -2843,6 +2831,21 @@ const fixFormatting = () => {
     };
 };
 
+const addDebugger = () => {
+    const smallMapContainer = getSmallMapContainer();
+    if (smallMapContainer) {
+        smallMapContainer.addEventListener('contextmenu', (evt) => {
+            debugMap(this, evt);
+        });
+    }
+    const modHeader = document.querySelector('#gg-mods-header');
+    if (modHeader) {
+        modHeader.addEventListener('contextmenu', (evt) => {
+            debugMap(this, evt);
+        });
+    }
+};
+
 onDomReady(() => {
     if (!_CHEAT_DETECTION) {
         return; // Get outta 'ere
@@ -2851,7 +2854,10 @@ onDomReady(() => {
         return; // Get outta 'ere
     }
     fixFormatting();
-    document.addEventListener('ggCoordinates', (evt) => {
+    if (DEBUG) {
+        addDebugger();
+    }
+    document.addEventListener('ggCoordinates', (evt) => { // Used for duels.
         GG_LOC = evt.detail;
     });
     injecter(() => {
