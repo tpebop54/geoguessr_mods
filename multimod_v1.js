@@ -19,8 +19,8 @@
 
 /**
   TECHNICAL DEBT
-   - Disable certain mods when actual location cannot be found.
    - Sometimes the click events are being blocked on the button menu, but then it works if you refresh.
+   - Tiles remaining thing stays on pages that it shouldn't.
 */
 
 
@@ -2194,8 +2194,7 @@ const _COLOR_FILTERS = {
     'black and white': { // TODO: does this need to be configurable based on the image?
         grayscale: '100%',
         contrast: '1000%',
-        threshold: '128',
-        brightness: '1.5',
+        brightness: '70%',
     },
     deuteranopia: {
         'hue-rotate': '-20deg',
@@ -2271,7 +2270,7 @@ const getFilterStr = (mod) => { // Get string that can be applied to streetview 
     let filterStr = '';
     for (const [key, value] of Object.entries(activeFilter)) {
         if (value == null) {
-            continue
+            continue;
         }
         filterStr += `${key}(${value}) `; // Requires units in value.
     }
