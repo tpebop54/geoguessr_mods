@@ -1999,7 +1999,6 @@ async function updatePuzzle(forceState = null) {
 
 let _TILE_COUNT_DISPLAY; // Div for showing the number of remaining tiles.
 let _TILE_COUNT; // How many remaining tiles the user has.
-let _OVERLAY_TILES; // Opaque black tiles to overlay.
 let _TILE_COUNT_DRAGGING = false;
 let _TILE_COUNT_OFFSET_X = 0;
 let _TILE_COUNT_OFFSET_Y = 0;
@@ -2252,6 +2251,34 @@ const _COLOR_FILTERS = {
     },
 };
 
+/**
+Most of the formatting here can be done with pure CSS on the canvas,
+but for some modes it needs to be an overlay div that modifies the contents under it.
+*/
+const removeColorOverlay = () => {
+    const colorOverlay = document.getElementById('gg-color-overlay');
+    if (colorOverlay) {
+        colorOverlay.parentElement.removeChild(colorOverlay);
+    }
+};
+
+const makeColorOverlay = () => {
+    removeColorOverlay();
+
+    const bigMapContainer = getBigMapContainer();
+    if (!bigMapContainer) {
+        return;
+    }
+
+    const container = document.createElement('div');
+    container.id = 'gg-color-overlay';
+
+    const colorOverlay = document.createElement('div');
+    colorOverlay.id = 'gg-color-overlay';
+
+    bigMapContainer.parentElement.insertBefore(colorOverlay, bigMapContainer.parentElement.firstChild);
+};
+
 const getFilterStr = (mod) => { // Get string that can be applied to streetview canvas filters.
     const activeFilter = Object.assign({}, _BASE_COLOR_FILTER); // The actual styling that will be applied to the canvas.
     const activeColorMode = getOption(mod, 'colorMode');
@@ -2286,6 +2313,7 @@ const updateDisplayOptions = (forceState = null) => {
 
     let filterStr = '';
     if (active) {
+        makeColorOverlay(); // TODO: depends on mode.
         filterStr = getFilterStr(mod);
     }
     const canvas3d = getBigMapCanvas();
@@ -3068,6 +3096,7 @@ const style = `
         flex-direction: column;
         gap: 6px;
         margin-top: 10px;
+        z-index: 9999;
     }
 
     .gg-mod-button {
@@ -3325,6 +3354,16 @@ const style = `
         pointer-events: none;
         background: transparent !important;
         border: none;
+    }
+
+    #gg-color-overlay {
+        position: absolute;
+        width: 100vw;
+        height: 100vh;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+        z-index: 2;
     }
 
 `;
