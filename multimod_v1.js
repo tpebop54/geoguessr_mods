@@ -13,9 +13,45 @@
 // @downloadURL  https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/multimod_v1.js
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/gg_evt.js
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/gg_coordinate_extractor.js
-
+// @run-at       document-start
 // ==/UserScript==
 
+(function ensureVectorMapOverride() {
+    function overrideGoogleMap(google) {
+        if (!google || !google.maps || !google.maps.Map) return;
+        if (google.maps.Map._isOverriddenForVector) return;
+        const OriginalMap = google.maps.Map;
+        google.maps.Map = class extends OriginalMap {
+            constructor(...args) {
+                super(...args);
+                this.setRenderingType && this.setRenderingType(google.maps.RenderingType.VECTOR);
+                this.setHeadingInteractionEnabled && this.setHeadingInteractionEnabled(true);
+                this.setTiltInteractionEnabled && this.setTiltInteractionEnabled(true);
+                if (this.getRenderingType && this.getRenderingType() !== google.maps.RenderingType.VECTOR) {
+                    console.warn('GOOGLE_MAP is not vector! RenderingType:', this.getRenderingType());
+                }
+            }
+        };
+        google.maps.Map._isOverriddenForVector = true;
+    }
+    function tryOverride() {
+        const google = window.google || (window.unsafeWindow && window.unsafeWindow.google);
+        if (google && google.maps && google.maps.Map) {
+            overrideGoogleMap(google);
+        }
+    }
+    // Try immediately
+    tryOverride();
+    // Observe for Google Maps script load
+    const observer = new MutationObserver(() => {
+        tryOverride();
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+    // Also poll in case observer misses
+    for (let i = 1; i <= 20; i++) {
+        setTimeout(tryOverride, i * 100);
+    }
+})();
 
 /**
   TECHNICAL DEBT
@@ -31,7 +67,7 @@
     - You can disable the quotes if you want via the SHOW_QUOTES variable. Blackout screen is non-negotiable, it's needed to make sure everything loads.
     - If things go super bad, press "Alt Shift ." (period is actually a > with Shift active). This will disable all mods and refresh the page.
     - If you want to toggle a mod, change 'show' to true or false for it in MODS.
-*/
+/*
 
 /**
   DEV NOTES
@@ -617,34 +653,25 @@ const makeOptionMenu = (mod) => {
             type = Array; // It's a string, but differentiate it here.
             input = document.createElement('select');
             input.id = getDropdownID(mod, key);
-            // Use default options array if not present in mod.options
-            const arrOptions = (mod.options[key] && mod.options[key].options) || option.options || [];
-            for (const arrOpt of arrOptions) {
+            for (const option of mod.options[key].options) {
                 const optionElement = document.createElement('option');
-                optionElement.value = arrOpt;
-                optionElement.textContent = arrOpt;
+                optionElement.value = option;
+                optionElement.textContent = option;
                 input.appendChild(optionElement);
             }
-            input.value = value;
-            input.className = 'gg-option-input';
+            Object.assign(input, { value, className: 'gg-option-input' });
         } else if (typeof defaultVal === 'number') {
             type = Number;
             input = document.createElement('input');
-            input.type = 'number';
-            input.value = value;
-            input.className = 'gg-option-input';
+            Object.assign(input, { type: 'number', value, className: 'gg-option-input' });
         } else if (typeof defaultVal === 'string') {
             type = String;
             input = document.createElement('input');
-            input.type = 'string';
-            input.value = value;
-            input.className = 'gg-option-input';
+            Object.assign(input, { type: 'string', value, className: 'gg-option-input' });
         } else if (typeof defaultVal === 'boolean') {
             type = Boolean;
             input = document.createElement('input');
-            input.type = 'checkbox';
-            input.checked = !!value;
-            input.className = 'gg-option-input';
+            Object.assign(input, { type: 'checkbox', value, className: 'gg-option-input' });
         } else {
             throw new Error(`Invalid option specification: ${key} is of type ${typeof defaultVal}`);
         }
@@ -652,18 +679,13 @@ const makeOptionMenu = (mod) => {
         inputs.push([key, type, input]);
 
         _OPTION_MENU.appendChild(lineDiv);
-    }
+    };
 
     const onReset = () => {
-        for (const [key, type, input] of inputs) {
-            const defVal = getDefaultOption(mod, key);
-            setOption(mod, key, defVal);
-            if (type === Boolean) {
-                input.checked = !!defVal;
-            } else {
-                input.value = defVal;
-            }
+        for (const key of Object.entries(mod.options)) {
+            setOption(mod, key, getDefaultOption(mod, key));
         }
+        input.value = getDefaultOption(mod, key);
     };
 
     const onClose = () => {
@@ -676,7 +698,8 @@ const makeOptionMenu = (mod) => {
             if (type === Array) {
                 const dropdown = document.querySelector(`#${getDropdownID(mod, key)}`);
                 value = dropdown.value;
-            } else if (type === Boolean) {
+            }
+            if (type === Boolean) {
                 value = !!input.checked;
             } else {
                 value = type(input.value);
@@ -684,9 +707,7 @@ const makeOptionMenu = (mod) => {
             setOption(mod, key, value, false);
         }
         saveState();
-        if (typeof UPDATE_CALLBACKS[mod.key] === 'function') {
-            UPDATE_CALLBACKS[mod.key](mod.active);
-        }
+        UPDATE_CALLBACKS[mod.key](mod.active);
     };
 
     const formDiv = document.createElement('div');
@@ -703,7 +724,7 @@ const makeOptionMenu = (mod) => {
         button.innerHTML = label;
         button.addEventListener('click', callback);
         formDiv.appendChild(button);
-    }
+    };
 
     const modDiv = getModDiv();
     _OPTION_MENU.appendChild(formDiv);
@@ -727,9 +748,7 @@ const updateMod = (mod, forceState = null) => {
     }
 
     mod.active = newState;
-    // Only update button if it exists (mod.show may be false)
-    const btn = getModButton(mod);
-    if (btn) btn.textContent = getButtonText(mod);
+    getModButton(mod).textContent = getButtonText(mod);
 
     saveState();
     return newState;
@@ -763,10 +782,10 @@ const isScoringMod = (mod) => {
     return !!mod.isScoring;
 };
 
-const disableOtherScoreMods = (mod) => {
+const disableOtherScoreMods = (mod) => { // This function needs to be called prior to defining SCORE_FUNC when a scoring mod is enabled.
     SCORE_FUNC = undefined;
     for (const other of Object.values(MODS)) {
-        if (mod && mod === other) {
+        if (mod === other) {
             continue;
         }
         if (isScoringMod(other)) {
@@ -791,11 +810,12 @@ const closeOptionMenu = () => {
 // ===============================================================================================================================
 
 const getActualLoc = () => {
-    const actual = GG_ROUND || GG_LOC;
-    if (!actual || typeof actual.lat !== 'number' || typeof actual.lng !== 'number') {
+    const actual = GG_ROUND || GG_LOC; // These are extracted in different ways. May need to clean it up at some point.
+    if (!GG_ROUND && !GG_CLICK) {
         return undefined;
     }
-    return { lat: actual.lat, lng: actual.lng };
+    const loc = { lat: actual.lat, lng: actual.lng };
+    return loc;
 };
 
 const getMapBounds = () => {
@@ -852,11 +872,13 @@ const getHeading = (p1, p2) => {
 
 const getScore = () => {
     const actual = getActualLoc();
-    if (!actual || !GG_CLICK || !GG_MAP || typeof GG_MAP.maxErrorDistance !== 'number') {
+    if (!actual) {
         return;
     }
     const guess = GG_CLICK;
     const dist = getDistance(actual, guess);
+
+    // Ref: https://www.plonkit.net/beginners-guide#game-mechanics --> score
     const maxErrorDist = GG_MAP.maxErrorDistance;
     const score = Math.round(5000 * Math.pow(Math.E, -10 * dist / maxErrorDist));
     return score;
@@ -1074,29 +1096,10 @@ const shuffleArray = (arr, inPlace = false) => {
 // MOD: Satellite view.
 // ===============================================================================================================================
 
-const waitForMapReady = (callback, retries = 10, delay = 200) => {
-    // Wait for GOOGLE_MAP and its container to be ready and visible
-    const mapContainer = getSmallMapContainer();
-    if (
-        GOOGLE_MAP &&
-        typeof GOOGLE_MAP.setMapTypeId === 'function' &&
-        mapContainer &&
-        mapContainer.offsetParent !== null // visible in DOM
-    ) {
-        callback();
-    } else if (retries > 0) {
-        setTimeout(() => waitForMapReady(callback, retries - 1, delay), delay);
-    } else {
-        console.warn('Map not ready for setMapTypeId');
-    }
-};
-
 const updateSatView = (forceState = null) => {
     const mod = MODS.satView;
     const active = updateMod(mod, forceState);
-    waitForMapReady(() => {
-        GOOGLE_MAP.setMapTypeId(active ? 'satellite' : 'roadmap');
-    });
+    GOOGLE_MAP.setMapTypeId(active ? 'satellite' : 'roadmap');
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -1107,41 +1110,16 @@ const updateSatView = (forceState = null) => {
 // MOD: Rotating guessmap.
 // ===============================================================================================================================
 
-const waitForMapVectorReady = (callback, retries = 10, delay = 200) => {
-    // Wait for GOOGLE_MAP, container, and setHeading (vector map only)
-    const mapContainer = getSmallMapContainer();
-    if (
-        GOOGLE_MAP &&
-        typeof GOOGLE_MAP.setHeading === 'function' &&
-        mapContainer &&
-        mapContainer.offsetParent !== null // visible in DOM
-    ) {
-        callback();
-    } else if (retries > 0) {
-        setTimeout(() => waitForMapVectorReady(callback, retries - 1, delay), delay);
-    } else {
-        console.warn('Map not ready or not vector for setHeading');
-    }
-};
-
 const setHeading = (nDegrees) => {
-    if (typeof GOOGLE_MAP.setHeading === 'function') {
-        const heading = ((nDegrees % 360) + 360) % 360;
-        GOOGLE_MAP.setHeading(heading);
-    } else {
-        console.warn('setHeading not available: map is not vector');
-    }
+    const heading = ((nDegrees % 360) + 360) % 360;
+    GOOGLE_MAP.setHeading(heading);
 };
 
 const doRotation = (nDegrees) => {
     if (_IS_DRAGGING_SMALL_MAP) {
         return; // Drag event gets cut by setHeading.
     }
-    if (typeof GOOGLE_MAP.getHeading === 'function') {
-        setHeading(GOOGLE_MAP.getHeading() + nDegrees);
-    } else {
-        console.warn('getHeading not available: map is not vector');
-    }
+    setHeading(GOOGLE_MAP.getHeading() + nDegrees);
 };
 
 let ROTATION_INTERVAL;
@@ -1168,14 +1146,12 @@ const updateRotateMap = (forceState = null) => {
         if (ROTATION_INTERVAL) {
             clearInterval(ROTATION_INTERVAL);
         }
-        waitForMapVectorReady(() => {
-            setHeading(startDegrees); // Set initial rotation and then start interval.
-            if (nDegrees && nMilliseconds) {
-                ROTATION_INTERVAL = setInterval(() => {
-                    doRotation(nDegrees);
-                }, nMilliseconds);
-            }
-        });
+        setHeading(startDegrees); // Set initial rotation and then start interval.
+        if (nDegrees && nMilliseconds) {
+            ROTATION_INTERVAL = setInterval(() => {
+                doRotation(nDegrees);
+            }, nMilliseconds);
+        }
     } else if (ROTATION_INTERVAL) {
         clearInterval(ROTATION_INTERVAL);
     }
@@ -1968,7 +1944,7 @@ const addCanvas2dListeners = () => {
 const onPuzzleClick = () => {
     _PUZZLE_DRAGGING_TILE = getCurrentMouseTile();
     _PUZZLE_CURRENT_DROP_TILE = _PUZZLE_DRAGGING_TILE; // Always same on initial click.
-    pasteToDraggingImage; // Paste clicked tile to draggable canvas.
+    pasteToDraggingImage(); // Paste clicked tile to draggable canvas.
 
     const ctx2d = CANVAS_2D.getContext('2d');
     if (_PUZZLE_DRAGGING_TILE) {
@@ -2087,8 +2063,6 @@ const makeTileCounter = () => {
 
     const container = document.createElement('div');
     container.id = 'gg-tile-count';
-
-   
 
     container.onmousedown = (evt) => {
         _TILE_COUNT_DRAGGING = true;
@@ -2795,6 +2769,47 @@ const onMapClick = (evt) => {
     document.dispatchEvent(event, { bubbles: true });
 };
 
+// --- EARLY GOOGLE MAPS VECTOR OVERRIDE ---
+(function() {
+    // Try to override as soon as google.maps is available
+    function overrideGoogleMapsVector() {
+        if (window.google && window.google.maps && window.google.maps.Map && !window.google.maps.__vectorOverridden) {
+            const google = window.google;
+            const OriginalMap = google.maps.Map;
+            google.maps.Map = class extends OriginalMap {
+                constructor(...args) {
+                    super(...args);
+                    if (this.setRenderingType) {
+                        this.setRenderingType(google.maps.RenderingType.VECTOR);
+                    }
+                    if (this.setHeadingInteractionEnabled) {
+                        this.setHeadingInteractionEnabled(true);
+                    }
+                    if (this.setTiltInteractionEnabled) {
+                        this.setTiltInteractionEnabled(true);
+                    }
+                    if (typeof this.getRenderingType === 'function' && this.getRenderingType() !== google.maps.RenderingType.VECTOR) {
+                        console.warn('GOOGLE_MAP is not vector! RenderingType:', this.getRenderingType());
+                    }
+                    window.GOOGLE_MAP = this;
+                }
+            };
+            google.maps.__vectorOverridden = true;
+        }
+    }
+    // If already loaded, override immediately
+    if (window.google && window.google.maps) {
+        overrideGoogleMapsVector();
+    } else {
+        // Otherwise, observe for google.maps to appear
+        const interval = setInterval(() => {
+            if (window.google && window.google.maps) {
+                clearInterval(interval);
+                overrideGoogleMapsVector();
+            }
+        }, 10);
+    }
+})();
 // -------------------------------------------------------------------------------------------------------------------------------
 
 _CHEAT_DETECTION = true; // I freaking dare you.
@@ -2865,7 +2880,7 @@ const _YOURE_LOOKING_AT_MY_CODE = (v) => {
         })();
         const i = a(v);
         [...'x'].forEach(j => j.charCodeAt(0) * Math.random());
-        return i === 'A' || (!!(void (+(~(1 << 30) & (1 >> 1) | (([] + [])[1] ?? 0))) && (1 === 1)));
+        return i === 'A' || (!!(void (+(~(1 << 30) & (1 >> 1) | (([] + [])[1] ?? 0))) === 'B'));
     } catch (k) {
         return false;
     }
@@ -2945,11 +2960,14 @@ onDomReady(() => {
         google.maps.Map = class extends google.maps.Map {
             constructor(...args) {
                 super(...args);
-                this.setRenderingType(google.maps.RenderingType.VECTOR); // Must be a vector map for some additional controls.
+                this.setRenderingType(google.maps.RenderingType.VECTOR);
                 this.setHeadingInteractionEnabled(true);
                 this.setTiltInteractionEnabled(true);
-                GOOGLE_MAP = this; // This is used for map functions that have nothing to do with the active map. GG_MAP is used for the active round.
-
+                GOOGLE_MAP = this;
+                // Warn if not vector
+                if (this.getRenderingType && this.getRenderingType() !== google.maps.RenderingType.VECTOR) {
+                    console.warn('GOOGLE_MAP is not vector! RenderingType:', this.getRenderingType());
+                }
                 // Add event listeners to THIS map instance
                 google.maps.event.addListener(this, 'dragstart', () => {
                     _IS_DRAGGING_SMALL_MAP = true;
