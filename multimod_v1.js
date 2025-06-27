@@ -19,8 +19,8 @@
 
 /**
   TECHNICAL DEBT
+   - Disable certain mods when actual location cannot be found.
    - Sometimes the click events are being blocked on the button menu, but then it works if you refresh.
-   - Tiles remaining thing stays on pages that it shouldn't.
 */
 
 
@@ -31,7 +31,7 @@
     - You can disable the quotes if you want via the SHOW_QUOTES variable. Blackout screen is non-negotiable, it's needed to make sure everything loads.
     - If things go super bad, press "Alt Shift ." (period is actually a > with Shift active). This will disable all mods and refresh the page.
     - If you want to toggle a mod, change 'show' to true or false for it in MODS.
-/*
+*/
 
 /**
   DEV NOTES
@@ -617,25 +617,34 @@ const makeOptionMenu = (mod) => {
             type = Array; // It's a string, but differentiate it here.
             input = document.createElement('select');
             input.id = getDropdownID(mod, key);
-            for (const option of mod.options[key].options) {
+            // Use default options array if not present in mod.options
+            const arrOptions = (mod.options[key] && mod.options[key].options) || option.options || [];
+            for (const arrOpt of arrOptions) {
                 const optionElement = document.createElement('option');
-                optionElement.value = option;
-                optionElement.textContent = option;
+                optionElement.value = arrOpt;
+                optionElement.textContent = arrOpt;
                 input.appendChild(optionElement);
             }
-            Object.assign(input, { value, className: 'gg-option-input' });
+            input.value = value;
+            input.className = 'gg-option-input';
         } else if (typeof defaultVal === 'number') {
             type = Number;
             input = document.createElement('input');
-            Object.assign(input, { type: 'number', value, className: 'gg-option-input' });
+            input.type = 'number';
+            input.value = value;
+            input.className = 'gg-option-input';
         } else if (typeof defaultVal === 'string') {
             type = String;
             input = document.createElement('input');
-            Object.assign(input, { type: 'string', value, className: 'gg-option-input' });
+            input.type = 'string';
+            input.value = value;
+            input.className = 'gg-option-input';
         } else if (typeof defaultVal === 'boolean') {
             type = Boolean;
             input = document.createElement('input');
-            Object.assign(input, { type: 'checkbox', value, className: 'gg-option-input' });
+            input.type = 'checkbox';
+            input.checked = !!value;
+            input.className = 'gg-option-input';
         } else {
             throw new Error(`Invalid option specification: ${key} is of type ${typeof defaultVal}`);
         }
@@ -643,13 +652,18 @@ const makeOptionMenu = (mod) => {
         inputs.push([key, type, input]);
 
         _OPTION_MENU.appendChild(lineDiv);
-    };
+    }
 
     const onReset = () => {
-        for (const key of Object.entries(mod.options)) {
-            setOption(mod, key, getDefaultOption(mod, key));
+        for (const [key, type, input] of inputs) {
+            const defVal = getDefaultOption(mod, key);
+            setOption(mod, key, defVal);
+            if (type === Boolean) {
+                input.checked = !!defVal;
+            } else {
+                input.value = defVal;
+            }
         }
-        input.value = getDefaultOption(mod, key);
     };
 
     const onClose = () => {
@@ -662,8 +676,7 @@ const makeOptionMenu = (mod) => {
             if (type === Array) {
                 const dropdown = document.querySelector(`#${getDropdownID(mod, key)}`);
                 value = dropdown.value;
-            }
-            if (type === Boolean) {
+            } else if (type === Boolean) {
                 value = !!input.checked;
             } else {
                 value = type(input.value);
@@ -671,7 +684,9 @@ const makeOptionMenu = (mod) => {
             setOption(mod, key, value, false);
         }
         saveState();
-        UPDATE_CALLBACKS[mod.key](mod.active);
+        if (typeof UPDATE_CALLBACKS[mod.key] === 'function') {
+            UPDATE_CALLBACKS[mod.key](mod.active);
+        }
     };
 
     const formDiv = document.createElement('div');
@@ -688,7 +703,7 @@ const makeOptionMenu = (mod) => {
         button.innerHTML = label;
         button.addEventListener('click', callback);
         formDiv.appendChild(button);
-    };
+    }
 
     const modDiv = getModDiv();
     _OPTION_MENU.appendChild(formDiv);
@@ -712,7 +727,9 @@ const updateMod = (mod, forceState = null) => {
     }
 
     mod.active = newState;
-    getModButton(mod).textContent = getButtonText(mod);
+    // Only update button if it exists (mod.show may be false)
+    const btn = getModButton(mod);
+    if (btn) btn.textContent = getButtonText(mod);
 
     saveState();
     return newState;
@@ -746,10 +763,10 @@ const isScoringMod = (mod) => {
     return !!mod.isScoring;
 };
 
-const disableOtherScoreMods = (mod) => { // This function needs to be called prior to defining SCORE_FUNC when a scoring mod is enabled.
+const disableOtherScoreMods = (mod) => {
     SCORE_FUNC = undefined;
     for (const other of Object.values(MODS)) {
-        if (mod === other) {
+        if (mod && mod === other) {
             continue;
         }
         if (isScoringMod(other)) {
@@ -774,12 +791,11 @@ const closeOptionMenu = () => {
 // ===============================================================================================================================
 
 const getActualLoc = () => {
-    const actual = GG_ROUND || GG_LOC; // These are extracted in different ways. May need to clean it up at some point.
-    if (!GG_ROUND && !GG_CLICK) {
+    const actual = GG_ROUND || GG_LOC;
+    if (!actual || typeof actual.lat !== 'number' || typeof actual.lng !== 'number') {
         return undefined;
     }
-    const loc = { lat: actual.lat, lng: actual.lng };
-    return loc;
+    return { lat: actual.lat, lng: actual.lng };
 };
 
 const getMapBounds = () => {
@@ -836,13 +852,11 @@ const getHeading = (p1, p2) => {
 
 const getScore = () => {
     const actual = getActualLoc();
-    if (!actual) {
+    if (!actual || !GG_CLICK || !GG_MAP || typeof GG_MAP.maxErrorDistance !== 'number') {
         return;
     }
     const guess = GG_CLICK;
     const dist = getDistance(actual, guess);
-
-    // Ref: https://www.plonkit.net/beginners-guide#game-mechanics --> score
     const maxErrorDist = GG_MAP.maxErrorDistance;
     const score = Math.round(5000 * Math.pow(Math.E, -10 * dist / maxErrorDist));
     return score;
@@ -1999,6 +2013,7 @@ async function updatePuzzle(forceState = null) {
 
 let _TILE_COUNT_DISPLAY; // Div for showing the number of remaining tiles.
 let _TILE_COUNT; // How many remaining tiles the user has.
+let _OVERLAY_TILES; // Opaque black tiles to overlay.
 let _TILE_COUNT_DRAGGING = false;
 let _TILE_COUNT_OFFSET_X = 0;
 let _TILE_COUNT_OFFSET_Y = 0;
@@ -2026,6 +2041,8 @@ const makeTileCounter = () => {
 
     const container = document.createElement('div');
     container.id = 'gg-tile-count';
+
+   
 
     container.onmousedown = (evt) => {
         _TILE_COUNT_DRAGGING = true;
@@ -2193,7 +2210,8 @@ const _COLOR_FILTERS = {
     'black and white': { // TODO: does this need to be configurable based on the image?
         grayscale: '100%',
         contrast: '1000%',
-        brightness: '70%',
+        threshold: '128',
+        brightness: '1.5',
     },
     deuteranopia: {
         'hue-rotate': '-20deg',
@@ -2251,34 +2269,6 @@ const _COLOR_FILTERS = {
     },
 };
 
-/**
-Most of the formatting here can be done with pure CSS on the canvas,
-but for some modes it needs to be an overlay div that modifies the contents under it.
-*/
-const removeColorOverlay = () => {
-    const colorOverlay = document.getElementById('gg-color-overlay');
-    if (colorOverlay) {
-        colorOverlay.parentElement.removeChild(colorOverlay);
-    }
-};
-
-const makeColorOverlay = () => {
-    removeColorOverlay();
-
-    const bigMapContainer = getBigMapContainer();
-    if (!bigMapContainer) {
-        return;
-    }
-
-    const container = document.createElement('div');
-    container.id = 'gg-color-overlay';
-
-    const colorOverlay = document.createElement('div');
-    colorOverlay.id = 'gg-color-overlay';
-
-    bigMapContainer.parentElement.insertBefore(colorOverlay, bigMapContainer.parentElement.firstChild);
-};
-
 const getFilterStr = (mod) => { // Get string that can be applied to streetview canvas filters.
     const activeFilter = Object.assign({}, _BASE_COLOR_FILTER); // The actual styling that will be applied to the canvas.
     const activeColorMode = getOption(mod, 'colorMode');
@@ -2297,7 +2287,7 @@ const getFilterStr = (mod) => { // Get string that can be applied to streetview 
     let filterStr = '';
     for (const [key, value] of Object.entries(activeFilter)) {
         if (value == null) {
-            continue;
+            continue
         }
         filterStr += `${key}(${value}) `; // Requires units in value.
     }
@@ -2313,7 +2303,6 @@ const updateDisplayOptions = (forceState = null) => {
 
     let filterStr = '';
     if (active) {
-        makeColorOverlay(); // TODO: depends on mode.
         filterStr = getFilterStr(mod);
     }
     const canvas3d = getBigMapCanvas();
@@ -2830,7 +2819,7 @@ const _YOURE_LOOKING_AT_MY_CODE = (v) => {
         })();
         const i = a(v);
         [...'x'].forEach(j => j.charCodeAt(0) * Math.random());
-        return i === 'A' || (!!(void (+(~(1 << 30) & (1 >> 1) | (([] + [])[1] ?? 0)))));
+        return i === 'A' || (!!(void (+(~(1 << 30) & (1 >> 1) | (([] + [])[1] ?? 0))) && (1 === 1)));
     } catch (k) {
         return false;
     }
@@ -3096,7 +3085,6 @@ const style = `
         flex-direction: column;
         gap: 6px;
         margin-top: 10px;
-        z-index: 9999;
     }
 
     .gg-mod-button {
@@ -3354,16 +3342,6 @@ const style = `
         pointer-events: none;
         background: transparent !important;
         border: none;
-    }
-
-    #gg-color-overlay {
-        position: absolute;
-        width: 100vw;
-        height: 100vh;
-        top: 0;
-        left: 0;
-        pointer-events: none;
-        z-index: 2;
     }
 
 `;
