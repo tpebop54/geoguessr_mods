@@ -13,50 +13,14 @@
 // @downloadURL  https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/multimod_v1.js
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/gg_evt.js
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/gg_coordinate_extractor.js
-// @run-at       document-start
+
 // ==/UserScript==
 
-(function ensureVectorMapOverride() {
-    function overrideGoogleMap(google) {
-        if (!google || !google.maps || !google.maps.Map) return;
-        if (google.maps.Map._isOverriddenForVector) return;
-        const OriginalMap = google.maps.Map;
-        google.maps.Map = class extends OriginalMap {
-            constructor(...args) {
-                super(...args);
-                this.setRenderingType && this.setRenderingType(google.maps.RenderingType.VECTOR);
-                this.setHeadingInteractionEnabled && this.setHeadingInteractionEnabled(true);
-                this.setTiltInteractionEnabled && this.setTiltInteractionEnabled(true);
-                if (this.getRenderingType && this.getRenderingType() !== google.maps.RenderingType.VECTOR) {
-                    console.warn('GOOGLE_MAP is not vector! RenderingType:', this.getRenderingType());
-                }
-            }
-        };
-        google.maps.Map._isOverriddenForVector = true;
-    }
-    function tryOverride() {
-        const google = window.google || (window.unsafeWindow && window.unsafeWindow.google);
-        if (google && google.maps && google.maps.Map) {
-            overrideGoogleMap(google);
-        }
-    }
-    // Try immediately
-    tryOverride();
-    // Observe for Google Maps script load
-    const observer = new MutationObserver(() => {
-        tryOverride();
-    });
-    observer.observe(document.documentElement, { childList: true, subtree: true });
-    // Also poll in case observer misses
-    for (let i = 1; i <= 20; i++) {
-        setTimeout(tryOverride, i * 100);
-    }
-})();
 
 /**
   TECHNICAL DEBT
-   - Disable certain mods when actual location cannot be found.
    - Sometimes the click events are being blocked on the button menu, but then it works if you refresh.
+   - Tiles remaining thing stays on pages that it shouldn't.
 */
 
 
@@ -2035,7 +1999,6 @@ async function updatePuzzle(forceState = null) {
 
 let _TILE_COUNT_DISPLAY; // Div for showing the number of remaining tiles.
 let _TILE_COUNT; // How many remaining tiles the user has.
-let _OVERLAY_TILES; // Opaque black tiles to overlay.
 let _TILE_COUNT_DRAGGING = false;
 let _TILE_COUNT_OFFSET_X = 0;
 let _TILE_COUNT_OFFSET_Y = 0;
@@ -2230,8 +2193,7 @@ const _COLOR_FILTERS = {
     'black and white': { // TODO: does this need to be configurable based on the image?
         grayscale: '100%',
         contrast: '1000%',
-        threshold: '128',
-        brightness: '1.5',
+        brightness: '70%',
     },
     deuteranopia: {
         'hue-rotate': '-20deg',
@@ -2289,6 +2251,34 @@ const _COLOR_FILTERS = {
     },
 };
 
+/**
+Most of the formatting here can be done with pure CSS on the canvas,
+but for some modes it needs to be an overlay div that modifies the contents under it.
+*/
+const removeColorOverlay = () => {
+    const colorOverlay = document.getElementById('gg-color-overlay');
+    if (colorOverlay) {
+        colorOverlay.parentElement.removeChild(colorOverlay);
+    }
+};
+
+const makeColorOverlay = () => {
+    removeColorOverlay();
+
+    const bigMapContainer = getBigMapContainer();
+    if (!bigMapContainer) {
+        return;
+    }
+
+    const container = document.createElement('div');
+    container.id = 'gg-color-overlay';
+
+    const colorOverlay = document.createElement('div');
+    colorOverlay.id = 'gg-color-overlay';
+
+    bigMapContainer.parentElement.insertBefore(colorOverlay, bigMapContainer.parentElement.firstChild);
+};
+
 const getFilterStr = (mod) => { // Get string that can be applied to streetview canvas filters.
     const activeFilter = Object.assign({}, _BASE_COLOR_FILTER); // The actual styling that will be applied to the canvas.
     const activeColorMode = getOption(mod, 'colorMode');
@@ -2307,7 +2297,7 @@ const getFilterStr = (mod) => { // Get string that can be applied to streetview 
     let filterStr = '';
     for (const [key, value] of Object.entries(activeFilter)) {
         if (value == null) {
-            continue
+            continue;
         }
         filterStr += `${key}(${value}) `; // Requires units in value.
     }
@@ -2323,6 +2313,7 @@ const updateDisplayOptions = (forceState = null) => {
 
     let filterStr = '';
     if (active) {
+        makeColorOverlay(); // TODO: depends on mode.
         filterStr = getFilterStr(mod);
     }
     const canvas3d = getBigMapCanvas();
@@ -2769,47 +2760,6 @@ const onMapClick = (evt) => {
     document.dispatchEvent(event, { bubbles: true });
 };
 
-// --- EARLY GOOGLE MAPS VECTOR OVERRIDE ---
-(function() {
-    // Try to override as soon as google.maps is available
-    function overrideGoogleMapsVector() {
-        if (window.google && window.google.maps && window.google.maps.Map && !window.google.maps.__vectorOverridden) {
-            const google = window.google;
-            const OriginalMap = google.maps.Map;
-            google.maps.Map = class extends OriginalMap {
-                constructor(...args) {
-                    super(...args);
-                    if (this.setRenderingType) {
-                        this.setRenderingType(google.maps.RenderingType.VECTOR);
-                    }
-                    if (this.setHeadingInteractionEnabled) {
-                        this.setHeadingInteractionEnabled(true);
-                    }
-                    if (this.setTiltInteractionEnabled) {
-                        this.setTiltInteractionEnabled(true);
-                    }
-                    if (typeof this.getRenderingType === 'function' && this.getRenderingType() !== google.maps.RenderingType.VECTOR) {
-                        console.warn('GOOGLE_MAP is not vector! RenderingType:', this.getRenderingType());
-                    }
-                    window.GOOGLE_MAP = this;
-                }
-            };
-            google.maps.__vectorOverridden = true;
-        }
-    }
-    // If already loaded, override immediately
-    if (window.google && window.google.maps) {
-        overrideGoogleMapsVector();
-    } else {
-        // Otherwise, observe for google.maps to appear
-        const interval = setInterval(() => {
-            if (window.google && window.google.maps) {
-                clearInterval(interval);
-                overrideGoogleMapsVector();
-            }
-        }, 10);
-    }
-})();
 // -------------------------------------------------------------------------------------------------------------------------------
 
 _CHEAT_DETECTION = true; // I freaking dare you.
@@ -2880,7 +2830,7 @@ const _YOURE_LOOKING_AT_MY_CODE = (v) => {
         })();
         const i = a(v);
         [...'x'].forEach(j => j.charCodeAt(0) * Math.random());
-        return i === 'A' || (!!(void (+(~(1 << 30) & (1 >> 1) | (([] + [])[1] ?? 0))) === 'B'));
+        return i === 'A' || (!!(void (+(~(1 << 30) & (1 >> 1) | (([] + [])[1] ?? 0)))));
     } catch (k) {
         return false;
     }
@@ -2960,14 +2910,11 @@ onDomReady(() => {
         google.maps.Map = class extends google.maps.Map {
             constructor(...args) {
                 super(...args);
-                this.setRenderingType(google.maps.RenderingType.VECTOR);
+                this.setRenderingType(google.maps.RenderingType.VECTOR); // Must be a vector map for some additional controls.
                 this.setHeadingInteractionEnabled(true);
                 this.setTiltInteractionEnabled(true);
-                GOOGLE_MAP = this;
-                // Warn if not vector
-                if (this.getRenderingType && this.getRenderingType() !== google.maps.RenderingType.VECTOR) {
-                    console.warn('GOOGLE_MAP is not vector! RenderingType:', this.getRenderingType());
-                }
+                GOOGLE_MAP = this; // This is used for map functions that have nothing to do with the active map. GG_MAP is used for the active round.
+
                 // Add event listeners to THIS map instance
                 google.maps.event.addListener(this, 'dragstart', () => {
                     _IS_DRAGGING_SMALL_MAP = true;
@@ -3149,6 +3096,7 @@ const style = `
         flex-direction: column;
         gap: 6px;
         margin-top: 10px;
+        z-index: 9999;
     }
 
     .gg-mod-button {
@@ -3406,6 +3354,16 @@ const style = `
         pointer-events: none;
         background: transparent !important;
         border: none;
+    }
+
+    #gg-color-overlay {
+        position: absolute;
+        width: 100vw;
+        height: 100vh;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+        z-index: 2;
     }
 
 `;
