@@ -1074,10 +1074,29 @@ const shuffleArray = (arr, inPlace = false) => {
 // MOD: Satellite view.
 // ===============================================================================================================================
 
+const waitForMapReady = (callback, retries = 10, delay = 200) => {
+    // Wait for GOOGLE_MAP and its container to be ready and visible
+    const mapContainer = getSmallMapContainer();
+    if (
+        GOOGLE_MAP &&
+        typeof GOOGLE_MAP.setMapTypeId === 'function' &&
+        mapContainer &&
+        mapContainer.offsetParent !== null // visible in DOM
+    ) {
+        callback();
+    } else if (retries > 0) {
+        setTimeout(() => waitForMapReady(callback, retries - 1, delay), delay);
+    } else {
+        console.warn('Map not ready for setMapTypeId');
+    }
+};
+
 const updateSatView = (forceState = null) => {
     const mod = MODS.satView;
     const active = updateMod(mod, forceState);
-    GOOGLE_MAP.setMapTypeId(active ? 'satellite' : 'roadmap');
+    waitForMapReady(() => {
+        GOOGLE_MAP.setMapTypeId(active ? 'satellite' : 'roadmap');
+    });
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -1088,16 +1107,41 @@ const updateSatView = (forceState = null) => {
 // MOD: Rotating guessmap.
 // ===============================================================================================================================
 
+const waitForMapVectorReady = (callback, retries = 10, delay = 200) => {
+    // Wait for GOOGLE_MAP, container, and setHeading (vector map only)
+    const mapContainer = getSmallMapContainer();
+    if (
+        GOOGLE_MAP &&
+        typeof GOOGLE_MAP.setHeading === 'function' &&
+        mapContainer &&
+        mapContainer.offsetParent !== null // visible in DOM
+    ) {
+        callback();
+    } else if (retries > 0) {
+        setTimeout(() => waitForMapVectorReady(callback, retries - 1, delay), delay);
+    } else {
+        console.warn('Map not ready or not vector for setHeading');
+    }
+};
+
 const setHeading = (nDegrees) => {
-    const heading = ((nDegrees % 360) + 360) % 360;
-    GOOGLE_MAP.setHeading(heading);
+    if (typeof GOOGLE_MAP.setHeading === 'function') {
+        const heading = ((nDegrees % 360) + 360) % 360;
+        GOOGLE_MAP.setHeading(heading);
+    } else {
+        console.warn('setHeading not available: map is not vector');
+    }
 };
 
 const doRotation = (nDegrees) => {
     if (_IS_DRAGGING_SMALL_MAP) {
         return; // Drag event gets cut by setHeading.
     }
-    setHeading(GOOGLE_MAP.getHeading() + nDegrees);
+    if (typeof GOOGLE_MAP.getHeading === 'function') {
+        setHeading(GOOGLE_MAP.getHeading() + nDegrees);
+    } else {
+        console.warn('getHeading not available: map is not vector');
+    }
 };
 
 let ROTATION_INTERVAL;
@@ -1124,12 +1168,14 @@ const updateRotateMap = (forceState = null) => {
         if (ROTATION_INTERVAL) {
             clearInterval(ROTATION_INTERVAL);
         }
-        setHeading(startDegrees); // Set initial rotation and then start interval.
-        if (nDegrees && nMilliseconds) {
-            ROTATION_INTERVAL = setInterval(() => {
-                doRotation(nDegrees);
-            }, nMilliseconds);
-        }
+        waitForMapVectorReady(() => {
+            setHeading(startDegrees); // Set initial rotation and then start interval.
+            if (nDegrees && nMilliseconds) {
+                ROTATION_INTERVAL = setInterval(() => {
+                    doRotation(nDegrees);
+                }, nMilliseconds);
+            }
+        });
     } else if (ROTATION_INTERVAL) {
         clearInterval(ROTATION_INTERVAL);
     }
@@ -1922,7 +1968,7 @@ const addCanvas2dListeners = () => {
 const onPuzzleClick = () => {
     _PUZZLE_DRAGGING_TILE = getCurrentMouseTile();
     _PUZZLE_CURRENT_DROP_TILE = _PUZZLE_DRAGGING_TILE; // Always same on initial click.
-    pasteToDraggingImage(); // Paste clicked tile to draggable canvas.
+    pasteToDraggingImage; // Paste clicked tile to draggable canvas.
 
     const ctx2d = CANVAS_2D.getContext('2d');
     if (_PUZZLE_DRAGGING_TILE) {
