@@ -1,4 +1,4 @@
-export default QUOTES = { 
+let QUOTES = { 
 
     inspirational: [
         `It is in falling short of your own goals that you will surpass those who exceed theirs. — Tokugawa Ieyasu`,
@@ -109,3 +109,5 @@ export default QUOTES = {
     ],
 
 };
+
+export default QUOTES;
