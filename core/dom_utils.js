@@ -56,8 +56,30 @@ const getBigMapContainer = () => {
     const selectors = [
         `div[class^="game_canvas__"]`,
         `#panorama-container`,
+        `div[class*="game-layout_panoramaContainer"]`,
+        `div[class*="game_panoramaContainer"]`,
+        `div[class*="panorama"]`,
+        `.game-layout__panorama-container`,
+        `[data-qa="panorama"]`,
     ];
-    return _tryMultiple(selectors);
+    
+    console.log('GeoGuessr MultiMod: Looking for big map container...');
+    
+    for (const selector of selectors) {
+        const element = document.querySelector(selector);
+        if (element) {
+            console.log(`GeoGuessr MultiMod: Found big map container with selector: ${selector}`, element);
+            return element;
+        }
+    }
+    
+    console.log('GeoGuessr MultiMod: No big map container found with any selector');
+    console.log('GeoGuessr MultiMod: Available elements with "game" in class:', 
+        document.querySelectorAll('[class*="game"]'));
+    console.log('GeoGuessr MultiMod: Available elements with "panorama" in class:', 
+        document.querySelectorAll('[class*="panorama"]'));
+    
+    return null;
 };
 
 const getBigMapCanvas = () => {
