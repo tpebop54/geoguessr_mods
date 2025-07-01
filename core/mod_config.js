@@ -242,3 +242,21 @@ const MODS = {
     },
 
 };
+
+// Default configuration for options restoration
+const GG_DEFAULT = {} // Used for default options and restoring options.
+for (const mod of Object.values(MODS)) {
+    GG_DEFAULT[mod.key] = JSON.parse(JSON.stringify(mod));
+}
+
+// On page load, show random quotes, jokes, facts, etc. The blackout screen cannot be turned off without changing code.
+const SHOW_QUOTES = {
+    inspirational: true,
+    heavy: true, // I'll understand if you want to turn this one off.
+    media: true, // From movies and stuff. Generally light-hearted.
+    jokes: true,
+    funFacts: true,
+};
+
+// Callback registry for mod updates
+const UPDATE_CALLBACKS = {};

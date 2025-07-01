@@ -12,11 +12,6 @@
 let GOOGLE_STREETVIEW, GOOGLE_MAP, GOOGLE_SVC; // Assigned in the google API portion of the script.
 let PREV_GOOGLE_STREETVIEW_POV, PREV_GOOGLE_STREETVIEW_POSITION; // Stored state of streetview POV and position, used to detect if either has changed.s
 
-const GG_DEFAULT = {} // Used for default options and restoring options.
-for (const mod of Object.values(MODS)) {
-    GG_DEFAULT[mod.key] = JSON.parse(JSON.stringify(mod));
-}
-
 const STATE_KEY = 'gg_state'; // Key in window.localStorage.
 
 const saveState = () => {
@@ -75,15 +70,6 @@ let GG_GUESSMAP_BLOCKER; // Div that blocks events to the map. You can still ope
 
 let _IS_DRAGGING_SMALL_MAP = false; // true when user is actively dragging the guessMap. Some of the map events conflict with others.
 
-// On page load, show random quotes, jokes, facts, etc. The blackout screen cannot be turned off without changing code.
-const SHOW_QUOTES = {
-    inspirational: true,
-    heavy: true, // I'll understand if you want to turn this one off.
-    media: true, // From movies and stuff. Generally light-hearted.
-    jokes: true,
-    funFacts: true,
-};
-
 /**
   SCORE_FUNC is a function used to display the overlay that shows how well you clicked (score, direction, whatever).
   This can only be used by one mod at a time, so in mods that use it we have to use disableOtherScoreModes to disable the other ones.
@@ -91,8 +77,6 @@ const SHOW_QUOTES = {
   By default, it will give the 0-5000 score, but some mods override it.
 */
 let SCORE_FUNC;
-
-const UPDATE_CALLBACKS = {};
 
 let _CHEAT_DETECTION = true; // true to perform some actions that will make it obvious that a user is using this mod pack.
 let _MODS_LOADED = false;

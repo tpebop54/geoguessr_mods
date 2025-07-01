@@ -381,3 +381,34 @@ const closeOptionMenu = () => {
         menu.parentElement.removeChild(menu);
     }
 };
+
+// Additional utility functions
+// ===============================================================================================================================
+
+const fixFormatting = () => {
+    const ticketBar = getTicketBar();
+    if (ticketBar) {
+        const ggHeader = getGGHeader();
+        if (ggHeader) {
+            Object.assign(ggHeader.style, {
+                position: 'absolute',
+                top: '-35px',
+            });
+        }
+    };
+};
+
+const addDebugger = () => {
+    const smallMapContainer = getSmallMapContainer();
+    if (smallMapContainer) {
+        smallMapContainer.addEventListener('contextmenu', (evt) => {
+            debugMap(this, evt);
+        });
+    }
+    const modHeader = document.querySelector('#gg-mods-header');
+    if (modHeader) {
+        modHeader.addEventListener('contextmenu', (evt) => {
+            debugMap(this, evt);
+        });
+    }
+};
