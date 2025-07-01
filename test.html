@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoGuessr MultiMod Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        #__next {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            min-height: 400px;
+        }
+        .test-map-container {
+            width: 100%;
+            height: 300px;
+            background-color: #4CAF50;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            margin-top: 20px;
+        }
+        #game-layout__panorama-container {
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <div id="__next">
+        <h1>GeoGuessr MultiMod Test Page</h1>
+        <p>This simulates the basic GeoGuessr page structure.</p>
+        
+        <div id="game-layout__panorama-container">
+            <div class="test-map-container">
+                Simulated Map Container
+            </div>
+        </div>
+        
+        <button id="load-buttons" onclick="triggerDOMChange()">Simulate Game Load</button>
+        <div id="test-log"></div>
+    </div>
+
+    <script>
+        // Simulate some GeoGuessr-like behavior
+        function triggerDOMChange() {
+            const container = document.getElementById('game-layout__panorama-container');
+            const newDiv = document.createElement('div');
+            newDiv.textContent = 'New game element added: ' + new Date().toLocaleTimeString();
+            newDiv.style.marginTop = '10px';
+            newDiv.style.padding = '10px';
+            newDiv.style.backgroundColor = '#e0e0e0';
+            newDiv.style.borderRadius = '4px';
+            container.appendChild(newDiv);
+            
+            log('DOM change triggered - MultiMod should try to add buttons');
+        }
+        
+        function log(message) {
+            const logDiv = document.getElementById('test-log');
+            const entry = document.createElement('div');
+            entry.textContent = new Date().toLocaleTimeString() + ': ' + message;
+            entry.style.margin = '5px 0';
+            entry.style.padding = '5px';
+            entry.style.backgroundColor = '#f9f9f9';
+            entry.style.border = '1px solid #ddd';
+            entry.style.borderRadius = '3px';
+            logDiv.appendChild(entry);
+        }
+        
+        // Override console.log to capture mod messages
+        const originalConsoleLog = console.log;
+        console.log = function(...args) {
+            originalConsoleLog.apply(console, args);
+            if (args[0] && args[0].includes && args[0].includes('MultiMod')) {
+                log(args.join(' '));
+            }
+        };
+        
+        const originalConsoleError = console.error;
+        console.error = function(...args) {
+            originalConsoleError.apply(console, args);
+            if (args[0] && args[0].includes && args[0].includes('MultiMod')) {
+                log('ERROR: ' + args.join(' '));
+            }
+        };
+        
+        log('Test page loaded');
+    </script>
+</body>
+</html>

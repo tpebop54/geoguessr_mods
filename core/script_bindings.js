@@ -120,3 +120,53 @@ const disableModsAsNeeded = () => {
         ], true);
     }
 };
+
+// Initialize the mod system
+// ===============================================================================================================================
+
+// Initialize when DOM is ready
+const initializeMods = () => {
+    try {
+        // Load configuration from localStorage
+        loadState();
+        
+        // Disable mods as needed based on current page
+        disableModsAsNeeded();
+
+        // Create observer to monitor DOM changes and add buttons when the game interface loads
+        const observer = new MutationObserver(() => {
+            try {
+                const buttonsAdded = addButtons();
+                // Remove game reactions div (anti-cheat method from GeoGuessr that's annoying)
+                const reactionsDiv = getGameReactionsDiv();
+                if (reactionsDiv) {
+                    reactionsDiv.parentElement.removeChild(reactionsDiv);
+                }
+                return buttonsAdded;
+            } catch (err) {
+                console.error('Error in MutationObserver:', err);
+            }
+        });
+
+        // Start observing the React root element for changes
+        const nextElement = document.querySelector('#__next');
+        if (nextElement) {
+            observer.observe(nextElement, { subtree: true, childList: true });
+            console.log('GeoGuessr MultiMod: Observer started successfully');
+        } else {
+            console.error('GeoGuessr MultiMod: Could not find #__next element');
+            // Retry after a short delay
+            setTimeout(initializeMods, 1000);
+        }
+    } catch (err) {
+        console.error('GeoGuessr MultiMod: Initialization failed:', err);
+    }
+};
+
+// Start initialization when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeMods);
+} else {
+    // DOM is already ready
+    initializeMods();
+}
