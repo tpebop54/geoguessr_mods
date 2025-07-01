@@ -1,4 +1,8 @@
-let QUOTES = { 
+/**
+ * Quotes and facts and whatever.
+ */
+
+const QUOTES = { 
 
     inspirational: [
         `It is in falling short of your own goals that you will surpass those who exceed theirs. — Tokugawa Ieyasu`,
@@ -110,4 +114,13 @@ let QUOTES = {
 
 };
 
-export default QUOTES;
+function initQuotes() {
+    window._QUOTES = QUOTES; // Make available globally
+    return QUOTES;
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initQuotes);
+} else {
+    initQuotes();
+}
