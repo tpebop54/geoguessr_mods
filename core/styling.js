@@ -211,6 +211,17 @@ const applyModStyles = () => {
             justify-content: center;
             pointer-events: none;
         }
+
+        #gg-color-overlay {
+            position: absolute;
+            width: 100vw;
+            height: 100vh;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 2;
+        }
+        
     `;
 
     if (typeof GM_addStyle !== 'undefined') {
