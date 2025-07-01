@@ -106,6 +106,23 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
                 modButton.classList.add('gg-mod-button');
                 modButton.title = mod.tooltip;
                 modButton.textContent = getButtonText(mod);
+                
+                // Apply inline styles to ensure visibility
+                modButton.style.cssText = `
+                    background: #8e44ad !important;
+                    border-radius: 5px !important;
+                    font-size: 14px !important;
+                    cursor: pointer !important;
+                    opacity: 0.9 !important;
+                    padding: 8px 10px !important;
+                    color: white !important;
+                    font-weight: bold !important;
+                    border: 1px solid #666 !important;
+                    display: block !important;
+                    text-align: center !important;
+                    margin: 2px 0 !important;
+                `;
+                
                 buttonContainer.appendChild(modButton);
                 buttonCount++;
                 console.log(`GeoGuessr MultiMod: Created button for ${key}: ${modButton.textContent}`);
@@ -120,6 +137,68 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
         bigMapContainer.appendChild(modsContainer);
         
         console.log('GeoGuessr MultiMod: Mod container added to DOM');
+        
+        // Force apply critical styles directly to ensure visibility
+        modsContainer.style.cssText = `
+            position: fixed !important;
+            width: 200px !important;
+            top: 20px !important;
+            left: 20px !important;
+            z-index: 999999 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            background: rgba(142, 68, 173, 0.95) !important;
+            border-radius: 10px !important;
+            padding: 10px !important;
+            border: 2px solid #fff !important;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
+        `;
+        
+        headerContainer.style.cssText = `
+            display: flex !important;
+            align-items: center !important;
+            font-size: 18px !important;
+            justify-content: space-between !important;
+        `;
+        
+        headerText.style.cssText = `
+            font-weight: bold !important;
+            color: white !important;
+            font-size: 16px !important;
+        `;
+        
+        modMenuToggle.style.cssText = `
+            padding: 2px 6px !important;
+            font-size: 16px !important;
+            cursor: pointer !important;
+            background: none !important;
+            border: none !important;
+            color: white !important;
+            font-weight: bold !important;
+        `;
+        
+        buttonContainer.style.cssText = `
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 6px !important;
+            margin-top: 10px !important;
+        `;
+        
+        console.log('GeoGuessr MultiMod: Inline styles applied');
+        
+        console.log('GeoGuessr MultiMod: Container styles:', window.getComputedStyle(modsContainer));
+        console.log('GeoGuessr MultiMod: Container dimensions:', {
+            width: modsContainer.offsetWidth,
+            height: modsContainer.offsetHeight,
+            top: modsContainer.offsetTop,
+            left: modsContainer.offsetLeft
+        });
+        console.log('GeoGuessr MultiMod: Container visibility:', {
+            display: window.getComputedStyle(modsContainer).display,
+            visibility: window.getComputedStyle(modsContainer).visibility,
+            opacity: window.getComputedStyle(modsContainer).opacity,
+            zIndex: window.getComputedStyle(modsContainer).zIndex
+        });
         
         bindButtons();
 

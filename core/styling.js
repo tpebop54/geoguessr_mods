@@ -25,16 +25,18 @@ const applyModStyles = () => {
         }
 
         #gg-mods-container {
-            position: absolute;
-            width: 200px;
-            top: 20px;
-            left: 20px;
-            z-index: 999999;
-            display: flex;
-            flex-direction: column;
-            background: rgba(0, 0, 0, 0.1);
-            border-radius: 10px;
-            padding: 10px;
+            position: fixed !important;
+            width: 200px !important;
+            top: 20px !important;
+            left: 20px !important;
+            z-index: 999999 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            background: rgba(142, 68, 173, 0.95) !important;
+            border-radius: 10px !important;
+            padding: 10px !important;
+            border: 2px solid #fff !important;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
         }
 
         #gg-mods-header-container {
@@ -45,53 +47,56 @@ const applyModStyles = () => {
         }
 
         #gg-mods-header {
-            font-weight: bold;
-            text-shadow: ${headerShadow};
-            position: relative;
-            color: white;
+            font-weight: bold !important;
+            text-shadow: ${headerShadow} !important;
+            position: relative !important;
+            color: white !important;
+            font-size: 16px !important;
         }
 
         #gg-mods-container-toggle {
-            padding: 2px 6px;
-            font-size: 16px;
-            cursor: pointer;
-            text-shadow: ${headerShadow};
-            background: none;
-            border: none;
-            color: white;
-            font-weight: bold;
+            padding: 2px 6px !important;
+            font-size: 16px !important;
+            cursor: pointer !important;
+            text-shadow: ${headerShadow} !important;
+            background: none !important;
+            border: none !important;
+            color: white !important;
+            font-weight: bold !important;
         }
 
         #gg-mods-button-container {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            margin-top: 10px;
-            z-index: 9999;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 6px !important;
+            margin-top: 10px !important;
+            z-index: 9999 !important;
         }
 
         .gg-mod-button {
-            background: var(--ds-color-purple-100, #8e44ad);
-            border-radius: 5px;
-            font-size: 14px;
-            cursor: pointer;
-            opacity: 0.9;
-            transition: opacity 0.2s;
-            padding: 4px 10px;
-            color: white;
-            font-weight: bold;
-            text-shadow: ${bodyShadow};
-            border: 1px solid #666;
+            background: #8e44ad !important;
+            border-radius: 5px !important;
+            font-size: 14px !important;
+            cursor: pointer !important;
+            opacity: 0.9 !important;
+            transition: opacity 0.2s !important;
+            padding: 8px 10px !important;
+            color: white !important;
+            font-weight: bold !important;
+            text-shadow: ${bodyShadow} !important;
+            border: 1px solid #666 !important;
+            display: block !important;
+            text-align: center !important;
         }
 
         .gg-mod-button:hover {
-            opacity: 1;
-            background: var(--ds-color-purple-200, #9b59b6);
+            opacity: 1 !important;
+            background: #9b59b6 !important;
         }
 
         .gg-mod-button.active {
-            background: ${greenMenuColor};
-            opacity: 1;
+            background: #006400 !important;
+            opacity: 1 !important;
         }
 
         #gg-score-div {
