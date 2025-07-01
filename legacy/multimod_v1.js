@@ -9,11 +9,11 @@
 // @grant        GM_addStyle
 // @grant        GM_openInTab
 // @grant        GM.xmlHttpRequest
-// @updateURL    https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/multimod_v1.js
-// @downloadURL  https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/multimod_v1.js
+// @updateURL    https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/multimod_v1.js
+// @downloadURL  https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/multimod_v1.js
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/gg_evt.js
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/gg_quotes.js
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/gg_coordinate_extractor.js
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/gg_coordinate_extractor.js
 
 // ==/UserScript==
 

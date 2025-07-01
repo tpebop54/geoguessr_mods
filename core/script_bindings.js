@@ -188,6 +188,9 @@ const disableModsAsNeeded = () => {
 // Initialize when DOM is ready
 const initializeMods = () => {
     try {
+        // Enforce cheat protection
+        enforceCheatProtection();
+        
         // Load configuration from localStorage
         loadState();
         
