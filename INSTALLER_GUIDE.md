@@ -8,15 +8,11 @@ This document explains the different installer options available for Tpebop's Ge
 **Recommended for most users**
 
 - **Branch**: main (stable)
-- **Structure**: Monolithic 
-- **@require lines**: 4 (minimal)
-- **Dependencies**:
-  - `core/evt.js`
-  - `core/quotes.js` 
-  - `core/coordinate_extractor.js`
-  - `multimod_v1.js` (contains all mod code)
+- **Structure**: Modular 
+- **@require lines**: 25 (all individual modules)
+- **Dependencies**: All individual core and mod files
 - **Auto-updates**: Yes
-- **Best for**: Regular users who want stable, working mods
+- **Best for**: Regular users who want stable, working mods with better maintainability
 
 ### 2. `multimod_installer_dev.js` - Dev Branch (Latest)
 **For testers and enthusiasts**
@@ -56,8 +52,9 @@ To switch from one installer to another:
 
 - **Mods not loading**: Check the TamperMonkey console for errors
 - **Outdated mods**: Manually update externals in TamperMonkey
-- **Performance issues**: Consider using the main branch installer (fewer files to load)
+- **Performance issues**: Both installers now use the same modular structure for consistency
 - **Missing features**: Try the dev branch installer for latest features
+- **Legacy support**: Use `multimod_v1.js` if you need the old monolithic structure
 
 ## For Developers
 
