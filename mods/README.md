@@ -15,6 +15,6 @@ This directory contains all the individual mod implementations for the GeoGuessr
 - **puzzle.js** - Puzzle pieces mod
 - **tilereveal.js** - Tile reveal animation mod
 - **display.js** - Display modifications mod
-- **scratch.js** - Scratch-off effect mod
+- **scratch.js** - Dev work
 
 Each mod is self-contained but depends on the core system files in the `/core/` directory.
