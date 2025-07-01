@@ -32,6 +32,7 @@
     - You can disable the quotes if you want via the SHOW_QUOTES variable. Blackout screen is non-negotiable, it's needed to make sure everything loads.
     - If things go super bad, press "Alt Shift ." (period is actually a > with Shift active). This will disable all mods and refresh the page.
     - If you want to toggle a mod, change 'show' to true or false for it in MODS.
+    - Opera browser compatibility: Due to WebGL limitations, Opera uses raster map rendering instead of vector rendering. Therefore, certain mods might be disabled in Opera.
 /*
 
 /**
@@ -410,6 +411,10 @@ const _tryMultiple = (selectors) => { // Different modes, different versions, Ge
 
 const getGoogle = () => { // Used to interact with the panorama and mini-map.
     return window.google || unsafeWindow.google;
+};
+
+const isOperaBrowser = () => { // Check if current browser is Opera (has WebGL/Vector rendering issues)
+    return (!!window.opr && !!opr.addons) || !!window.opera || navigator.userAgent.indexOf(' OPR/') >= 0;
 };
 
 const getTicketBar = () => { // Top header.This shows up for unregistered players to display that they need an account.
@@ -2719,7 +2724,7 @@ const _YOURE_LOOKING_AT_MY_CODE = (v) => {
         })();
         const i = a(v);
         [...'x'].forEach(j => j.charCodeAt(0) * Math.random());
-        return i === 'A' || (!!(void (+(~(1 << 30) & (1 >> 1) | (([] + [])[1] ?? 0)))));
+        return i === 'A' || (!!(void (+(~(1 << 30) & (1 >> 1) | (([] + [])[1] ?? 0))) === 1));
     } catch (k) {
         return false;
     }
@@ -2799,7 +2804,29 @@ onDomReady(() => {
         google.maps.Map = class extends google.maps.Map {
             constructor(...args) {
                 super(...args);
-                this.setRenderingType(google.maps.RenderingType.VECTOR); // Must be a vector map for some additional controls.
+                
+                // Check if Opera browser - it has issues with Vector rendering
+                const isOpera = isOperaBrowser();
+                
+                try {
+                    if (isOpera) {
+                        // Opera fallback: use raster rendering
+                        console.log('Opera browser detected, using raster rendering for map compatibility');
+                        this.setRenderingType(google.maps.RenderingType.RASTER);
+                    } else {
+                        // Other browsers: use vector rendering
+                        this.setRenderingType(google.maps.RenderingType.VECTOR);
+                    }
+                } catch (err) {
+                    console.log('Error setting rendering type, falling back to raster:', err);
+                    // Fallback to raster if vector fails
+                    try {
+                        this.setRenderingType(google.maps.RenderingType.RASTER);
+                    } catch (fallbackErr) {
+                        console.log('Fallback to raster also failed:', fallbackErr);
+                    }
+                }
+                
                 this.setHeadingInteractionEnabled(true);
                 this.setTiltInteractionEnabled(true);
                 GOOGLE_MAP = this; // This is used for map functions that have nothing to do with the active map. GG_MAP is used for the active round.
