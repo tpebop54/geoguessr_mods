@@ -56,7 +56,6 @@ const QUOTES = {
 
     media: [ // Funny, light-hearted, or from movies/TV/celebrities. Some of the heavy stuff is also from media, but they belong in the heavy section.
         `Don't hate the player. Hate the game. — Ice-T`,
-        `I came here to chew bubblegum and kick [butt], and I'm all out of bubblegum — Roddy Piper`,
         `That rug really tied the room together. — The Dude`,
         `If you don't know what you want, you end up with a lot you don't. — Tyler Durden`,
         `Do. Or do not. There is no try. — Yoda`,
@@ -74,6 +73,7 @@ const QUOTES = {
         `I said "A" "L" "B" "U" .... .... "QUERQUE" — Weird Al`,
         `Badgers? Badgers? We don't need no stinking badgers! — Raul Hernandez`,
         `Time to deliver a pizza ball! — Eric Andre`,
+        `I don't know how to put this, but I'm kind of a big deal. — Ron Burgundy`,
     ],
 
     jokes: [
@@ -100,7 +100,6 @@ const QUOTES = {
         `Elephants have about 3 times as many neurons as humans.`,
         `Scientists simulated a fruit fly brain fully. This has 140k neurons (humans have 86 billion)`,
         `On average, Mercury is closer to Earth than Venus.`,
-
         `The Jamaican flag is the only country flag that does not contain red, white, or blue.`,
         `Nintendo was founded before the fall of the Ottoman Empire.`,
         `The fax machine was invented before the telephone.`,
