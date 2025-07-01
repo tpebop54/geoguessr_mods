@@ -77,5 +77,4 @@ let _IS_DRAGGING_SMALL_MAP = false; // true when user is actively dragging the g
 */
 let SCORE_FUNC;
 
-let _CHEAT_DETECTION = true; // true to perform some actions that will make it obvious that a user is using this mod pack.
 let _MODS_LOADED = false;
