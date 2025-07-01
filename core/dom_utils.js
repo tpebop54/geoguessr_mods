@@ -63,21 +63,12 @@ const getBigMapContainer = () => {
         `[data-qa="panorama"]`,
     ];
     
-    console.log('GeoGuessr MultiMod: Looking for big map container...');
-    
     for (const selector of selectors) {
         const element = document.querySelector(selector);
         if (element) {
-            console.log(`GeoGuessr MultiMod: Found big map container with selector: ${selector}`, element);
             return element;
         }
     }
-    
-    console.log('GeoGuessr MultiMod: No big map container found with any selector');
-    console.log('GeoGuessr MultiMod: Available elements with "game" in class:', 
-        document.querySelectorAll('[class*="game"]'));
-    console.log('GeoGuessr MultiMod: Available elements with "panorama" in class:', 
-        document.querySelectorAll('[class*="panorama"]'));
     
     return null;
 };

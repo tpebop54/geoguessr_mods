@@ -31,7 +31,6 @@ const loadState = () => { // Load state from local storage if it exists, else us
         console.error(err);
     }
     if (!storedState || typeof storedState !== 'object') {
-        console.log('Refreshing stored state');
         clearState();
         storedState = {};
     }

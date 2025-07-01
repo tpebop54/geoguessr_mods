@@ -42,4 +42,4 @@
 
 // ==/UserScript==
 
-console.log(`Tpebop's mods loaded (main branch - modular version).`);
+console.log(`Tpebop's mods loaded.`);

@@ -200,8 +200,6 @@ const applyModStyles = () => {
         styleSheet.textContent = style;
         document.head.appendChild(styleSheet);
     }
-    
-    console.log('GeoGuessr MultiMod: CSS styles applied');
 };
 
 // Apply styles when this file loads
