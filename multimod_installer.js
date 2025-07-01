@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Tpebop's Geoguessr MultiMod V1 (Main - Stable)
+// @name         Tpebop's Geoguessr Mods
 // @description  Various mods to make the game interesting in various ways (Auto-updating Main Branch)
 // @version      1.0
 // @author       tpebop

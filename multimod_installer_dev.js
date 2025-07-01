@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Tpebop's Geoguessr MultiMod V1 (Dev - Modular)
+// @name         Tpebop's Geoguessr Mods (DEV)
 // @description  Various mods to make the game interesting in various ways (Auto-updating Dev Branch)
 // @version      1.0
 // @author       tpebop
