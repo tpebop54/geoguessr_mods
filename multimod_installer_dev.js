@@ -41,3 +41,5 @@
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/core/script_bindings.js
 
 // ==/UserScript==
+
+console.log(`Tpebop's mods loaded (dev branch - modular version).`);

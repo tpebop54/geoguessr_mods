@@ -146,11 +146,28 @@ const applyModStyles = () => {
         }
 
         .gg-option-form-button {
-            border-radius: 20px;
-            height: 30px;
-            border: none;
+            width: 80px;
+            height: 25px;
+            border-radius: 15px;
+            color: white;
+            text-shadow: ${bodyShadow};
+            padding: 0;
             cursor: pointer;
+            border: none;
             font-weight: bold;
+        }
+
+        #gg-option-close {
+            background: red;
+        }
+
+        #gg-option-reset {
+            background: purple;
+            margin: 0 5px;
+        }
+
+        #gg-option-apply {
+            background: green;
         }
 
         #gg-flashlight-div {

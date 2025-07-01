@@ -329,6 +329,7 @@ const loadState = () => { // Load state from local storage if it exists, else us
         console.error(err);
     }
     if (!storedState || typeof storedState !== 'object') {
+        console.log('Refreshing stored state');
         clearState();
         storedState = {};
     }
@@ -1829,6 +1830,7 @@ const onDropTile = (evt) => { // When mouse is released, drop the dragged tile a
     _PUZZLE_CURRENT_DROP_TILE = undefined;
 
     // checkSolved(); // TODO
+    console.log('tile dropped'); // TODO: remove
 };
 
 const onPuzzleMousemove = () => {
@@ -2335,6 +2337,8 @@ const updateDisplayOptions = (forceState = null) => {
 const updateScratch = (forceState = null) => {
     const mod = MODS.scratch;
     const active = updateMod(mod, forceState);
+
+    console.log('yo');
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
