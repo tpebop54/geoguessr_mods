@@ -4,14 +4,34 @@ A collection of mods to make GeoGuessr more interesting and challenging in vario
 
 ## Installation
 
-### Option 1: Auto-updating Installer (Recommended)
-Install the script by copying the contents of `multimod_installer.js` directly to a TamperMonkey script through your TamperMonkey browser extension. This version will automatically stay up to date.
+### Option 1: Auto-updating Installer - Main Branch (Recommended for Users)
+Install the script by copying the contents of `multimod_installer.js` directly to a TamperMonkey script. This version:
+- Uses the stable main branch
+- Uses the monolithic `multimod_v1.js` file for simplicity
+- Only requires 4 @require lines (minimal dependencies)
+- Automatically stays up to date
 
-### Option 2: Static Version
+### Option 2: Auto-updating Installer - Dev Branch (For Testing)
+Install the script by copying the contents of `multimod_installer_dev.js` for the latest features. This version:
+- Uses the development branch with latest features
+- Uses the new modular structure
+- Requires all individual module files (25+ @require lines)
+- May have experimental or unstable features
+
+### Option 3: Static Version
 Install `multimod_v1.js` for a static version that won't automatically update.
 
-### Option 3: Modular Version (For Developers)
+### Option 4: Modular Version (For Developers)
 Install `multimod_v1_modular.js` for the new modular structure that loads components from separate files.
+
+### Quick Comparison
+
+| Option | Branch | Structure | @require Lines | Auto-update | Best For |
+|--------|--------|-----------|----------------|-------------|----------|
+| `multimod_installer.js` | main | Monolithic | 4 | ✅ | Most users |
+| `multimod_installer_dev.js` | dev | Modular | 25+ | ✅ | Testers |
+| `multimod_v1.js` | any | Monolithic | 3 | ❌ | Offline use |
+| `multimod_v1_modular.js` | any | Modular | 25+ | ❌ | Developers |
 
 ## Project Structure
 
