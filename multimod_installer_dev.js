@@ -17,4 +17,4 @@
 
 // ==/UserScript==
 
-console.log(`Tpebop's mods imported from source. (dev)`);
+console.log(`Tpebop's mods imported from source (dev).`);
