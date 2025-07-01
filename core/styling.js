@@ -25,18 +25,13 @@ const applyModStyles = () => {
         }
 
         #gg-mods-container {
-            position: fixed !important;
+            position: absolute !important;
             width: 200px !important;
-            top: 20px !important;
+            top: 40px !important;
             left: 20px !important;
-            z-index: 999999 !important;
+            z-index: 9 !important;
             display: flex !important;
             flex-direction: column !important;
-            background: rgba(142, 68, 173, 0.95) !important;
-            border-radius: 10px !important;
-            padding: 10px !important;
-            border: 2px solid #fff !important;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
         }
 
         #gg-mods-header-container {
@@ -50,19 +45,13 @@ const applyModStyles = () => {
             font-weight: bold !important;
             text-shadow: ${headerShadow} !important;
             position: relative !important;
-            color: white !important;
-            font-size: 16px !important;
         }
 
         #gg-mods-container-toggle {
-            padding: 2px 6px !important;
+            padding: 0 !important;
             font-size: 16px !important;
             cursor: pointer !important;
             text-shadow: ${headerShadow} !important;
-            background: none !important;
-            border: none !important;
-            color: white !important;
-            font-weight: bold !important;
         }
 
         #gg-mods-button-container {
@@ -74,28 +63,16 @@ const applyModStyles = () => {
         }
 
         .gg-mod-button {
-            background: #8e44ad !important;
+            background: var(--ds-color-purple-100) !important;
             border-radius: 5px !important;
             font-size: 14px !important;
             cursor: pointer !important;
             opacity: 0.9 !important;
             transition: opacity 0.2s !important;
-            padding: 8px 10px !important;
-            color: white !important;
-            font-weight: bold !important;
-            text-shadow: ${bodyShadow} !important;
-            border: 1px solid #666 !important;
-            display: block !important;
-            text-align: center !important;
+            padding: 4px 10px !important;
         }
 
         .gg-mod-button:hover {
-            opacity: 1 !important;
-            background: #9b59b6 !important;
-        }
-
-        .gg-mod-button.active {
-            background: #006400 !important;
             opacity: 1 !important;
         }
 

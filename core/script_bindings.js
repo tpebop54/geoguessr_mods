@@ -94,17 +94,12 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
                 
                 // Apply inline styles to ensure visibility
                 modButton.style.cssText = `
-                    background: #8e44ad !important;
+                    background: var(--ds-color-purple-100) !important;
                     border-radius: 5px !important;
                     font-size: 14px !important;
                     cursor: pointer !important;
                     opacity: 0.9 !important;
-                    padding: 8px 10px !important;
-                    color: white !important;
-                    font-weight: bold !important;
-                    border: 1px solid #666 !important;
-                    display: block !important;
-                    text-align: center !important;
+                    padding: 4px 10px !important;
                     margin: 2px 0 !important;
                 `;
                 
@@ -121,18 +116,13 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
         
         // Force apply critical styles directly to ensure visibility
         modsContainer.style.cssText = `
-            position: fixed !important;
+            position: absolute !important;
             width: 200px !important;
-            top: 20px !important;
+            top: 40px !important;
             left: 20px !important;
-            z-index: 999999 !important;
+            z-index: 9 !important;
             display: flex !important;
             flex-direction: column !important;
-            background: rgba(142, 68, 173, 0.95) !important;
-            border-radius: 10px !important;
-            padding: 10px !important;
-            border: 2px solid #fff !important;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
         `;
         
         headerContainer.style.cssText = `
@@ -144,18 +134,12 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
         
         headerText.style.cssText = `
             font-weight: bold !important;
-            color: white !important;
-            font-size: 16px !important;
         `;
         
         modMenuToggle.style.cssText = `
-            padding: 2px 6px !important;
+            padding: 0 !important;
             font-size: 16px !important;
             cursor: pointer !important;
-            background: none !important;
-            border: none !important;
-            color: white !important;
-            font-weight: bold !important;
         `;
         
         buttonContainer.style.cssText = `
