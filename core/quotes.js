@@ -100,6 +100,7 @@ const QUOTES = {
         `Elephants have about 3 times as many neurons as humans.`,
         `Scientists simulated a fruit fly brain fully. This has 140k neurons (humans have 86 billion)`,
         `On average, Mercury is closer to Earth than Venus.`,
+
         `The Jamaican flag is the only country flag that does not contain red, white, or blue.`,
         `Nintendo was founded before the fall of the Ottoman Empire.`,
         `The fax machine was invented before the telephone.`,
@@ -110,6 +111,15 @@ const QUOTES = {
         `The inventor of the glue used in Post-Its intended to make a very strong glue but accidentally made a very weak glue.`,
         `Popsicles were invented by an 11-year-old.`,
         `The plural of octopus has three accepted versions- octopuses, octopi, octopodes.`,
+        `Lake Baikal holds 20% of Earth's liquid freshwater.`,
+        `The Eiffel Tower can be 15 cm taller during the summer due to thermal expansion of the metal.`,
+        `Bananas are berries, but strawberries aren't.`,
+        `A group of flamingos is called a flamboyance.`,
+        `A group of owls is called a parliament.`,
+        `A group of jellyfish is called a smack.`,
+        `Broccoli, cauliflower, bok choy, turnip, cabbage, kale, and brussels sprouts all come from plants in the same genus`,
+        `Michelin stars were originally given to restaurants to encourage people to drive more and buy more tires.`,
+        `The longest place name in the world is 85 characters long and is in New Zealand (Taumatawhakatangihangakoauauotamateaturipukakapikimaungahoronukupokaiwhenuakitanatahu).`,
     ],
 
 };
