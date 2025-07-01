@@ -171,18 +171,45 @@ const applyModStyles = () => {
         }
 
         #gg-flashlight-div {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(
-                circle at var(--flashlight-x-pos, 50%) var(--flashlight-y-pos, 50%),
-                transparent var(--flashlight-radius, 100px),
-                rgba(0, 0, 0, 0.95) var(--flashlight-blur, 150px)
-            );
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 200%;
+            height: 200%;
+            padding: 5rem;
             pointer-events: none;
-            z-index: 999998;
+            overflow: hidden;
+            position: absolute;
+            z-index: 99999;
+            --flashlight-y-pos: -50%;
+            --flashlight-x-pos: -50%;
+            --flashlight-inset: -300px;
+        }
+
+        #gg-flashlight-div::before {
+            content: "";
+            position: absolute;
+            inset: var(--flashlight-inset);
+            background-image: radial-gradient(
+                circle, 
+                transparent 0%, 
+                rgba(47,52,2,0.4) var(--flashlight-radius), 
+                black var(--flashlight-blur), 
+                black 100%
+            );
+            background-position: var(--flashlight-x-pos) var(--flashlight-y-pos);
+            background-repeat: no-repeat;
+            pointer-events: none;
+        }
+
+        #gg-flashlight-div::after {
+            content: "";
+            position: absolute;
+            transform: translate(var(--flashlight-x-pos), var(--flashlight-y-pos));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
         }
     `;
 
