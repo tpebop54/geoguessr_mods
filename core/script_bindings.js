@@ -89,18 +89,29 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
         buttonContainer.id = 'gg-mods-button-container';
 
         console.log('GeoGuessr MultiMod: Creating mod buttons...');
+        console.log('GeoGuessr MultiMod: Available mods:', Object.keys(MODS));
+        
         let buttonCount = 0;
-        for (const mod of Object.values(MODS)) {
+        for (const [key, mod] of Object.entries(MODS)) {
+            console.log(`GeoGuessr MultiMod: Processing mod ${key}:`, mod);
+            
             if (!mod.show) {
+                console.log(`GeoGuessr MultiMod: Skipping mod ${key} (show: false)`);
                 continue;
             }
-            const modButton = document.createElement('div');
-            modButton.id = getModButtonId(mod);
-            modButton.classList.add('gg-mod-button');
-            modButton.title = mod.tooltip;
-            modButton.textContent = getButtonText(mod);
-            buttonContainer.appendChild(modButton);
-            buttonCount++;
+            
+            try {
+                const modButton = document.createElement('div');
+                modButton.id = getModButtonId(mod);
+                modButton.classList.add('gg-mod-button');
+                modButton.title = mod.tooltip;
+                modButton.textContent = getButtonText(mod);
+                buttonContainer.appendChild(modButton);
+                buttonCount++;
+                console.log(`GeoGuessr MultiMod: Created button for ${key}: ${modButton.textContent}`);
+            } catch (err) {
+                console.error(`GeoGuessr MultiMod: Error creating button for ${key}:`, err);
+            }
         }
         console.log(`GeoGuessr MultiMod: Created ${buttonCount} mod buttons`);
 
