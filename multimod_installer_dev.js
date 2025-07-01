@@ -9,7 +9,7 @@
 // @grant        GM_addStyle
 // @grant        GM_openInTab
 // @grant        GM.xmlHttpRequest
-// @updateURL    https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/multimod_installer_dev.js
+// @updateURL    github.com/tpebop54/geoguessr_mods/blob/dev/VERSION.md
 // @downloadURL  https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/multimod_installer_dev.js
 
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/core/evt.js

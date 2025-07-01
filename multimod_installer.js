@@ -9,9 +9,9 @@
 // @grant        GM_addStyle
 // @grant        GM_openInTab
 // @grant        GM.xmlHttpRequest
-// @updateURL    https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/multimod_installer.js
+// @updateURL    github.com/tpebop54/geoguessr_mods/blob/main/VERSION.md
 // @downloadURL  https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/multimod_installer.js
-// Core system files (in dependency order)
+
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/core/evt.js
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/core/quotes.js
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/core/coordinate_extractor.js
@@ -24,7 +24,6 @@
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/core/styling.js
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/core/cheat_protection.js
 
-// Individual mods (register UPDATE_CALLBACKS)
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/mods/satellite.js
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/mods/rotate.js
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/mods/zoom.js
@@ -39,7 +38,6 @@
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/mods/display.js
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/mods/scratch.js
 
-// Script bindings (must come after mods to access UPDATE_CALLBACKS)
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/core/script_bindings.js
 
 // ==/UserScript==
