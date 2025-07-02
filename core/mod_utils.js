@@ -386,3 +386,78 @@ const getGGMapWithFallback = async (maxWaitTime = 5000) => {
         id: 'fallback'
     };
 };
+
+// Utility function for mods to wait for both 2D and 3D maps to be ready
+const waitForMapsReady = (callback, options = {}) => {
+    const {
+        timeout = 5000,
+        intervalMs = 100,
+        require2D = true,
+        require3D = true,
+        modName = 'Unknown'
+    } = options;
+
+    const startTime = Date.now();
+    
+    const checkMapsReady = () => {
+        try {
+            const map2dReady = !require2D || (GOOGLE_MAP && GOOGLE_MAP.getBounds && GOOGLE_MAP.getBounds());
+            const map3dReady = !require3D || (GOOGLE_STREETVIEW && GOOGLE_STREETVIEW.getPosition && GOOGLE_STREETVIEW.getPosition());
+            
+            if (map2dReady && map3dReady) {
+                console.debug(`${modName}: Maps ready, executing callback`);
+                callback();
+                return true;
+            }
+            
+            if (Date.now() - startTime > timeout) {
+                console.warn(`${modName}: Timeout waiting for maps, executing callback anyway`);
+                callback();
+                return true;
+            }
+            
+            return false;
+        } catch (err) {
+            console.debug(`${modName}: Error checking map readiness:`, err);
+            return false;
+        }
+    };
+
+    // Check immediately first
+    if (checkMapsReady()) {
+        return;
+    }
+
+    // If not ready, start interval checking
+    console.debug(`${modName}: Maps not ready, waiting...`);
+    const checkInterval = setInterval(() => {
+        if (checkMapsReady()) {
+            clearInterval(checkInterval);
+        }
+    }, intervalMs);
+};
+
+// Helper to create a map-safe mod update function
+const createMapSafeModUpdate = (originalUpdateFunction, options = {}) => {
+    const { 
+        require2D = true, 
+        require3D = false, 
+        modName = 'Unknown',
+        timeout = 5000
+    } = options;
+
+    return (forceState = null) => {
+        // If maps aren't needed (mod being disabled), we still need to check the mod state
+        // but we can try to determine this from function name or just execute for disable
+        if (forceState === false) {
+            console.debug(`${modName}: Deactivating, no need to wait for maps`);
+            originalUpdateFunction(forceState);
+            return;
+        }
+
+        // For enabling or toggling, wait for maps to be ready
+        waitForMapsReady(() => {
+            originalUpdateFunction(forceState);
+        }, { require2D, require3D, modName, timeout });
+    };
+};
