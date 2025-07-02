@@ -12,6 +12,8 @@
 let _LOTTERY_DISPLAY; // Display elements for lottery mod. (counter and button).
 let _LOTTERY_COUNT; // How many remaining guesses you have.
 let _LOTTERY_DRAGGING = false; // Makes lottery display draggable because it overlaps the menu.
+let _LOTTERY_DRAGGING_OFFSET_X; // X offset from mouse to element edge when dragging starts.
+let _LOTTERY_DRAGGING_OFFSET_Y; // Y offset from mouse to element edge when dragging starts.
 
 const removeLotteryDisplay = () => {
     if (_LOTTERY_DISPLAY) {
@@ -27,9 +29,24 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     container.id = 'gg-lottery';
 
     /* eslint-disable no-return-assign */
-    container.onmousedown = () => _LOTTERY_DRAGGING = true;
-    document.onmousemove = (evt) => _LOTTERY_DRAGGING && (container.style.left = evt.clientX - 50 + 'px', container.style.top = evt.clientY - 25 + 'px');
-    document.onmouseup = () => _LOTTERY_DRAGGING = false;
+    container.addEventListener('mousedown', (evt) => {
+        _LOTTERY_DRAGGING = true;
+        _LOTTERY_DRAGGING_OFFSET_X = evt.clientX - container.offsetLeft;
+        _LOTTERY_DRAGGING_OFFSET_Y = evt.clientY - container.offsetTop;
+        evt.preventDefault(); // Prevent text selection during drag
+    });
+    document.addEventListener('mousemove', (evt) => {
+        if (_LOTTERY_DRAGGING) {
+            container.style.left = evt.clientX - _LOTTERY_DRAGGING_OFFSET_X + 'px';
+            container.style.top = evt.clientY - _LOTTERY_DRAGGING_OFFSET_Y + 'px';
+            evt.preventDefault(); // Prevent text selection during drag
+        }
+    });
+    document.addEventListener('mouseup', () => {
+        _LOTTERY_DRAGGING = false;
+        _LOTTERY_DRAGGING_OFFSET_X = undefined;
+        _LOTTERY_DRAGGING_OFFSET_Y = undefined;
+    });
     /* eslint-enable no-return-assign */
 
     // Set up display for the lottery counter and button.
@@ -46,6 +63,11 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     const button = document.createElement('button');
     button.id = 'gg-lottery-button';
     button.textContent = 'Insert token';
+    
+    // Prevent dragging when clicking the button
+    button.addEventListener('mousedown', (evt) => {
+        evt.stopPropagation();
+    });
 
     container.appendChild(counterDiv);
     container.appendChild(button);
@@ -90,11 +112,13 @@ const updateLottery = (forceState = null) => {
     const mod = MODS.lottery;
     const active = updateMod(mod, forceState);
 
+    console.log('[DEBUG] updateLottery called, active:', active);
     removeLotteryDisplay();
     _LOTTERY_COUNT = getOption(mod, 'nGuesses');
 
     const smallMap = getSmallMap();
     if (active) {
+        console.log('[DEBUG] Lottery mod activated, disabling guess map events');
         makeLotteryDisplay();
         setGuessMapEvents(false);
     } else {
@@ -102,6 +126,7 @@ const updateLottery = (forceState = null) => {
         if (container) {
             container.parentElement.removeChild(container);
         }
+        console.log('[DEBUG] Lottery mod deactivated, enabling guess map events');
         setGuessMapEvents(true);
     }
 };

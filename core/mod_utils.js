@@ -289,8 +289,51 @@ const addMarkerAt = (lat, lng, title = null) => {
 };
 
 const setGuessMapEvents = (enabled = true) => {
+    console.log('[DEBUG] setGuessMapEvents called, enabled:', enabled);
     const container = getSmallMapContainer();
-    container.style.pointerEvents = enabled ? 'auto' : 'none';
+    if (enabled) {
+        container.style.pointerEvents = 'auto';
+        // Clean up any existing contextmenu overlay
+        const overlay = container.querySelector('.gg-contextmenu-overlay');
+        if (overlay) {
+            console.log('[DEBUG] Removing contextmenu overlay');
+            overlay.remove();
+        }
+    } else {
+        // Disable map interactions but preserve contextmenu functionality
+        container.style.pointerEvents = 'none';
+        console.log('[DEBUG] Disabled pointer events, adding contextmenu overlay');
+        
+        // Add a transparent overlay to capture contextmenu events
+        if (!container.querySelector('.gg-contextmenu-overlay')) {
+            const overlay = document.createElement('div');
+            overlay.className = 'gg-contextmenu-overlay';
+            overlay.style.cssText = `
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                pointer-events: auto;
+                background: transparent;
+                z-index: 1000;
+            `;
+            
+            // Only capture contextmenu events, let everything else pass through
+            overlay.addEventListener('contextmenu', (evt) => {
+                console.log('[DEBUG] Contextmenu triggered on overlay');
+                debugMap(null, evt);
+            });
+            
+            // Prevent other interactions on the overlay
+            overlay.addEventListener('click', (evt) => evt.preventDefault());
+            overlay.addEventListener('mousedown', (evt) => evt.preventDefault());
+            overlay.addEventListener('mouseup', (evt) => evt.preventDefault());
+            
+            container.appendChild(overlay);
+            console.log('[DEBUG] Contextmenu overlay added');
+        }
+    }
 };
 
 const shuffleArray = (arr, inPlace = false) => {
