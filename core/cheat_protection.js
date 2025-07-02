@@ -84,6 +84,169 @@ const _YOURE_LOOKING_AT_MY_CODE = (v) => {
     }
 };
 
+// Quote overlay system
+let _QUOTES_FLAT = [];
+let _CHEAT_OVERLAY; // Div to block view.
+
+const initQuotesFlat = () => {
+    _QUOTES_FLAT = [];
+    
+    // Make sure SHOW_QUOTES is available
+    if (typeof SHOW_QUOTES === 'undefined') {
+        console.warn('SHOW_QUOTES not defined, using defaults');
+        return;
+    }
+    
+    for (const [key, value] of Object.entries(SHOW_QUOTES)) {
+        if (value) {
+            const quotesThisCategory = window._QUOTES && window._QUOTES[key];
+            if (!quotesThisCategory) {
+                console.warn(`Quotes category ${key} not found`);
+                continue;
+            }
+            _QUOTES_FLAT.push(...quotesThisCategory);
+        }
+    }
+};
+
+const getRandomQuote = () => {
+    if (!SHOW_QUOTES || !_QUOTES_FLAT.length) {
+        return 'Loading...';
+    }
+    const ix = Math.floor(Math.random() * _QUOTES_FLAT.length);
+    const quote = _QUOTES_FLAT[ix];
+    return quote;
+};
+
+/** Split the quote and the author into a String[]. Must include the dash character to split it. */
+const splitQuote = (quote) => {
+    const parts = quote.split('—').map(part => part.trim());
+    return parts;
+};
+
+const clearCheatOverlay = () => {
+    if (_CHEAT_OVERLAY) {
+        _CHEAT_OVERLAY.parentElement.removeChild(_CHEAT_OVERLAY);
+        _CHEAT_OVERLAY = undefined;
+    }
+};
+
+const createQuoteOverlay = () => {
+    clearCheatOverlay();
+    
+    // Initialize quotes if needed - wait a bit for quotes to be available
+    if (!window._QUOTES || _QUOTES_FLAT.length === 0) {
+        setTimeout(() => {
+            initQuotesFlat();
+            createQuoteOverlayNow();
+        }, 100);
+        return;
+    }
+    
+    createQuoteOverlayNow();
+};
+
+const createQuoteOverlayNow = () => {
+    const cheatOverlay = document.createElement('div'); // Opaque black div that covers everything while the page loads.
+    cheatOverlay.id = 'on-your-honor';
+    Object.assign(cheatOverlay.style, { // Intentionally not in CSS to make it harder for people to figure out.
+        height: '100vh',
+        width: '100vw',
+        background: 'black',
+        'z-index': '99999999',
+        position: 'fixed',
+        top: '0',
+        left: '0',
+    });
+    
+    const quoteDiv = document.createElement('div');
+    const quote = getRandomQuote();
+    let parts;
+    try {
+        parts = splitQuote(quote);
+    } catch (err) {
+        console.error(err);
+        parts = [quote];
+    }
+    
+    Object.assign(quoteDiv.style, { // Style for div that contains quote and author. Again, done via JS to obfuscate the code.
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        'font-size': '60px',
+        color: 'white',
+        transform: 'translate(-50%, -50%)',
+        'pointer-events': 'none',
+        display: 'flex',
+        'flex-direction': 'column',
+        'text-align': 'center',
+        'align-items': 'center',
+    });
+    
+    const quoteStyle = { // Styling for just the quote.
+        'font-size': '40px',
+    };
+    const authorStyle = { // Styling for just the author.
+        'margin-top': '10px',
+        'font-size': '20px',
+    };
+    
+    for (const [ix, part] of Object.entries(parts)) {
+        const div = document.createElement('div');
+        if (Number(ix) === parts.length - 1 && parts.length > 1) {
+            div.innerText = '— ' + part;
+            Object.assign(div.style, authorStyle);
+        } else {
+            div.innerText = part;
+            Object.assign(div.style, quoteStyle);
+        }
+        quoteDiv.appendChild(div);
+    }
+
+    // On page load, black out everything. Then, we listen for the google map load event, add a time buffer, and remove it after that.
+    // We have to have the map loaded to do the anti-cheat clicks. This is done down below in the map load event bubble.
+    cheatOverlay.appendChild(quoteDiv);
+    _CHEAT_OVERLAY = document.body.insertBefore(cheatOverlay, document.body.firstChild);
+
+    // Other measures are taken, but no matter what we can't let this div brick the entire site,
+    //   e.g. if they change the URL naming scheme. Race condition with map loading, but so be it.
+    // This also should allow ample time for mods to load after the initial GOOGLE_MAP load. There may be a better way to do this.
+    setTimeout(clearCheatOverlay, 5000);
+};
+
+/**
+  Click around the map *after* it is loaded and idle, and the screen is blacked out.
+  This will be a callback in the google maps section of this script.
+  This will completely mess up the replay file. We have 1 second to do this.
+  Always end with a click at { lat: 0, lng: 0 }. This will be extremely obvious in replays, both for streaming and the actual replay files.
+  This function is sloppy, but it doesn't really matter as long as we screw up the replay.
+*/
+const clickGarbage = (nMilliseconds = 900) => {
+    const nClicks = 20; // Approximately...
+    const start = Date.now(); // Unix epoch ms.
+    const end = start + nMilliseconds; // Stop clicking after this time (epoch ms).
+    for (let _ = 0; _ <= nClicks; _++) {
+        if (Date.now() > end) {
+            break;
+        }
+        const { lat, lng } = getRandomLoc();
+        clickAt(lat, lng);
+    }
+    clickAt(0, 0); // Race condition, but whatever.
+};
+
+// Main initialization - this matches the legacy window load event
+const initCheatProtection = () => {
+    if (!_CHEAT_DETECTION) {
+        return; // Get outta 'ere
+    }
+    if (_YOURE_LOOKING_AT_MY_CODE()) {
+        return; // Get outta 'ere
+    }
+    
+    createQuoteOverlay();
+};
+
 // Cheat protection enforcement
 const enforceCheatProtection = () => {
     _CHEAT_DETECTION = true; // I freaking dare you.
@@ -100,3 +263,8 @@ const enforceCheatProtection = () => {
         GG_LOC = evt.detail;
     });
 };
+
+// Initialize cheat protection with window load event (matches legacy implementation)
+window.addEventListener('load', () => {
+    initCheatProtection();
+});
