@@ -153,13 +153,17 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
         
         bindButtons();
 
-        // Button menu toggler.
+        // Button menu toggler - use direct style manipulation for Opera compatibility
+        let isMenuVisible = true; // Track state explicitly
         modMenuToggle.addEventListener('click', function () {
-            buttonContainer.classList.toggle('hidden');
-            if (buttonContainer.classList.contains('hidden')) {
+            if (isMenuVisible) {
+                buttonContainer.style.display = 'none';
                 modMenuToggle.textContent = '▶';
+                isMenuVisible = false;
             } else {
+                buttonContainer.style.display = 'flex';
                 modMenuToggle.textContent = '▼';
+                isMenuVisible = true;
             }
         });
         return true;
