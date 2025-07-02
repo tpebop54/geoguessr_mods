@@ -256,6 +256,55 @@ if (document.readyState === 'loading') {
     initializeMods();
 }
 
+// Global functions for round detection
+let handleRoundStart, fetchMapDataWithRetry;
+
+const simulateRoundStart = () => {
+    console.log('GeoGuessr MultiMod: Attempting to simulate round_start event');
+    
+    // Try to get game data from various sources
+    let gameData = null;
+    
+    // Method 1: Check if GEF has current game data
+    if (typeof GeoGuessrEventFramework !== 'undefined' && GeoGuessrEventFramework.game) {
+        gameData = GeoGuessrEventFramework.game;
+        console.log('GeoGuessr MultiMod: Found game data from GEF.game');
+    }
+    
+    // Method 2: Try to extract from window objects
+    if (!gameData && window.__NEXT_DATA__) {
+        try {
+            const nextData = window.__NEXT_DATA__;
+            if (nextData.props && nextData.props.pageProps) {
+                gameData = nextData.props.pageProps.game || nextData.props.pageProps;
+                console.log('GeoGuessr MultiMod: Found game data from __NEXT_DATA__');
+            }
+        } catch (err) {
+            console.debug('GeoGuessr MultiMod: Could not extract from __NEXT_DATA__:', err);
+        }
+    }
+    
+    // Method 3: Look for React state
+    if (!gameData) {
+        try {
+            const reactRoot = document.querySelector('#__next');
+            if (reactRoot && reactRoot._reactInternalFiber) {
+                // Try to find game data in React fiber
+                console.log('GeoGuessr MultiMod: Attempting to extract from React fiber');
+            }
+        } catch (err) {
+            console.debug('GeoGuessr MultiMod: Could not extract from React fiber:', err);
+        }
+    }
+    
+    if (gameData && handleRoundStart) {
+        console.log('GeoGuessr MultiMod: Simulating round_start with data:', gameData);
+        handleRoundStart({ detail: gameData });
+    } else {
+        console.warn('GeoGuessr MultiMod: Could not find game data for simulation or handleRoundStart not defined');
+    }
+};
+
 // Initialize GeoGuessrEventFramework after a small delay to ensure all modules are loaded
 let initRetryCount = 0;
 const maxRetries = 10;
@@ -329,6 +378,9 @@ function initializeEventFramework() {
         
         setupEventListeners();
         
+        // Set up DOM observer for fallback detection
+        setupDOMObserver();
+        
         // Alternative: Monitor for round changes using URL and DOM changes
         let currentUrl = window.location.href;
         let roundChangeDetected = false;
@@ -356,52 +408,6 @@ function initializeEventFramework() {
             }
         };
         
-        const simulateRoundStart = () => {
-            console.log('GeoGuessr MultiMod: Attempting to simulate round_start event');
-            
-            // Try to get game data from various sources
-            let gameData = null;
-            
-            // Method 1: Check if GEF has current game data
-            if (GEF && GEF.game) {
-                gameData = GEF.game;
-                console.log('GeoGuessr MultiMod: Found game data from GEF.game');
-            }
-            
-            // Method 2: Try to extract from window objects
-            if (!gameData && window.__NEXT_DATA__) {
-                try {
-                    const nextData = window.__NEXT_DATA__;
-                    if (nextData.props && nextData.props.pageProps) {
-                        gameData = nextData.props.pageProps.game || nextData.props.pageProps;
-                        console.log('GeoGuessr MultiMod: Found game data from __NEXT_DATA__');
-                    }
-                } catch (err) {
-                    console.debug('GeoGuessr MultiMod: Could not extract from __NEXT_DATA__:', err);
-                }
-            }
-            
-            // Method 3: Look for React state
-            if (!gameData) {
-                try {
-                    const reactRoot = document.querySelector('#__next');
-                    if (reactRoot && reactRoot._reactInternalFiber) {
-                        // Try to find game data in React fiber
-                        console.log('GeoGuessr MultiMod: Attempting to extract from React fiber');
-                    }
-                } catch (err) {
-                    console.debug('GeoGuessr MultiMod: Could not extract from React fiber:', err);
-                }
-            }
-            
-            if (gameData) {
-                console.log('GeoGuessr MultiMod: Simulating round_start with data:', gameData);
-                handleRoundStart({ detail: gameData });
-            } else {
-                console.warn('GeoGuessr MultiMod: Could not find game data for simulation');
-            }
-        };
-        
         // Monitor URL changes
         setInterval(detectRoundChange, 1000);
         
@@ -424,7 +430,7 @@ function initializeEventFramework() {
             }
         };
         
-        const handleRoundStart = (evt) => {
+        handleRoundStart = (evt) => {
             console.log('GeoGuessr MultiMod: Round start detected:', evt);
             
             // Clear any existing interval
@@ -477,7 +483,7 @@ function initializeEventFramework() {
         };
         
         // Enhanced map data fetching with retry logic (moved outside event handler)
-        const fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) => {
+        fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) => {
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
                     console.debug(`GeoGuessr MultiMod: Fetching map data attempt ${attempt}/${maxRetries}`);
@@ -611,8 +617,6 @@ const setupDOMObserver = () => {
     console.log('GeoGuessr MultiMod: DOM observer set up for game detection');
 };
 
-setupDOMObserver();
-
 // Global GG_MAP loading with background retries
 let globalMapLoadInterval;
 let lastAttemptedMapId = null;
@@ -650,5 +654,3 @@ const stopGlobalMapLoading = () => {
         console.log('GeoGuessr MultiMod: Stopped global background map loading');
     }
 };
-
-startGlobalMapLoading();
