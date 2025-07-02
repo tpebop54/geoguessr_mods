@@ -141,6 +141,16 @@ const QUOTES = {
         `Zippy zipper-zaggers zipped zigzag zones with zany zest.`,
     ],
 
+    questions: [
+        `If you could time travel to any period in history, when and where would you go?`,
+        `If you could have dinner with any historical figure, who would it be?`,
+        `If you could instantly learn any skill, what would it be?`,
+        `If you could live in any fictional universe, which one would you choose?`,
+        `If you could only eat one food for the rest of your life, what would it be?`,
+        `If you could speak any language fluently, which one would it be?`,
+        `If you could have a conversation with your future self, what would you ask?`,
+    ]
+
 };
 
 function initQuotes() {

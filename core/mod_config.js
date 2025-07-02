@@ -302,6 +302,8 @@ const SHOW_QUOTES = {
     media: true, // From movies and stuff. Generally light-hearted.
     jokes: true,
     funFacts: true,
+    tongueTwisters: true,
+    questions: true,
 };
 
 // Callback registry for mod updates
