@@ -1522,7 +1522,7 @@ const setLotteryMapMode = (enabled = true) => {
             existingOverlay.remove();
         }
         
-        // Add lottery-specific overlay to capture only click events
+        // Add lottery-specific overlay that only intercepts click events
         const overlay = document.createElement('div');
         overlay.className = 'gg-lottery-overlay';
         overlay.style.cssText = `
@@ -1531,45 +1531,45 @@ const setLotteryMapMode = (enabled = true) => {
             left: 0;
             right: 0;
             bottom: 0;
-            pointer-events: auto;
+            pointer-events: none;
             background: transparent;
             z-index: 1000;
         `;
         
-        // Block click events but allow wheel (zoom) and drag (pan) to pass through
+        // Only enable pointer events for specific interactions we want to block
         overlay.addEventListener('click', (evt) => {
             evt.preventDefault();
             evt.stopPropagation();
-        });
+        }, true);
         
-        overlay.addEventListener('mousedown', (evt) => {
-            // Only block left clicks (guessing), allow middle/right clicks and wheel
-            if (evt.button === 0) { // Left click
-                evt.preventDefault();
-                evt.stopPropagation();
-            }
-        });
+        // Override the click behavior at the container level instead of using overlay
+        container.addEventListener('click', (evt) => {
+            // Block clicks that would place markers
+            evt.preventDefault();
+            evt.stopPropagation();
+            console.log('GeoGuessr MultiMod: Lottery mode blocked map click');
+        }, true);
         
-        overlay.addEventListener('contextmenu', (evt) => {
-            debugMap(null, evt);
-        });
-        
-        // Allow wheel events to pass through for zooming
-        overlay.addEventListener('wheel', (evt) => {
-            // Let the wheel event pass through to the map below
-            overlay.style.pointerEvents = 'none';
-            setTimeout(() => {
-                overlay.style.pointerEvents = 'auto';
-            }, 10);
-        });
+        // Store reference to the click handler so we can remove it later
+        container._lotteryClickHandler = (evt) => {
+            evt.preventDefault();
+            evt.stopPropagation();
+            console.log('GeoGuessr MultiMod: Lottery mode blocked map click');
+        };
         
         container.appendChild(overlay);
     } else {
-        // Normal mode: remove lottery overlay
+        // Normal mode: remove lottery overlay and click handler
         container.style.pointerEvents = 'auto';
         const overlay = container.querySelector('.gg-lottery-overlay');
         if (overlay) {
             overlay.remove();
+        }
+        
+        // Remove the click handler
+        if (container._lotteryClickHandler) {
+            container.removeEventListener('click', container._lotteryClickHandler, true);
+            delete container._lotteryClickHandler;
         }
     }
 };
