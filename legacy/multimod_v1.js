@@ -2401,6 +2401,8 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
         const headerText = document.createElement('div');
         headerText.id = 'gg-mods-header';
         headerText.textContent = `TPEBOP'S MODS`;
+        const version = (typeof MOD_VERSION !== 'undefined') ? MOD_VERSION : 'unknown';
+        headerText.title = `Version: ${version}`;
         const modMenuToggle = document.createElement('button');
         modMenuToggle.id = 'gg-mods-container-toggle';
         modMenuToggle.textContent = '▼'; // TODO: load from localStorage.
