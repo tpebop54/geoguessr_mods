@@ -6,6 +6,23 @@
 
 // ==/UserScript==
 
+// Browser detection for conditional mod disabling
+// ===============================================================================================================================
+
+// Check if we should disable certain mods in Opera browser
+const shouldDisableInOpera = () => {
+    // isOperaBrowser is defined in dom_utils.js (loaded before this file)
+    if (typeof isOperaBrowser === 'function') {
+        return isOperaBrowser();
+    }
+    // Fallback detection if isOperaBrowser is not available
+    return (!!window.opr && !!opr.addons) || !!window.opera || navigator.userAgent.indexOf(' OPR/') >= 0;
+};
+
+const IS_OPERA = shouldDisableInOpera();
+
+console.log('GeoGuessr MultiMod: mod_config.js loading, Opera detected:', IS_OPERA);
+
 // Mods available in this script.
 // ===============================================================================================================================
 
@@ -25,6 +42,7 @@ const MODS = {
         key: 'rotate-map',
         name: 'Map Rotation',
         tooltip: 'Makes the guess map rotate while you are trying to click.',
+        disableInOpera: true, // Disable in Opera due to WebGL/Vector rendering issues
         options: {
             every: {
                 label: 'Run Every (s)',
@@ -71,6 +89,7 @@ const MODS = {
         key: 'flashlight',
         name: 'Flashlight',
         tooltip: 'Uses cursor as a "flashlight" where you can only see part of the screen',
+        disableInOpera: true, // Disable in Opera due to CSS filter and rendering performance issues
         options: {
             radius: {
                 label: 'Radius',
@@ -90,6 +109,7 @@ const MODS = {
         key: 'seizure',
         name: 'Seizure',
         tooltip: 'Makes large map jitter around. Seizure warning!!',
+        disableInOpera: true, // Disable in Opera due to performance and rendering issues
         options: {
             frequency: {
                 label: 'Frequency (Hz)',
@@ -158,6 +178,7 @@ const MODS = {
         key: 'puzzle',
         name: 'Puzzle',
         tooltip: 'Split up the large map into tiles and rearrange them randomly',
+        disableInOpera: true, // Disable in Opera due to complex DOM manipulation and rendering issues
         options: {
             nRows: {
                 label: '# Rows',
@@ -201,6 +222,7 @@ const MODS = {
         key: 'display-preferences',
         name: 'Display Preferences',
         tooltip: 'Various display options for page elements, colors, etc. Does not mess with gameplay.',
+        disableInOpera: true, // Disable in Opera due to CSS filter support issues
         options: {
             tidy: {
                 label: 'Tidy mode',
@@ -243,6 +265,29 @@ const MODS = {
 
 };
 
+// Apply Opera-specific mod disabling
+// ===============================================================================================================================
+
+if (IS_OPERA) {
+    console.log('GeoGuessr MultiMod: Opera browser detected, disabling incompatible mods...');
+    let disabledCount = 0;
+    
+    for (const [modKey, mod] of Object.entries(MODS)) {
+        if (mod.disableInOpera) {
+            const wasEnabled = mod.enabled;
+            mod.show = false;
+            mod.enabled = false;
+            mod.tooltip = `${mod.tooltip} [DISABLED IN OPERA]`;
+            disabledCount++;
+            console.log(`GeoGuessr MultiMod: Disabled mod '${mod.name}' due to Opera compatibility`);
+        }
+    }
+    
+    if (disabledCount > 0) {
+        console.log(`GeoGuessr MultiMod: Disabled ${disabledCount} mods due to Opera browser compatibility`);
+    }
+}
+
 // Default configuration for options restoration
 const GG_DEFAULT = {} // Used for default options and restoring options.
 for (const mod of Object.values(MODS)) {
@@ -260,3 +305,5 @@ const SHOW_QUOTES = {
 
 // Callback registry for mod updates
 const UPDATE_CALLBACKS = {};
+
+console.log('GeoGuessr MultiMod: mod_config.js loaded successfully');
