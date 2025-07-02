@@ -253,12 +253,12 @@ const MODS = {
                 ],
             },
             flipVertical: {
-                label: 'Flip Vertical (Upside Down)',
+                label: 'Flip Vertical',
                 default: false,
                 tooltip: 'Flip the main view vertically (upside down).',
             },
             flipHorizontal: {
-                label: 'Flip Horizontal (Left-Right)',
+                label: 'Flip Horizontal',
                 default: false,
                 tooltip: 'Flip the main view horizontally (left-right mirror).',
             },
