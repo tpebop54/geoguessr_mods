@@ -223,7 +223,7 @@ const MODS = {
         key: 'display-preferences',
         name: 'Display Preferences',
         tooltip: 'Various display options for page elements, colors, etc. Does not mess with gameplay.',
-        disableInOpera: true, // Disable in Opera due to CSS filter support issues
+        // Note: CSS filters may have issues in Opera, but transforms work fine
         options: {
             tidy: {
                 label: 'Tidy mode',

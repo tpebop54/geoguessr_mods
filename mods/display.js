@@ -134,6 +134,11 @@ const removeColorOverlay = () => {
 const makeColorOverlay = () => {
     removeColorOverlay();
 
+    // Skip overlay creation in Opera due to performance issues
+    if (IS_OPERA) {
+        return;
+    }
+
     const bigMapContainer = getBigMapContainer();
     if (!bigMapContainer) {
         return;
@@ -149,6 +154,11 @@ const makeColorOverlay = () => {
 };
 
 const getFilterStr = (mod) => { // Get string that can be applied to streetview canvas filters.
+    // In Opera, CSS filters may have performance issues, so skip them
+    if (IS_OPERA) {
+        return '';
+    }
+    
     const activeFilter = Object.assign({}, _BASE_COLOR_FILTER); // The actual styling that will be applied to the canvas.
     const activeColorMode = getOption(mod, 'colorMode');
     const enabledFilter = _COLOR_FILTERS[activeColorMode] || {};
