@@ -357,6 +357,7 @@ const applyModStyles = () => {
         tileRevealStyles +
         lotteryStyles +
         utilityStyles;
+        
     GM_addStyle(combinedStyles);
 };
 

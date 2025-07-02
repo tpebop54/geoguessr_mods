@@ -252,6 +252,16 @@ const MODS = {
                     'octopus',
                 ],
             },
+            flipVertical: {
+                label: 'Flip Vertical (Upside Down)',
+                default: false,
+                tooltip: 'Flip the main view vertically (upside down).',
+            },
+            flipHorizontal: {
+                label: 'Flip Horizontal (Left-Right)',
+                default: false,
+                tooltip: 'Flip the main view horizontally (left-right mirror).',
+            },
         },
     },
 

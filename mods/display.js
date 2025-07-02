@@ -181,10 +181,35 @@ const updateDisplayOptions = (forceState = null) => {
     _updateTidy(mod);
 
     let filterStr = '';
+    let transformStr = '';
+    
     if (active) {
         makeColorOverlay(); // TODO: depends on mode.
         filterStr = getFilterStr(mod);
+        
+        // Handle flip transforms
+        const flipVertical = getOption(mod, 'flipVertical');
+        const flipHorizontal = getOption(mod, 'flipHorizontal');
+        
+        const transforms = [];
+        if (flipVertical) {
+            transforms.push('scaleY(-1)');
+        }
+        if (flipHorizontal) {
+            transforms.push('scaleX(-1)');
+        }
+        
+        if (transforms.length > 0) {
+            transformStr = transforms.join(' ');
+        }
+    } else {
+        // When mod is disabled, clear overlays
+        removeColorOverlay();
     }
+    
     const canvas3d = getBigMapCanvas();
-    canvas3d.style.filter = filterStr;
+    if (canvas3d) {
+        canvas3d.style.filter = filterStr;
+        canvas3d.style.transform = transformStr;
+    }
 };
