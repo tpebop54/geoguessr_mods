@@ -137,7 +137,7 @@ const MODS = {
     },
 
     inFrame: {
-        show: false, // Doesn't work in duels.
+        show: true,
         key: 'in-frame',
         name: 'Show In-Frame',
         tooltip: 'Shows if the location is in or out of your current guess map view.',
