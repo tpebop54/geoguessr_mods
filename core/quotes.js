@@ -169,12 +169,6 @@ const QUOTES = {
 
 function initQuotes() {
     window._QUOTES = QUOTES; // Make available globally
-    
-    // Initialize the flattened quotes array after quotes are available
-    if (typeof initQuotesFlat === 'function') {
-        initQuotesFlat();
-    }
-    
     return QUOTES;
 }
 
