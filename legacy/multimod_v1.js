@@ -1518,10 +1518,8 @@ const updateLottery = (forceState = null) => {
         // Reset lottery count to the configured number of guesses
         _LOTTERY_COUNT = getOption(mod, 'nGuesses');
         
-        // Only show the display if we're in an active round
-        if (typeof GG_ROUND !== 'undefined' && GG_ROUND) {
-            makeLotteryDisplay();
-        }
+        // Always show the display when mod is active
+        makeLotteryDisplay();
         setGuessMapEvents(false);
     } else {
         const container = document.querySelector(`#gg-lottery`);
