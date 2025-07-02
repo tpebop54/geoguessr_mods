@@ -70,7 +70,7 @@ const getHeading = (p1, p2) => {
     return heading;
 };
 
-const getScore = async () => {
+const getScore = () => {
     const actual = getActualLoc();
     if (!actual) {
         console.error('getScore: no actual location available');
@@ -83,13 +83,40 @@ const getScore = async () => {
     }
     const dist = getDistance(actual, guess);
 
+    // Use synchronous fallback if GG_MAP isn't loaded yet
+    let maxErrorDist;
+    if (isGGMapLoaded()) {
+        maxErrorDist = GG_MAP.maxErrorDistance;
+    } else {
+        console.warn('getScore: GG_MAP not loaded, using fallback maxErrorDistance');
+        maxErrorDist = 20015086; // Default world map max distance in meters
+    }
+    
+    const score = Math.round(5000 * Math.pow(Math.E, -10 * dist / maxErrorDist));
+    return score;
+};
+
+// Async version of getScore that waits for GG_MAP to load (for cases where you need accurate data)
+const getScoreAsync = async () => {
+    const actual = getActualLoc();
+    if (!actual) {
+        console.error('getScoreAsync: no actual location available');
+        return null;
+    }
+    const guess = GG_CLICK;
+    if (!guess) {
+        console.error('getScoreAsync: no guess click available');
+        return null;
+    }
+    const dist = getDistance(actual, guess);
+
     // Get GG_MAP with enhanced fallback handling
     const mapData = await getGGMapWithFallback(2000); // Wait up to 2 seconds
     const maxErrorDist = mapData.maxErrorDistance;
     const score = Math.round(5000 * Math.pow(Math.E, -10 * dist / maxErrorDist));
     
     if (!isGGMapLoaded()) {
-        console.warn('getScore: calculated with fallback maxErrorDistance, score:', score);
+        console.warn('getScoreAsync: calculated with fallback maxErrorDistance, score:', score);
     }
     
     return score;
@@ -151,12 +178,18 @@ const getCardinalDirection = (degrees, level = 0) => {
 /**
   Map click listener. For scoring mods, SCORE_FUNC needs to be defined and then cleared when the mod is deactivated.
 */
-const scoreListener = (evt) => {
+const scoreListener = async (evt) => {
     let scoreString;
     if (SCORE_FUNC) { // See note about SCORE_FUNC in the globals.
-        scoreString = SCORE_FUNC(evt);
+        const result = SCORE_FUNC(evt);
+        // Handle both sync and async score functions
+        if (result && typeof result.then === 'function') {
+            scoreString = String(await result);
+        } else {
+            scoreString = String(result);
+        }
     } else {
-        scoreString = String(getScore());
+        scoreString = String(getScore()); // Use synchronous version by default
     }
 
     let fadeTarget = document.getElementById('gg-score-div');

@@ -304,6 +304,9 @@ function initializeEventFramework() {
         }
         console.log('GeoGuessr MultiMod: GeoGuessrEventFramework successfully initialized');
         
+        // Start global background map loading
+        startGlobalMapLoading();
+        
         // Add comprehensive event listeners with debugging
         const setupEventListeners = () => {
             console.log('GeoGuessr MultiMod: Setting up event listeners...');
@@ -534,6 +537,9 @@ function initializeEventFramework() {
                 mapDataCheckInterval = null;
             }
             
+            // Reset global map loading state
+            lastAttemptedMapId = null;
+            
             GG_ROUND = undefined;
             GG_CLICK = undefined;
         });
@@ -606,3 +612,43 @@ const setupDOMObserver = () => {
 };
 
 setupDOMObserver();
+
+// Global GG_MAP loading with background retries
+let globalMapLoadInterval;
+let lastAttemptedMapId = null;
+
+const startGlobalMapLoading = () => {
+    if (globalMapLoadInterval) {
+        clearInterval(globalMapLoadInterval);
+    }
+    
+    globalMapLoadInterval = setInterval(() => {
+        // Only attempt if we have round data but no map data
+        if (GG_ROUND && (!GG_MAP || !GG_MAP.maxErrorDistance)) {
+            const mapId = GG_ROUND.map?.id || GG_ROUND.mapId;
+            
+            // Don't keep retrying the same failed map
+            if (mapId && mapId !== lastAttemptedMapId) {
+                console.log('GeoGuessr MultiMod: Background attempting to load GG_MAP for mapId:', mapId);
+                lastAttemptedMapId = mapId;
+                
+                fetchMapDataWithRetry(mapId, 2, 2000).catch(err => {
+                    console.warn('GeoGuessr MultiMod: Background map load failed:', err);
+                });
+            }
+        }
+    }, 5000); // Check every 5 seconds
+    
+    console.log('GeoGuessr MultiMod: Started global background map loading');
+};
+
+const stopGlobalMapLoading = () => {
+    if (globalMapLoadInterval) {
+        clearInterval(globalMapLoadInterval);
+        globalMapLoadInterval = null;
+        lastAttemptedMapId = null;
+        console.log('GeoGuessr MultiMod: Stopped global background map loading');
+    }
+};
+
+startGlobalMapLoading();
