@@ -6,8 +6,6 @@
 
 // ==/UserScript==
 
-console.log('GeoGuessr MultiMod: script_bindings.js loading...');
-
 // Add bindings and start the script.
 // ===============================================================================================================================
 
@@ -268,29 +266,16 @@ function initializeEventFramework() {
     // Initialize GeoGuessrEventFramework for round events and map data
     /* eslint-disable no-undef */
     try {
-        console.log(`GeoGuessr MultiMod: Attempting to initialize GeoGuessrEventFramework... (attempt ${initRetryCount + 1}/${maxRetries})`);
-        
-        // Debug: Check what's available in the global scope
-        console.log('GeoGuessr MultiMod: Checking global scope...');
-        console.log('typeof GeoGuessrEventFramework:', typeof GeoGuessrEventFramework);
-        console.log('window.GeoGuessrEventFramework:', typeof window.GeoGuessrEventFramework);
-        console.log('unsafeWindow.GeoGuessrEventFramework:', typeof (typeof unsafeWindow !== 'undefined' ? unsafeWindow.GeoGuessrEventFramework : 'unsafeWindow not available'));
-        console.log('Browser user agent:', navigator.userAgent);
-        console.log('Current URL:', window.location.href);
-        
         // Try to find GeoGuessrEventFramework from multiple sources
         let GEF = null;
         if (typeof GeoGuessrEventFramework !== 'undefined') {
             GEF = GeoGuessrEventFramework;
-            console.log('GeoGuessr MultiMod: Found GeoGuessrEventFramework in global scope');
         } else if (typeof window.GeoGuessrEventFramework !== 'undefined') {
             GEF = window.GeoGuessrEventFramework;
-            console.log('GeoGuessr MultiMod: Found GeoGuessrEventFramework in window');
         } else if (typeof unsafeWindow !== 'undefined' && typeof unsafeWindow.GeoGuessrEventFramework !== 'undefined') {
             GEF = unsafeWindow.GeoGuessrEventFramework;
-            console.log('GeoGuessr MultiMod: Found GeoGuessrEventFramework in unsafeWindow');
         } else {
-            console.log('GeoGuessr MultiMod: GeoGuessrEventFramework not found in any context');
+            console.debug('GeoGuessr MultiMod: GeoGuessrEventFramework not found in any context');
         }
         
         if (!GEF) {
@@ -315,27 +300,19 @@ function initializeEventFramework() {
             setTimeout(initializeEventFramework, 2000);
             return;
         }
-        
-        // The GeoGuessrEventFramework is already initialized in its constructor
-        // So we can use it directly without calling init() again
-        console.log('GeoGuessr MultiMod: GeoGuessrEventFramework found and ready');
-        console.log('GeoGuessr MultiMod: GEF object:', GEF);
-        console.log('GeoGuessr MultiMod: GEF.events:', GEF.events);
-        
+                
         GEF.events.addEventListener('round_start', (evt) => {
-            console.log('GeoGuessr MultiMod: Round start event received');
             window.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
             try {
                 const round = evt.detail.rounds[evt.detail.rounds.length - 1];
                 GG_ROUND = round;
                 const mapID = evt.detail.map.id;
-                console.log('GeoGuessr MultiMod: Fetching map data for mapID:', mapID);
-                
+                console.debug('GeoGuessr MultiMod: Fetching map data for mapID:', mapID);
                 fetch(`https://www.geoguessr.com/api/maps/${mapID}`)
                     .then(data => data.json())
                     .then(data => {
                         GG_MAP = data;
-                        console.log('GeoGuessr MultiMod: GG_MAP loaded successfully:', GG_MAP);
+                        console.debug('GeoGuessr MultiMod: GG_MAP loaded successfully:', GG_MAP);
                     })
                     .catch(err => {
                         console.error('GeoGuessr MultiMod: Failed to fetch map data:', err);
@@ -346,7 +323,6 @@ function initializeEventFramework() {
         });
         
         GEF.events.addEventListener('round_end', (evt) => {
-            console.log('GeoGuessr MultiMod: Round end event received');
             GG_ROUND = undefined;
             GG_CLICK = undefined;
         });
@@ -366,9 +342,6 @@ function initializeEventFramework() {
                 }
             }
         });
-        
-        console.log('GeoGuessr MultiMod: Event listeners successfully registered');
-        
     } catch (err) {
         console.error('GeoGuessr MultiMod: Exception during GeoGuessrEventFramework setup:', err);
         initRetryCount++;
@@ -381,5 +354,3 @@ function initializeEventFramework() {
     }
     /* eslint-enable no-undef */
 }
-
-console.log('GeoGuessr MultiMod: script_bindings.js loaded successfully');

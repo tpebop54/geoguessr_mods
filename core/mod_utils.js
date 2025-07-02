@@ -73,23 +73,23 @@ const getHeading = (p1, p2) => {
 const getScore = () => {
     const actual = getActualLoc();
     if (!actual) {
-        console.log('getScore: no actual location available');
+        console.error('getScore: no actual location available');
         return null;
     }
     const guess = GG_CLICK;
     if (!guess) {
-        console.log('getScore: no guess click available');
+        console.error('getScore: no guess click available');
         return null;
     }
     const dist = getDistance(actual, guess);
-    
+
     // Ref: https://www.plonkit.net/beginners-guide#game-mechanics --> score
     if (!GG_MAP || !GG_MAP.maxErrorDistance) {
         console.warn('GG_MAP not yet loaded, using fallback maxErrorDistance');
         // Use fallback value - standard world map distance is around 20015 km
         const fallbackMaxErrorDist = 20015086; // meters, approximate max distance on Earth
         const score = Math.round(5000 * Math.pow(Math.E, -10 * dist / fallbackMaxErrorDist));
-        console.log('getScore: calculated with fallback, score:', score);
+        console.warn('getScore: calculated with fallback, score:', score);
         return score;
     }
     const maxErrorDist = GG_MAP.maxErrorDistance;

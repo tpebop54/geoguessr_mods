@@ -6,7 +6,7 @@
 
 // ==/UserScript==
 
-console.log('GeoGuessr MultiMod: global_state.js loading...');
+console.debug('GeoGuessr MultiMod: global_state.js loading...');
 
 // Global state. Load from local storage if it exists. Values used in this script will be from this global variable after loading.
 // ===============================================================================================================================
@@ -80,5 +80,3 @@ let _IS_DRAGGING_SMALL_MAP = false; // true when user is actively dragging the g
 let SCORE_FUNC;
 
 let _MODS_LOADED = false;
-
-console.log('GeoGuessr MultiMod: global_state.js loaded successfully');

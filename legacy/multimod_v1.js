@@ -2806,20 +2806,16 @@ onDomReady(() => {
                 
                 try {
                     if (isOpera) {
-                        // Opera fallback: use raster rendering
-                        console.log('Opera browser detected, using raster rendering for map compatibility');
+                        console.log('Opera browser detected. Some mods will be disabled due to rendering issues.');
                         this.setRenderingType(google.maps.RenderingType.RASTER);
                     } else {
-                        // Other browsers: use vector rendering
                         this.setRenderingType(google.maps.RenderingType.VECTOR);
                     }
                 } catch (err) {
-                    console.log('Error setting rendering type, falling back to raster:', err);
-                    // Fallback to raster if vector fails
                     try {
                         this.setRenderingType(google.maps.RenderingType.RASTER);
                     } catch (fallbackErr) {
-                        console.log('Fallback to raster also failed:', fallbackErr);
+                        console.error('Fallback to raster failed:', fallbackErr);
                     }
                 }
                 
@@ -2863,7 +2859,7 @@ onDomReady(() => {
                     return loc && visible;
                 }
             } catch (err) {
-                console.log('Error checking map readiness:', err);
+                console.error('Error checking map readiness:', err);
                 return false;
             }
         };

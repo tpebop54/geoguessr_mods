@@ -123,7 +123,7 @@ async function drawCanvas2d() {
                     const drawY = y * tileSize.height;
                     ctx2d.drawImage(img, drawX, drawY);
                     tilesLoaded++;
-                    // console.log(`Loaded tile ${x},${y} (${tilesLoaded}/${totalTiles})`); // Kept for debugging.
+                    console.debug(`Loaded tile ${x},${y} (${tilesLoaded}/${totalTiles})`); // Kept for debugging.
                     resolve();
                 };
                 img.onerror = (err) => {

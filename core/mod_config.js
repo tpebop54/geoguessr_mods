@@ -6,22 +6,26 @@
 
 // ==/UserScript==
 
-// Browser detection for conditional mod disabling
+// Browser detection for conditional mod disabling.
+// This is required because Opera has issues with vector rendering of the 2D map, so they are totally unworkable in Opera.
 // ===============================================================================================================================
 
-// Check if we should disable certain mods in Opera browser
-const shouldDisableInOpera = () => {
-    // isOperaBrowser is defined in dom_utils.js (loaded before this file)
+const _isOpera = () => {
     if (typeof isOperaBrowser === 'function') {
         return isOperaBrowser();
     }
-    // Fallback detection if isOperaBrowser is not available
-    return (!!window.opr && !!opr.addons) || !!window.opera || navigator.userAgent.indexOf(' OPR/') >= 0;
+    return (!!window.opr && !!opr.addons) || !!window.opera || navigator.userAgent.indexOf(' OPR/') >= 0; // Fallback detection.
 };
 
-const IS_OPERA = shouldDisableInOpera();
+const IS_OPERA = _isOpera();
 
-console.log('GeoGuessr MultiMod: mod_config.js loading, Opera detected:', IS_OPERA);
+const valueUnlessOpera = (value = true) => {
+    if (IS_OPERA) {
+        return false;
+    }
+    return !!value;
+};
+
 
 // Mods available in this script.
 // ===============================================================================================================================
@@ -38,7 +42,7 @@ const MODS = {
     },
 
     rotateMap: {
-        show: true,
+        show: valueUnlessOpera(true),
         key: 'rotate-map',
         name: 'Map Rotation',
         tooltip: 'Makes the guess map rotate while you are trying to click.',
@@ -269,9 +273,8 @@ const MODS = {
 // ===============================================================================================================================
 
 if (IS_OPERA) {
-    console.log('GeoGuessr MultiMod: Opera browser detected, disabling incompatible mods...');
     let disabledCount = 0;
-    
+
     for (const [modKey, mod] of Object.entries(MODS)) {
         if (mod.disableInOpera) {
             const wasEnabled = mod.enabled;
@@ -279,12 +282,7 @@ if (IS_OPERA) {
             mod.enabled = false;
             mod.tooltip = `${mod.tooltip} [DISABLED IN OPERA]`;
             disabledCount++;
-            console.log(`GeoGuessr MultiMod: Disabled mod '${mod.name}' due to Opera compatibility`);
         }
-    }
-    
-    if (disabledCount > 0) {
-        console.log(`GeoGuessr MultiMod: Disabled ${disabledCount} mods due to Opera browser compatibility`);
     }
 }
 
@@ -305,5 +303,3 @@ const SHOW_QUOTES = {
 
 // Callback registry for mod updates
 const UPDATE_CALLBACKS = {};
-
-console.log('GeoGuessr MultiMod: mod_config.js loaded successfully');
