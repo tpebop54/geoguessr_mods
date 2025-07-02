@@ -154,14 +154,12 @@ const setLotteryMapMode = (enabled = true) => {
             // Block clicks that would place markers
             evt.preventDefault();
             evt.stopPropagation();
-            console.log('GeoGuessr MultiMod: Lottery mode blocked map click');
         }, true);
         
         // Store reference to the click handler so we can remove it later
         container._lotteryClickHandler = (evt) => {
             evt.preventDefault();
             evt.stopPropagation();
-            console.log('GeoGuessr MultiMod: Lottery mode blocked map click');
         };
         
         container.appendChild(overlay);
@@ -195,7 +193,6 @@ const updateLottery = (forceState = null) => {
         makeLotteryDisplay();
         setLotteryMapMode(true); // Enable lottery mode (zoom/pan allowed, clicks blocked)
     } else {
-        console.log('GeoGuessr MultiMod: Lottery deactivated');
         const container = document.querySelector(`#gg-lottery`);
         if (container) {
             container.parentElement.removeChild(container);
