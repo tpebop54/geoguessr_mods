@@ -221,6 +221,62 @@ const applyModStyles = () => {
             pointer-events: none;
             z-index: 2;
         }
+
+        /* TODO: can this be merged with the lottery CSS? and also some of it with gg-option-menu */
+        #gg-tile-count {
+            position: fixed;
+            display: flex;
+            justify-content: space-between;
+            font-size: 24px;
+            background: ${greenMenuColor} !important;
+            top: 10%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            min-width: 225px;
+            padding: 15px;
+            background: var(--ds-color-purple-100);
+            border-radius: 10px;
+            border: 2px solid black;
+            color: white;
+            font-weight: bold;
+            text-shadow: ${bodyShadow};
+            z-index: 9999;
+            overflow: hidden;
+            cursor: move;
+        }
+
+        #gg-tile-count-value {
+            padding-left: 0.5em;
+            pointer-events: none;
+        }
+
+        #gg-tile-overlay {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: transparent;
+            display: grid;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .gg-tile-block {
+            background: black;
+            border: 1px solid #333;
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+            pointer-events: all;
+        }
+
+        .gg-tile-block:hover {
+            background: #222;
+        }
+
+        .gg-tile-block.removed {
+            pointer-events: none;
+            background: transparent !important;
+            border: none;
+        }
         
     `;
 
