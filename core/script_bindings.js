@@ -24,9 +24,8 @@ const _BINDINGS = [
 ];
 
 const bindButtons = () => {
-    if (_MODS_LOADED) {
-        return;
-    }
+    let boundCount = 0;
+    
     for (const [mod, callback] of _BINDINGS) {
         if (!mod.show) {
             continue;
@@ -34,16 +33,30 @@ const bindButtons = () => {
         UPDATE_CALLBACKS[mod.key] = callback;
         const button = getModButton(mod);
         if (!button) {
-            console.error(`Mod ${mod.key} not found.`);
+            console.debug(`Mod button ${mod.key} not found, skipping binding.`);
             continue;
         }
+        
+        // Check if button already has event listeners by checking for a custom property
+        if (button._ggModsBound) {
+            continue; // Skip if already bound
+        }
+        
         // If option menu is open, close it. If enabling a mod, open the option menu.
         button.addEventListener('click', () => {
             closeOptionMenu();
             callback();
         });
+        
+        // Mark this button as bound
+        button._ggModsBound = true;
+        boundCount++;
     }
-    _MODS_LOADED = true;
+    
+    if (boundCount > 0) {
+        console.debug(`Bound ${boundCount} mod buttons`);
+        _MODS_LOADED = true;
+    }
 };
 
 const addButtons = () => { // Add mod buttons to the active round, with a little button to toggle them.
@@ -214,6 +227,12 @@ const initializeMods = () => {
         const observer = new MutationObserver(() => {
             try {
                 const buttonsAdded = addButtons();
+                
+                // Ensure buttons are bound even if they were already created
+                if (!buttonsAdded) {
+                    bindButtons(); // Try to bind existing buttons
+                }
+                
                 // Remove game reactions div (anti-cheat method from GeoGuessr that's annoying)
                 const reactionsDiv = getGameReactionsDiv();
                 if (reactionsDiv) {
@@ -254,6 +273,16 @@ const initializeMods = () => {
                 setTimeout(initializeMods, 1000);
             }
         }
+        
+        // Set up periodic button binding check to ensure buttons remain clickable
+        setInterval(() => {
+            try {
+                bindButtons();
+            } catch (err) {
+                console.debug('Error in periodic button binding check:', err);
+            }
+        }, 5000); // Check every 5 seconds
+        
     } catch (err) {
         console.error(err);
     }
@@ -369,6 +398,9 @@ const ensureGGMapLoaded = () => {
 // Round start event handler
 handleRoundStart = (evt) => {
     console.log('GeoGuessr MultiMod: Round start detected:', evt);
+    
+    // Reset mod button binding state for new round
+    _MODS_LOADED = false;
     
     // Clear any existing interval
     if (mapDataCheckInterval) {
