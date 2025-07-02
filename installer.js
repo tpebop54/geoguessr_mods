@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Tpebop's Geoguessr Mods
 // @description  Various mods to make the game interesting in various ways (Auto-updating Main Branch)
-// @version      0.9.0
+// @version      0.9.1
 // @author       tpebop
 // @match        *://*.geoguessr.com/*
 // @icon         https://www.google.com/s2/favicons?domain=geoguessr.com
@@ -44,7 +44,6 @@
 // ==/UserScript==
 
 // Configure which quote categories to show during loading screens
-// Use window.SHOW_QUOTES to avoid potential conflicts with other declarations
 if (typeof window.SHOW_QUOTES === 'undefined') {
     window.SHOW_QUOTES = {
         inspirational: true,  // Motivational and inspirational quotes
