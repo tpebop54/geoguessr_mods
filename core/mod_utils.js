@@ -289,20 +289,15 @@ const addMarkerAt = (lat, lng, title = null) => {
 };
 
 const setGuessMapEvents = (enabled = true) => {
-    console.log('[DEBUG] setGuessMapEvents called, enabled:', enabled);
     const container = getSmallMapContainer();
     if (enabled) {
         container.style.pointerEvents = 'auto';
-        // Clean up any existing contextmenu overlay
         const overlay = container.querySelector('.gg-contextmenu-overlay');
         if (overlay) {
-            console.log('[DEBUG] Removing contextmenu overlay');
             overlay.remove();
         }
     } else {
-        // Disable map interactions but preserve contextmenu functionality
         container.style.pointerEvents = 'none';
-        console.log('[DEBUG] Disabled pointer events, adding contextmenu overlay');
         
         // Add a transparent overlay to capture contextmenu events
         if (!container.querySelector('.gg-contextmenu-overlay')) {
@@ -321,7 +316,6 @@ const setGuessMapEvents = (enabled = true) => {
             
             // Only capture contextmenu events, let everything else pass through
             overlay.addEventListener('contextmenu', (evt) => {
-                console.log('[DEBUG] Contextmenu triggered on overlay');
                 debugMap(null, evt);
             });
             
@@ -331,7 +325,6 @@ const setGuessMapEvents = (enabled = true) => {
             overlay.addEventListener('mouseup', (evt) => evt.preventDefault());
             
             container.appendChild(overlay);
-            console.log('[DEBUG] Contextmenu overlay added');
         }
     }
 };

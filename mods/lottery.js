@@ -119,13 +119,11 @@ const updateLottery = (forceState = null) => {
     const mod = MODS.lottery;
     const active = updateMod(mod, forceState);
 
-    console.log('[DEBUG] updateLottery called, active:', active);
     removeLotteryDisplay();
     _LOTTERY_COUNT = getOption(mod, 'nGuesses');
 
     const smallMap = getSmallMap();
     if (active) {
-        console.log('[DEBUG] Lottery mod activated, disabling guess map events');
         makeLotteryDisplay();
         setGuessMapEvents(false);
     } else {
@@ -133,7 +131,6 @@ const updateLottery = (forceState = null) => {
         if (container) {
             container.parentElement.removeChild(container);
         }
-        console.log('[DEBUG] Lottery mod deactivated, enabling guess map events');
         setGuessMapEvents(true);
     }
 };
