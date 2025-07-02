@@ -475,12 +475,9 @@ function initializeEventFramework() {
         
         // Now set up the event listeners with proper handlers
         const setupEventListeners = () => {
-            console.log('GeoGuessr MultiMod: Setting up event listeners...');
-            
             try {
                 // Add the main event listeners
                 GEF.events.addEventListener('round_start', handleRoundStart);
-                console.log('GeoGuessr MultiMod: round_start listener added');
                 
                 GEF.events.addEventListener('round_end', (evt) => {
                     console.log('GeoGuessr MultiMod: round_end event detected');
@@ -496,15 +493,11 @@ function initializeEventFramework() {
                     GG_ROUND = undefined;
                     GG_CLICK = undefined;
                 });
-                console.log('GeoGuessr MultiMod: round_end listener added');
                 
                 // Test listener to verify events are working
                 GEF.events.addEventListener('guess', (evt) => {
                     console.log('GeoGuessr MultiMod: guess event detected:', evt);
                 });
-                console.log('GeoGuessr MultiMod: guess listener added');
-                
-                console.log('GeoGuessr MultiMod: All event listeners added successfully');
             } catch (err) {
                 console.error('GeoGuessr MultiMod: Failed to add event listeners:', err);
             }
@@ -738,9 +731,7 @@ const setupDOMObserver = () => {
                         node.querySelector('[data-qa="guess-map"]') ||
                         node.querySelector('.widget-scene-canvas') ||
                         node.id === 'street-view-container'
-                    )) {
-                        console.log('GeoGuessr MultiMod: Game elements detected in DOM, potential round start');
-                        
+                    )) {                       
                         // Delay to let the game fully initialize
                         setTimeout(() => {
                             if (!GG_ROUND) {
@@ -760,8 +751,6 @@ const setupDOMObserver = () => {
         childList: true,
         subtree: true
     });
-    
-    console.log('GeoGuessr MultiMod: DOM observer set up for game detection');
 };
 
 // Global GG_MAP loading with background retries
@@ -789,8 +778,6 @@ const startGlobalMapLoading = () => {
             }
         }
     }, 5000); // Check every 5 seconds
-    
-    console.log('GeoGuessr MultiMod: Started global background map loading');
 };
 
 const stopGlobalMapLoading = () => {
