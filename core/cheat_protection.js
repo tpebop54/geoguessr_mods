@@ -88,13 +88,21 @@ let _CHEAT_OVERLAY; // Div to block view.
 const initQuotesFlat = () => {
     _QUOTES_FLAT = [];
     
-    // Make sure SHOW_QUOTES is available
-    if (typeof SHOW_QUOTES === 'undefined') {
-        console.warn('SHOW_QUOTES not defined, using defaults');
-        return;
-    }
+    // Default configuration if SHOW_QUOTES is not defined
+    const defaultShowQuotes = {
+        inspirational: true,
+        heavy: true,
+        media: true,
+        jokes: true,
+        funFacts: true,
+        tongueTwisters: true,
+        questions: true,
+    };
     
-    for (const [key, value] of Object.entries(SHOW_QUOTES)) {
+    // Use SHOW_QUOTES if available, otherwise use defaults
+    const quotesConfig = (typeof SHOW_QUOTES !== 'undefined') ? SHOW_QUOTES : defaultShowQuotes;
+    
+    for (const [key, value] of Object.entries(quotesConfig)) {
         if (value) {
             const quotesThisCategory = window._QUOTES && window._QUOTES[key];
             if (!quotesThisCategory) {
@@ -107,8 +115,12 @@ const initQuotesFlat = () => {
 };
 
 const getRandomQuote = () => {
-    if (!SHOW_QUOTES || !_QUOTES_FLAT.length) {
-        return 'Loading...';
+    if (!_QUOTES_FLAT.length) {
+        // Try to initialize quotes if not already done
+        initQuotesFlat();
+        if (!_QUOTES_FLAT.length) {
+            return 'Loading...';
+        }
     }
     const ix = Math.floor(Math.random() * _QUOTES_FLAT.length);
     const quote = _QUOTES_FLAT[ix];

@@ -43,4 +43,15 @@
 
 // ==/UserScript==
 
+// Configure which quote categories to show during loading screens
+const SHOW_QUOTES = {
+    inspirational: true,  // Motivational and inspirational quotes
+    heavy: true,          // Thought provoking stuff, nothing morbid
+    media: true,          // Quotes from movies, TV shows, celebrities - generally light-hearted
+    jokes: true,          // Dad jokes and puns
+    funFacts: true,       // Interesting facts
+    tongueTwisters: true, // See if you can say them...
+    questions: true,      // Mostly silly questions, some real ones
+};
+
 console.log(`Tpebop's mods loaded (DEV).`);
