@@ -11,13 +11,10 @@
 // ===============================================================================================================================
 
 const _isOpera = () => {
-    // Self-contained Opera detection to avoid dependency issues
     return (!!window.opr && !!opr.addons) || !!window.opera || navigator.userAgent.indexOf(' OPR/') >= 0;
 };
 
 const IS_OPERA = _isOpera();
-
-console.log('GeoGuessr MultiMod: Opera browser detection result:', IS_OPERA);
 
 const valueUnlessOpera = (value = true) => {
     if (IS_OPERA) {
