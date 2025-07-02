@@ -122,7 +122,7 @@ const applyModStyles = () => {
         .gg-option-label {
             white-space: nowrap;
             padding-right: 20px;
-            text-shadow: none;
+            text-shadow: none !important;
         }
 
         .gg-option-input {
@@ -278,6 +278,52 @@ const applyModStyles = () => {
             background: transparent !important;
             border: none;
         }
+
+    #gg-lottery {
+        display: flex;
+        flex-direction: column;
+        width: 330px;
+        align-items: center;
+        position: absolute;
+        top: 13%;
+        left: 50%;
+        font-size: 30px;
+        color: white;
+        text-shadow: ${bodyShadow};
+        transform: translate(-50%, -50%);
+        background-color: rgba(0, 100, 0, 0.8);
+        padding: 0.5em;
+        border-radius: 10px;
+        z-index: 9999;
+    }
+
+    #gg-lottery-counter-div {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    #gg-lottery-counter {
+        padding-left: 0.5em;
+    }
+
+    #gg-lottery-button {
+        font-size: 25px;
+        margin-top: 0.5em;
+        border-radius: 10px;
+        padding: 5px 20px;
+        color: white;
+        background: black;
+        opacity: 75%;
+        cursor: pointer;
+    }
+
+    #gg-guessmap-blocker {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        pointer-events: none;
+        z-index: 99999999;
+    }
         
     `;
 
