@@ -83,7 +83,6 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     // Bind stuff.
     const onClick = () => {
         if (_LOTTERY_COUNT === 0) {
-            console.log('GeoGuessr MultiMod: Cannot use lottery token - no tokens remaining');
             return;
         }
         
