@@ -129,7 +129,7 @@ const MODS = {
     },
 
     lottery: {
-        show: false, // This is broken for duels. Need lat lng for the margins.
+        show: true,
         key: 'lottery',
         name: 'Lottery',
         tooltip: 'Get a random guess and you have to decide if you want it or not.',
