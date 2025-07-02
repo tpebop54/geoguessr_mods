@@ -6,6 +6,8 @@
 
 // ==/UserScript==
 
+console.log('GeoGuessr MultiMod: dom_utils.js loading...');
+
 // DOM and state utility functions.
 // ===============================================================================================================================
 
@@ -425,3 +427,5 @@ const addDebugger = () => {
         });
     }
 };
+
+console.log('GeoGuessr MultiMod: dom_utils.js loaded successfully, isOperaBrowser available:', typeof isOperaBrowser);

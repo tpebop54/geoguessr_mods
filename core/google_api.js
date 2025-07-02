@@ -94,7 +94,8 @@ const initializeGoogleMapsIntegration = () => {
                 super(...args);
                 
                 // Check if Opera browser - it has issues with Vector rendering
-                const isOpera = isOperaBrowser();
+                const isOpera = typeof isOperaBrowser === 'function' ? isOperaBrowser() : 
+                    ((!!window.opr && !!opr.addons) || !!window.opera || navigator.userAgent.indexOf(' OPR/') >= 0);
                 
                 try {
                     if (isOpera) {

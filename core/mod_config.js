@@ -11,13 +11,13 @@
 // ===============================================================================================================================
 
 const _isOpera = () => {
-    if (typeof isOperaBrowser === 'function') {
-        return isOperaBrowser();
-    }
-    return (!!window.opr && !!opr.addons) || !!window.opera || navigator.userAgent.indexOf(' OPR/') >= 0; // Fallback detection.
+    // Self-contained Opera detection to avoid dependency issues
+    return (!!window.opr && !!opr.addons) || !!window.opera || navigator.userAgent.indexOf(' OPR/') >= 0;
 };
 
 const IS_OPERA = _isOpera();
+
+console.log('GeoGuessr MultiMod: Opera browser detection result:', IS_OPERA);
 
 const valueUnlessOpera = (value = true) => {
     if (IS_OPERA) {
@@ -303,3 +303,5 @@ const SHOW_QUOTES = {
 
 // Callback registry for mod updates
 const UPDATE_CALLBACKS = {};
+
+console.log('GeoGuessr MultiMod: mod_config.js loaded successfully');
