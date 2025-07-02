@@ -82,13 +82,6 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
 
     // Bind stuff.
     const onClick = () => {
-        // Check if round is active and we have tokens
-        const hasActiveRound = typeof GG_ROUND !== 'undefined' && GG_ROUND;
-        if (!hasActiveRound) {
-            console.log('GeoGuessr MultiMod: Cannot use lottery token - no active round');
-            return;
-        }
-        
         if (_LOTTERY_COUNT === 0) {
             console.log('GeoGuessr MultiMod: Cannot use lottery token - no tokens remaining');
             return;
@@ -128,7 +121,7 @@ const updateLottery = (forceState = null) => {
     const mod = MODS.lottery;
     const active = updateMod(mod, forceState);
     
-    console.log('GeoGuessr MultiMod: updateLottery called, active:', active, 'GG_ROUND exists:', typeof GG_ROUND !== 'undefined' && GG_ROUND);
+    console.log('GeoGuessr MultiMod: updateLottery called, active:', active);
 
     removeLotteryDisplay();
 
@@ -141,9 +134,6 @@ const updateLottery = (forceState = null) => {
         // Always show the display when mod is active
         makeLotteryDisplay();
         
-        // Update button state based on round availability
-        updateLotteryButtonState();
-        
         setGuessMapEvents(false);
     } else {
         console.log('GeoGuessr MultiMod: Lottery deactivated');
@@ -152,30 +142,6 @@ const updateLottery = (forceState = null) => {
             container.parentElement.removeChild(container);
         }
         setGuessMapEvents(true);
-    }
-};
-
-// Update button state based on round availability
-const updateLotteryButtonState = () => {
-    const button = document.getElementById('gg-lottery-button');
-    const counterLabel = document.querySelector('#gg-lottery-counter-div div:first-child');
-    
-    if (!button || !counterLabel) return;
-    
-    const hasActiveRound = typeof GG_ROUND !== 'undefined' && GG_ROUND;
-    
-    if (hasActiveRound) {
-        button.style.opacity = '1';
-        button.style.cursor = 'pointer';
-        button.disabled = false;
-        counterLabel.textContent = 'Tokens remaining:';
-        button.title = '';
-    } else {
-        button.style.opacity = '0.5';
-        button.style.cursor = 'not-allowed';
-        button.disabled = true;
-        counterLabel.textContent = 'Waiting for round:';
-        button.title = 'Start a round to use lottery tokens';
     }
 };
 
@@ -192,9 +158,6 @@ const onLotteryRoundStart = () => {
             counter.innerText = _LOTTERY_COUNT;
         }
         
-        // Update button state for active round
-        updateLotteryButtonState();
-        
         console.log('GeoGuessr MultiMod: Lottery reset for new round, tokens:', _LOTTERY_COUNT);
     }
 };
@@ -203,9 +166,7 @@ const onLotteryRoundStart = () => {
 const onLotteryRoundEnd = () => {
     const mod = MODS.lottery;
     if (isModActive(mod)) {
-        // Update button state for inactive round
-        updateLotteryButtonState();
-        console.log('GeoGuessr MultiMod: Lottery round ended, button disabled');
+        console.log('GeoGuessr MultiMod: Lottery round ended');
     }
 };
 
