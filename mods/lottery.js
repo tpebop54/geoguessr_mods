@@ -20,7 +20,6 @@ const removeLotteryDisplay = () => {
 };
 
 const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
-    console.log('GeoGuessr MultiMod: Creating lottery display, count:', _LOTTERY_COUNT);
     removeLotteryDisplay();
 
     const container = document.createElement('div'); // Contains the full lottery display.
@@ -182,8 +181,6 @@ const setLotteryMapMode = (enabled = true) => {
 const updateLottery = (forceState = null) => {
     const mod = MODS.lottery;
     const active = updateMod(mod, forceState);
-    
-    console.log('GeoGuessr MultiMod: updateLottery called, active:', active);
 
     removeLotteryDisplay();
 
