@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         GG Mod Utilities
+// @name         GG Mod Utils
 // @description  Utility functions for GeoGuessr mods
 // @version      1.0
 // @author       tpebop
@@ -70,7 +70,7 @@ const getHeading = (p1, p2) => {
     return heading;
 };
 
-const getScore = () => {
+const getScore = async () => {
     const actual = getActualLoc();
     if (!actual) {
         console.error('getScore: no actual location available');
@@ -83,17 +83,15 @@ const getScore = () => {
     }
     const dist = getDistance(actual, guess);
 
-    // Ref: https://www.plonkit.net/beginners-guide#game-mechanics --> score
-    if (!GG_MAP || !GG_MAP.maxErrorDistance) {
-        console.warn('GG_MAP not yet loaded, using fallback maxErrorDistance');
-        // Use fallback value - standard world map distance is around 20015 km
-        const fallbackMaxErrorDist = 20015086; // meters, approximate max distance on Earth
-        const score = Math.round(5000 * Math.pow(Math.E, -10 * dist / fallbackMaxErrorDist));
-        console.warn('getScore: calculated with fallback, score:', score);
-        return score;
-    }
-    const maxErrorDist = GG_MAP.maxErrorDistance;
+    // Get GG_MAP with enhanced fallback handling
+    const mapData = await getGGMapWithFallback(2000); // Wait up to 2 seconds
+    const maxErrorDist = mapData.maxErrorDistance;
     const score = Math.round(5000 * Math.pow(Math.E, -10 * dist / maxErrorDist));
+    
+    if (!isGGMapLoaded()) {
+        console.warn('getScore: calculated with fallback maxErrorDistance, score:', score);
+    }
+    
     return score;
 };
 
@@ -329,11 +327,32 @@ const setGuessMapEvents = (enabled = true) => {
     }
 };
 
-const shuffleArray = (arr, inPlace = false) => {
-    const shuffled = inPlace ? arr : [...arr];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+// Utility function to check if GG_MAP is properly loaded
+const isGGMapLoaded = () => {
+    return GG_MAP && typeof GG_MAP.maxErrorDistance !== 'undefined' && GG_MAP.maxErrorDistance > 0;
+};
+
+// Get GG_MAP with fallback - waits for a reasonable time if not loaded yet
+const getGGMapWithFallback = async (maxWaitTime = 5000) => {
+    if (isGGMapLoaded()) {
+        return GG_MAP;
     }
-    return shuffled;
+    
+    // Wait for GG_MAP to load with timeout
+    const startTime = Date.now();
+    while (!isGGMapLoaded() && (Date.now() - startTime) < maxWaitTime) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    if (isGGMapLoaded()) {
+        return GG_MAP;
+    }
+    
+    // Return fallback if still not loaded
+    console.warn('GG_MAP not loaded within timeout, using fallback');
+    return {
+        maxErrorDistance: 20015086, // Default world map max distance
+        name: 'Fallback Map',
+        id: 'fallback'
+    };
 };
