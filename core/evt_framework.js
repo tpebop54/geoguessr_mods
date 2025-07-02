@@ -1,5 +1,6 @@
 // Taken and modified from https://miraclewhips.dev/geoguessr-event-framework/geoguessr-event-framework.js
 
+console.log('GeoGuessr MultiMod: evt_framework.js loading...');
 
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -14,12 +15,14 @@ const THE_WINDOW = unsafeWindow || window;
 (function () {
     class GEF {
         constructor() {
+            console.log('GeoGuessr MultiMod: GEF constructor called...');
             this.events = new EventTarget();
             this.state = this.defaultState();
             this.loadState();
             this.initFetchEvents();
             this.overrideFetch();
             this.init();
+            console.log('GeoGuessr MultiMod: GEF constructor completed, setting up load event...');
             THE_WINDOW.addEventListener('load', () => {
                 var _a, _b, _c;
                 if (location.pathname.startsWith("/challenge/")) {
@@ -208,7 +211,12 @@ const THE_WINDOW = unsafeWindow || window;
         }
     }
     if (!THE_WINDOW.GeoGuessrEventFramework) {
+        console.log('GeoGuessr MultiMod: Creating new GeoGuessrEventFramework instance...');
         THE_WINDOW.GeoGuessrEventFramework = new GEF();
+        console.log('GeoGuessr MultiMod: GeoGuessrEventFramework assigned to window:', THE_WINDOW.GeoGuessrEventFramework);
         console.log('GeoGuessr Event Framework initialised: https://github.com/miraclewhips/geoguessr-event-framework');
+    } else {
+        console.log('GeoGuessr MultiMod: GeoGuessrEventFramework already exists on window');
     }
+    console.log('GeoGuessr MultiMod: evt_framework.js loaded successfully');
 })();
