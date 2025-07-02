@@ -157,6 +157,8 @@ const createQuoteOverlayNow = () => {
         position: 'fixed',
         top: '0',
         left: '0',
+        'overflow-wrap': 'break-word',
+        'pointer-events': 'none',
     });
     
     const quoteDiv = document.createElement('div');
