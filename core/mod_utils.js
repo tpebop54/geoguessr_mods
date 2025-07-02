@@ -79,6 +79,10 @@ const getScore = () => {
     const dist = getDistance(actual, guess);
 
     // Ref: https://www.plonkit.net/beginners-guide#game-mechanics --> score
+    if (!GG_MAP || !GG_MAP.maxErrorDistance) {
+        console.warn('GG_MAP not yet loaded, cannot calculate score');
+        return null;
+    }
     const maxErrorDist = GG_MAP.maxErrorDistance;
     const score = Math.round(5000 * Math.pow(Math.E, -10 * dist / maxErrorDist));
     return score;

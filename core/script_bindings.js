@@ -253,3 +253,42 @@ if (document.readyState === 'loading') {
     // DOM is already ready
     initializeMods();
 }
+
+// Initialize GeoGuessrEventFramework for round events and map data
+/* eslint-disable no-undef */
+GeoGuessrEventFramework.init().then(GEF => { // Note: GG_MAP is the min-map, GOOGLE_MAP is used for pulling functionality from Google's map functions.
+    GEF.events.addEventListener('round_start', (evt) => {
+        window.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
+        try {
+            const round = evt.detail.rounds[evt.detail.rounds.length - 1];
+            GG_ROUND = round;
+            const mapID = evt.detail.map.id;
+            /* eslint-disable no-return-assign */
+            fetch(`https://www.geoguessr.com/api/maps/${mapID}`).then(data => data.json()).then(data => GG_MAP = data);
+        } catch (err) {
+            console.error('Error fetching map data:', err);
+        }
+    });
+    GEF.events.addEventListener('round_end', (evt) => {
+        GG_ROUND = undefined;
+        GG_CLICK = undefined;
+    });
+    document.addEventListener('keydown', (evt) => { // Custom hotkeys.
+        if (document.activeElement.tagName === 'INPUT') {
+            return;
+        }
+        
+        // Handle hotkeys for mods
+        for (const [mod, callback] of _BINDINGS) {
+            if (mod.hotkey && evt.code === mod.hotkey) {
+                evt.preventDefault();
+                closeOptionMenu();
+                callback();
+                break;
+            }
+        }
+    });
+}).catch(err => {
+    console.error('GeoGuessr MultiMod: Failed to initialize GeoGuessrEventFramework:', err);
+});
+/* eslint-enable no-undef */
