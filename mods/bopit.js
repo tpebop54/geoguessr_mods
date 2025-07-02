@@ -1,7 +1,4 @@
 // ==UserScript==
-// @name         GG Mod Bop It
-// @description  Bop It game mod for GeoGuessr
-// @version      1.0
 // @author       tpebop
 
 // ==/UserScript==

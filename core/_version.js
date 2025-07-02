@@ -1,1 +1,1 @@
-let MOD_VERSION = '0.9.1';
+let MOD_VERSION = '0.9.0';

@@ -1,7 +1,4 @@
 // ==UserScript==
-// @name         GG Mod Satellite
-// @description  Satellite view mod for GeoGuessr
-// @version      1.0
 // @author       tpebop
 
 // ==/UserScript==

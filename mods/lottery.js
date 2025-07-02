@@ -1,7 +1,4 @@
 // ==UserScript==
-// @name         GG Mod Lottery
-// @description  Lottery guessing mod for GeoGuessr
-// @version      1.0
 // @author       tpebop
 
 // ==/UserScript==
@@ -23,6 +20,7 @@ const removeLotteryDisplay = () => {
 };
 
 const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
+    console.log('GeoGuessr MultiMod: Creating lottery display, count:', _LOTTERY_COUNT);
     removeLotteryDisplay();
 
     const container = document.createElement('div'); // Contains the full lottery display.
@@ -87,6 +85,7 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         if (_LOTTERY_COUNT === 0) {
             return;
         }
+        
         const mod = MODS.lottery;
         const nDegLat = getOption(mod, 'nDegLat');
         const nDegLng = getOption(mod, 'nDegLng');
@@ -115,22 +114,149 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     button.addEventListener('click', onClick);
 };
 
+// Set lottery-specific map interaction mode (allow zoom/pan, block clicks)
+const setLotteryMapMode = (enabled = true) => {
+    const container = getSmallMapContainer();
+    if (!container) return;
+    
+    if (enabled) {
+        // Lottery mode: allow zoom/pan but block clicks
+        container.style.pointerEvents = 'auto';
+        
+        // Remove any existing lottery overlay
+        const existingOverlay = container.querySelector('.gg-lottery-overlay');
+        if (existingOverlay) {
+            existingOverlay.remove();
+        }
+        
+        // Add lottery-specific overlay that only intercepts click events
+        const overlay = document.createElement('div');
+        overlay.className = 'gg-lottery-overlay';
+        overlay.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            background: transparent;
+            z-index: 1000;
+        `;
+        
+        // Only enable pointer events for specific interactions we want to block
+        overlay.addEventListener('click', (evt) => {
+            evt.preventDefault();
+            evt.stopPropagation();
+        }, true);
+        
+        // Override the click behavior at the container level instead of using overlay
+        container.addEventListener('click', (evt) => {
+            // Block clicks that would place markers
+            evt.preventDefault();
+            evt.stopPropagation();
+        }, true);
+        
+        // Store reference to the click handler so we can remove it later
+        container._lotteryClickHandler = (evt) => {
+            evt.preventDefault();
+            evt.stopPropagation();
+        };
+        
+        container.appendChild(overlay);
+    } else {
+        // Normal mode: remove lottery overlay and click handler
+        container.style.pointerEvents = 'auto';
+        const overlay = container.querySelector('.gg-lottery-overlay');
+        if (overlay) {
+            overlay.remove();
+        }
+        
+        // Remove the click handler
+        if (container._lotteryClickHandler) {
+            container.removeEventListener('click', container._lotteryClickHandler, true);
+            delete container._lotteryClickHandler;
+        }
+    }
+};
+
 const updateLottery = (forceState = null) => {
     const mod = MODS.lottery;
     const active = updateMod(mod, forceState);
+    
+    console.log('GeoGuessr MultiMod: updateLottery called, active:', active);
 
     removeLotteryDisplay();
-    _LOTTERY_COUNT = getOption(mod, 'nGuesses');
 
     const smallMap = getSmallMap();
     if (active) {
+        _LOTTERY_COUNT = getOption(mod, 'nGuesses'); // Reset lottery count to the configured number of guesses
         makeLotteryDisplay();
-        setGuessMapEvents(false);
+        setLotteryMapMode(true); // Enable lottery mode (zoom/pan allowed, clicks blocked)
     } else {
         const container = document.querySelector(`#gg-lottery`);
         if (container) {
             container.parentElement.removeChild(container);
         }
-        setGuessMapEvents(true);
+        setLotteryMapMode(false); // Restore normal map mode
     }
 };
+
+// Function to handle round start events for the lottery mod
+const onLotteryRoundStart = () => {
+    const mod = MODS.lottery;
+    if (isModActive(mod)) {
+        // Reset lottery count for new round
+        _LOTTERY_COUNT = getOption(mod, 'nGuesses');
+        
+        // Update the counter display
+        const counter = document.getElementById('gg-lottery-counter');
+        if (counter) {
+            counter.innerText = _LOTTERY_COUNT;
+        }
+        
+        console.log('GeoGuessr MultiMod: Lottery reset for new round, tokens:', _LOTTERY_COUNT);
+    }
+};
+
+// Function to handle round end events for the lottery mod
+const onLotteryRoundEnd = () => {
+    const mod = MODS.lottery;
+    if (isModActive(mod)) {
+        console.log('GeoGuessr MultiMod: Lottery round ended');
+    }
+};
+
+// Monitor for round changes to show/hide lottery display appropriately
+const monitorRoundStateForLottery = () => {
+    let lastRoundState = typeof GG_ROUND !== 'undefined' && GG_ROUND;
+    
+    setInterval(() => {
+        const mod = MODS.lottery;
+        if (!isModActive(mod)) return;
+        
+        const currentRoundState = typeof GG_ROUND !== 'undefined' && GG_ROUND;
+        
+        // Round just started
+        if (!lastRoundState && currentRoundState) {
+            onLotteryRoundStart();
+        }
+        // Round just ended
+        else if (lastRoundState && !currentRoundState) {
+            onLotteryRoundEnd();
+        }
+        
+        lastRoundState = currentRoundState;
+    }, 1000); // Check every second
+};
+
+// Start monitoring when this module loads
+if (typeof GG_ROUND !== 'undefined') {
+    monitorRoundStateForLottery();
+} else {
+    // If GG_ROUND isn't defined yet, wait a bit and try again
+    setTimeout(() => {
+        if (typeof GG_ROUND !== 'undefined') {
+            monitorRoundStateForLottery();
+        }
+    }, 2000);
+}

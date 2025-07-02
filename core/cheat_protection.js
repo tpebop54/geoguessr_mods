@@ -1,7 +1,4 @@
 // ==UserScript==
-// @name         GG Cheat Protection
-// @description  Cheat protection system for GeoGuessr mods
-// @version      1.0
 // @author       tpebop
 
 // ==/UserScript==

@@ -1,7 +1,4 @@
 // ==UserScript==
-// @name         GG Styling
-// @description  CSS styling for GeoGuessr mods
-// @version      1.0
 // @author       tpebop
 
 // ==/UserScript==
@@ -31,6 +28,7 @@ const modContainerStyles = `
         z-index: 9 !important;
         display: flex !important;
         flex-direction: column !important;
+        margin-top: 20px;
     }
 
     #gg-mods-header-container {

@@ -1,7 +1,4 @@
 // ==UserScript==
-// @name         GG Mod Tile Reveal
-// @description  Tile reveal mod for GeoGuessr
-// @version      1.0
 // @author       tpebop
 
 // ==/UserScript==

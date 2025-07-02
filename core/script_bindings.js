@@ -1,7 +1,4 @@
 // ==UserScript==
-// @name         GG Script Bindings
-// @description  Script bindings and initialization for GeoGuessr mods
-// @version      1.0
 // @author       tpebop
 
 // ==/UserScript==
@@ -70,8 +67,8 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
         const headerText = document.createElement('div');
         headerText.id = 'gg-mods-header';
         headerText.textContent = `TPEBOP'S MODS`;
-
-        const version = (THE_WINDOW || {}).MOD_VERSION;;
+        const version = (typeof MOD_VERSION !== 'undefined') ? MOD_VERSION : ((THE_WINDOW || {}).MOD_VERSION || 'unknown');
+        headerText.title = `Version: ${version}`;
         const modMenuToggle = document.createElement('button');
         modMenuToggle.id = 'gg-mods-container-toggle';
         modMenuToggle.textContent = '▼'; // TODO: load from localStorage.
@@ -161,8 +158,6 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
             event.preventDefault();
             event.stopPropagation();
             
-            console.log('Toggle clicked via onclick, current state:', isMenuVisible);
-            
             const container = document.getElementById('gg-mods-button-container');
             if (!container) {
                 console.error('Button container not found!');
@@ -174,20 +169,13 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
                 container.style.setProperty('display', 'none', 'important');
                 modMenuToggle.textContent = '▶';
                 isMenuVisible = false;
-                console.log('Menu hidden via onclick');
             } else {
                 // Show the menu
                 container.style.setProperty('display', 'flex', 'important');
                 modMenuToggle.textContent = '▼';
                 isMenuVisible = true;
-                console.log('Menu shown via onclick');
             }
         };
-        
-        // Also add event listener as backup
-        modMenuToggle.addEventListener('click', function(event) {
-            console.log('Click event fired on toggle button');
-        });
         return true;
     } catch (err) {
         console.error(err);
@@ -203,8 +191,6 @@ const disableModsAsNeeded = () => {
     const pathname = window.location.pathname;
     if (pathname.indexOf('live-challenge') !== -1) {
         disableMods([
-            MODS.showScore,
-            MODS.bopIt,
         ], true);
     }
 };
@@ -486,12 +472,9 @@ function initializeEventFramework() {
         
         // Now set up the event listeners with proper handlers
         const setupEventListeners = () => {
-            console.log('GeoGuessr MultiMod: Setting up event listeners...');
-            
             try {
                 // Add the main event listeners
                 GEF.events.addEventListener('round_start', handleRoundStart);
-                console.log('GeoGuessr MultiMod: round_start listener added');
                 
                 GEF.events.addEventListener('round_end', (evt) => {
                     console.log('GeoGuessr MultiMod: round_end event detected');
@@ -507,15 +490,11 @@ function initializeEventFramework() {
                     GG_ROUND = undefined;
                     GG_CLICK = undefined;
                 });
-                console.log('GeoGuessr MultiMod: round_end listener added');
                 
                 // Test listener to verify events are working
                 GEF.events.addEventListener('guess', (evt) => {
                     console.log('GeoGuessr MultiMod: guess event detected:', evt);
                 });
-                console.log('GeoGuessr MultiMod: guess listener added');
-                
-                console.log('GeoGuessr MultiMod: All event listeners added successfully');
             } catch (err) {
                 console.error('GeoGuessr MultiMod: Failed to add event listeners:', err);
             }
@@ -696,7 +675,20 @@ function initializeEventFramework() {
         });
         
         document.addEventListener('keydown', (evt) => { // Custom hotkeys.
-            if (document.activeElement.tagName === 'INPUT') {
+            // Check if user is interacting with form elements or options menu
+            const activeElement = document.activeElement;
+            const isInOptionsMenu = activeElement && activeElement.closest('#gg-option-menu');
+            const isFormElement = activeElement && (
+                activeElement.tagName === 'INPUT' ||
+                activeElement.tagName === 'SELECT' ||
+                activeElement.tagName === 'TEXTAREA' ||
+                activeElement.tagName === 'BUTTON' ||
+                activeElement.contentEditable === 'true' ||
+                activeElement.classList.contains('gg-option-input')
+            );
+            
+            // Don't process hotkeys if user is in a form element or options menu
+            if (isFormElement || isInOptionsMenu) {
                 return;
             }
             
@@ -736,9 +728,7 @@ const setupDOMObserver = () => {
                         node.querySelector('[data-qa="guess-map"]') ||
                         node.querySelector('.widget-scene-canvas') ||
                         node.id === 'street-view-container'
-                    )) {
-                        console.log('GeoGuessr MultiMod: Game elements detected in DOM, potential round start');
-                        
+                    )) {                       
                         // Delay to let the game fully initialize
                         setTimeout(() => {
                             if (!GG_ROUND) {
@@ -758,8 +748,6 @@ const setupDOMObserver = () => {
         childList: true,
         subtree: true
     });
-    
-    console.log('GeoGuessr MultiMod: DOM observer set up for game detection');
 };
 
 // Global GG_MAP loading with background retries
@@ -787,8 +775,6 @@ const startGlobalMapLoading = () => {
             }
         }
     }, 5000); // Check every 5 seconds
-    
-    console.log('GeoGuessr MultiMod: Started global background map loading');
 };
 
 const stopGlobalMapLoading = () => {

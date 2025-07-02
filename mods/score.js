@@ -1,7 +1,4 @@
 // ==UserScript==
-// @name         GG Mod Score
-// @description  Score display mod for GeoGuessr
-// @version      1.0
 // @author       tpebop
 
 // ==/UserScript==

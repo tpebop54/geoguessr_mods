@@ -1,7 +1,4 @@
 // ==UserScript==
-// @name         GG DOM Utilities
-// @description  DOM and state utility functions for GeoGuessr mods
-// @version      1.0
 // @author       tpebop
 
 // ==/UserScript==

@@ -1,7 +1,4 @@
 // ==UserScript==
-// @name         GG Mod Configuration
-// @description  Configuration for all GeoGuessr mods
-// @version      1.0
 // @author       tpebop
 
 // ==/UserScript==

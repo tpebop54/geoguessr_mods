@@ -1,7 +1,4 @@
 // ==UserScript==
-// @name         GG Coordinate Extractor
-// @description  GG Coordinate Extractor
-// @version      1.0
 // @author       tpebop
 // @match        *://*.geoguessr.com/*
 // @icon         https://www.google.com/s2/favicons?domain=geoguessr.com

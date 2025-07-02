@@ -1,7 +1,4 @@
 // ==UserScript==
-// @name         GG Google API
-// @description  Google Maps API interceptor for GeoGuessr mods
-// @version      1.0
 // @author       tpebop
 
 // ==/UserScript==

@@ -1,7 +1,4 @@
 // ==UserScript==
-// @name         GG Mod Seizure
-// @description  Seizure effect mod for GeoGuessr
-// @version      1.0
 // @author       tpebop
 
 // ==/UserScript==

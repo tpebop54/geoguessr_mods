@@ -1,6 +1,4 @@
 // ==UserScript==
-// @name         GG Mod Puzzle
-// @description  Puzzle mod for GeoGuessr
 // @author       tpebop
 
 // ==/UserScript==

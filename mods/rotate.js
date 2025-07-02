@@ -1,7 +1,4 @@
 // ==UserScript==
-// @name         GG Mod Rotate
-// @description  Map rotation mod for GeoGuessr
-// @version      1.0
 // @author       tpebop
 
 // ==/UserScript==

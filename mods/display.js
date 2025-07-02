@@ -1,7 +1,4 @@
 // ==UserScript==
-// @name         GG Mod Display
-// @description  Display options mod for GeoGuessr
-// @version      1.0
 // @author       tpebop
 
 // ==/UserScript==

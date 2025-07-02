@@ -1507,25 +1507,161 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     button.addEventListener('click', onClick);
 };
 
+// Set lottery-specific map interaction mode (allow zoom/pan, block clicks)
+const setLotteryMapMode = (enabled = true) => {
+    const container = getSmallMapContainer();
+    if (!container) return;
+    
+    if (enabled) {
+        // Lottery mode: allow zoom/pan but block clicks
+        container.style.pointerEvents = 'auto';
+        
+        // Remove any existing lottery overlay
+        const existingOverlay = container.querySelector('.gg-lottery-overlay');
+        if (existingOverlay) {
+            existingOverlay.remove();
+        }
+        
+        // Add lottery-specific overlay that only intercepts click events
+        const overlay = document.createElement('div');
+        overlay.className = 'gg-lottery-overlay';
+        overlay.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            background: transparent;
+            z-index: 1000;
+        `;
+        
+        // Only enable pointer events for specific interactions we want to block
+        overlay.addEventListener('click', (evt) => {
+            evt.preventDefault();
+            evt.stopPropagation();
+        }, true);
+        
+        // Override the click behavior at the container level instead of using overlay
+        container.addEventListener('click', (evt) => {
+            // Block clicks that would place markers
+            evt.preventDefault();
+            evt.stopPropagation();
+            console.log('GeoGuessr MultiMod: Lottery mode blocked map click');
+        }, true);
+        
+        // Store reference to the click handler so we can remove it later
+        container._lotteryClickHandler = (evt) => {
+            evt.preventDefault();
+            evt.stopPropagation();
+            console.log('GeoGuessr MultiMod: Lottery mode blocked map click');
+        };
+        
+        container.appendChild(overlay);
+    } else {
+        // Normal mode: remove lottery overlay and click handler
+        container.style.pointerEvents = 'auto';
+        const overlay = container.querySelector('.gg-lottery-overlay');
+        if (overlay) {
+            overlay.remove();
+        }
+        
+        // Remove the click handler
+        if (container._lotteryClickHandler) {
+            container.removeEventListener('click', container._lotteryClickHandler, true);
+            delete container._lotteryClickHandler;
+        }
+    }
+};
+
 const updateLottery = (forceState = null) => {
     const mod = MODS.lottery;
     const active = updateMod(mod, forceState);
 
     removeLotteryDisplay();
-    _LOTTERY_COUNT = getOption(mod, 'nGuesses');
 
     const smallMap = getSmallMap();
     if (active) {
+        // Reset lottery count to the configured number of guesses
+        _LOTTERY_COUNT = getOption(mod, 'nGuesses');
+        
+        // Always show the display when mod is active
         makeLotteryDisplay();
-        setGuessMapEvents(false);
+        setLotteryMapMode(true); // Enable lottery mode (zoom/pan allowed, clicks blocked)
     } else {
         const container = document.querySelector(`#gg-lottery`);
         if (container) {
             container.parentElement.removeChild(container);
         }
-        setGuessMapEvents(true);
+        setLotteryMapMode(false); // Restore normal map mode
     }
 };
+
+// Function to handle round start events for the lottery mod
+const onLotteryRoundStart = () => {
+    const mod = MODS.lottery;
+    if (isModActive(mod)) {
+        // Reset lottery count for new round
+        _LOTTERY_COUNT = getOption(mod, 'nGuesses');
+        
+        // Remove existing display and create new one
+        removeLotteryDisplay();
+        makeLotteryDisplay();
+        
+        // Update the counter display
+        const counter = document.getElementById('gg-lottery-counter');
+        if (counter) {
+            counter.innerText = _LOTTERY_COUNT;
+        }
+        
+        console.log('GeoGuessr MultiMod: Lottery reset for new round, tokens:', _LOTTERY_COUNT);
+    }
+};
+
+// Function to handle round end events for the lottery mod
+const onLotteryRoundEnd = () => {
+    const mod = MODS.lottery;
+    if (isModActive(mod)) {
+        // Hide the display when round ends
+        removeLotteryDisplay();
+        console.log('GeoGuessr MultiMod: Lottery display hidden for round end');
+    }
+};
+
+// Monitor for round changes to show/hide lottery display appropriately
+const monitorRoundStateForLottery = () => {
+    let lastRoundState = typeof GG_ROUND !== 'undefined' && GG_ROUND;
+    
+    setInterval(() => {
+        const mod = MODS.lottery;
+        if (!isModActive(mod)) return;
+        
+        const currentRoundState = typeof GG_ROUND !== 'undefined' && GG_ROUND;
+        
+        // Round just started
+        if (!lastRoundState && currentRoundState) {
+            onLotteryRoundStart();
+        }
+        // Round just ended
+        else if (lastRoundState && !currentRoundState) {
+            onLotteryRoundEnd();
+        }
+        
+        lastRoundState = currentRoundState;
+    }, 1000); // Check every second
+};
+
+// Start monitoring when this module loads
+if (typeof GG_ROUND !== 'undefined') {
+    monitorRoundStateForLottery();
+} else {
+    // If GG_ROUND isn't defined yet, wait a bit and try again
+    setTimeout(() => {
+        if (typeof GG_ROUND !== 'undefined') {
+            monitorRoundStateForLottery();
+        }
+    }, 2000);
+}
 
 // -------------------------------------------------------------------------------------------------------------------------------
 
@@ -2401,6 +2537,8 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
         const headerText = document.createElement('div');
         headerText.id = 'gg-mods-header';
         headerText.textContent = `TPEBOP'S MODS`;
+        const version = (typeof MOD_VERSION !== 'undefined') ? MOD_VERSION : 'unknown';
+        headerText.title = `Version: ${version}`;
         const modMenuToggle = document.createElement('button');
         modMenuToggle.id = 'gg-mods-container-toggle';
         modMenuToggle.textContent = '▼'; // TODO: load from localStorage.
@@ -2911,9 +3049,23 @@ GeoGuessrEventFramework.init().then(GEF => { // Note: GG_MAP is the min-map, GOO
         GG_CLICK = undefined;
     });
     document.addEventListener('keydown', (evt) => { // Custom hotkeys.
-        if (document.activeElement.tagName === 'INPUT') {
+        // Check if user is interacting with form elements or options menu
+        const activeElement = document.activeElement;
+        const isInOptionsMenu = activeElement && activeElement.closest('#gg-option-menu');
+        const isFormElement = activeElement && (
+            activeElement.tagName === 'INPUT' ||
+            activeElement.tagName === 'SELECT' ||
+            activeElement.tagName === 'TEXTAREA' ||
+            activeElement.tagName === 'BUTTON' ||
+            activeElement.contentEditable === 'true' ||
+            activeElement.classList.contains('gg-option-input')
+        );
+        
+        // Don't process hotkeys if user is in a form element or options menu
+        if (isFormElement || isInOptionsMenu) {
             return;
         }
+        
         if (evt.key === ',' && GOOGLE_MAP && !isModActive(MODS.zoomInOnly)) {
             GOOGLE_MAP.setZoom(GOOGLE_MAP.getZoom() - 0.6);
         }
