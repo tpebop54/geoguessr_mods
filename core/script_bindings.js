@@ -161,8 +161,6 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
             event.preventDefault();
             event.stopPropagation();
             
-            console.log('Toggle clicked via onclick, current state:', isMenuVisible);
-            
             const container = document.getElementById('gg-mods-button-container');
             if (!container) {
                 console.error('Button container not found!');
@@ -174,20 +172,13 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
                 container.style.setProperty('display', 'none', 'important');
                 modMenuToggle.textContent = '▶';
                 isMenuVisible = false;
-                console.log('Menu hidden via onclick');
             } else {
                 // Show the menu
                 container.style.setProperty('display', 'flex', 'important');
                 modMenuToggle.textContent = '▼';
                 isMenuVisible = true;
-                console.log('Menu shown via onclick');
             }
         };
-        
-        // Also add event listener as backup
-        modMenuToggle.addEventListener('click', function(event) {
-            console.log('Click event fired on toggle button');
-        });
         return true;
     } catch (err) {
         console.error(err);

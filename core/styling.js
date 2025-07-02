@@ -31,6 +31,7 @@ const modContainerStyles = `
         z-index: 9 !important;
         display: flex !important;
         flex-direction: column !important;
+        margin-top: 20px;
     }
 
     #gg-mods-header-container {
