@@ -302,15 +302,15 @@ const lotteryStyles = `
         align-items: center;
         position: absolute;
         top: 13%;
-        left: 50%;
+        left: calc(50% - 165px);
         font-size: 30px;
         color: white;
         text-shadow: ${bodyShadow};
-        transform: translate(-50%, -50%);
         background-color: rgba(0, 100, 0, 0.8);
         padding: 0.5em;
         border-radius: 10px;
         z-index: 9999;
+        cursor: move;
     }
 
     #gg-lottery-counter-div {
@@ -345,9 +345,8 @@ const utilityStyles = `
     }
 `;
 
-// Apply CSS styles
+// Combine and apply CSS styles
 const applyModStyles = () => {
-    // Combine all styles
     const combinedStyles = 
         genericStyles +
         modContainerStyles +
@@ -358,18 +357,7 @@ const applyModStyles = () => {
         tileRevealStyles +
         lotteryStyles +
         utilityStyles;
-
-    if (typeof GM_addStyle !== 'undefined') {
-        GM_addStyle(combinedStyles);
-    } else {
-        // Fallback if GM_addStyle is not available
-        const styleSheet = document.createElement('style');
-        styleSheet.textContent = combinedStyles;
-        document.head.appendChild(styleSheet);
-    }
+    GM_addStyle(combinedStyles);
 };
 
-// Apply styles when this file loads
 applyModStyles();
-
-console.log('GeoGuessr MultiMod: styling.js loaded successfully');
