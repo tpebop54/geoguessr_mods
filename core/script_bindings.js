@@ -685,7 +685,20 @@ function initializeEventFramework() {
         });
         
         document.addEventListener('keydown', (evt) => { // Custom hotkeys.
-            if (document.activeElement.tagName === 'INPUT') {
+            // Check if user is interacting with form elements or options menu
+            const activeElement = document.activeElement;
+            const isInOptionsMenu = activeElement && activeElement.closest('#gg-option-menu');
+            const isFormElement = activeElement && (
+                activeElement.tagName === 'INPUT' ||
+                activeElement.tagName === 'SELECT' ||
+                activeElement.tagName === 'TEXTAREA' ||
+                activeElement.tagName === 'BUTTON' ||
+                activeElement.contentEditable === 'true' ||
+                activeElement.classList.contains('gg-option-input')
+            );
+            
+            // Don't process hotkeys if user is in a form element or options menu
+            if (isFormElement || isInOptionsMenu) {
                 return;
             }
             
