@@ -74,6 +74,7 @@ const QUOTES = {
         `Badgers? Badgers? We don't need no stinking badgers! — Raul Hernandez`,
         `Time to deliver a pizza ball! — Eric Andre`,
         `I don't know how to put this, but I'm kind of a big deal. — Ron Burgundy`,
+        `Be excellent to each other. — Bill and Ted`,
     ],
 
     jokes: [
