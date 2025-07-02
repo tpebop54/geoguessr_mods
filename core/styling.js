@@ -6,23 +6,6 @@
 
 // ==/UserScript==
 
-console.log('GeoGuessr MultiMod: styling.js loading...');
-
-// Dynamic styling - organized by mod category.
-// ===============================================================================================================================
-// This file contains CSS styles organized into separate objects by functionality:
-// - genericStyles: Base page styles (body, hidden class, etc.)
-// - modContainerStyles: Main mod container and button styles
-// - optionMenuStyles: Option menu and form styles
-// - showScoreStyles: Show Score mod specific styles
-// - flashlightStyles: Flashlight mod specific styles
-// - displayOptionsStyles: Display Options mod specific styles
-// - tileRevealStyles: Tile Reveal mod specific styles
-// - lotteryStyles: Lottery mod specific styles
-// - utilityStyles: Shared utility styles used by multiple mods
-// All styles are combined at the end before applying via GM_addStyle
-// ===============================================================================================================================
-
 const headerShadow = 'rgb(204, 48, 46) 2px 0px 0px, rgb(204, 48, 46) 1.75517px 0.958851px 0px, rgb(204, 48, 46) 1.0806px 1.68294px 0px, rgb(204, 48, 46) 0.141474px 1.99499px 0px, rgb(204, 48, 46) -0.832294px 1.81859px 0px, rgb(204, 48, 46) -1.60229px 1.19694px 0px, rgb(204, 48, 46) -1.97998px 0.28224px 0px, rgb(204, 48, 46) -1.87291px -0.701566px 0px, rgb(204, 48, 46) -1.30729px -1.5136px 0px, rgb(204, 48, 46) -0.421592px -1.95506px 0px, rgb(204, 48, 46) 0.567324px -1.91785px 0px, rgb(204, 48, 46) 1.41734px -1.41108px 0px, rgb(204, 48, 46) 1.92034px -0.558831px 0px';
 const bodyShadow = '3px 3px 0 #000, 3px 0px 3px #000, 1px 1px 0 #000, 3px 1px 2px #000';
 const greenMenuColor = '#006400';
