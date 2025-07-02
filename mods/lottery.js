@@ -31,8 +31,15 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     /* eslint-disable no-return-assign */
     container.addEventListener('mousedown', (evt) => {
         _LOTTERY_DRAGGING = true;
-        _LOTTERY_DRAGGING_OFFSET_X = evt.clientX - container.offsetLeft;
-        _LOTTERY_DRAGGING_OFFSET_Y = evt.clientY - container.offsetTop;
+        
+        // Convert CSS positioning to absolute pixel positioning before dragging
+        const rect = container.getBoundingClientRect();
+        container.style.left = rect.left + 'px';
+        container.style.top = rect.top + 'px';
+        
+        // Now calculate the offset based on the actual position
+        _LOTTERY_DRAGGING_OFFSET_X = evt.clientX - rect.left;
+        _LOTTERY_DRAGGING_OFFSET_Y = evt.clientY - rect.top;
         evt.preventDefault(); // Prevent text selection during drag
     });
     document.addEventListener('mousemove', (evt) => {
