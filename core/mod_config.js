@@ -87,7 +87,6 @@ const MODS = {
         key: 'flashlight',
         name: 'Flashlight',
         tooltip: 'Uses cursor as a "flashlight" where you can only see part of the screen',
-        disableInOpera: true, // Disable in Opera due to CSS filter and rendering performance issues
         options: {
             radius: {
                 label: 'Radius',

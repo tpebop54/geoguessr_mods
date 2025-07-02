@@ -6,9 +6,6 @@
 // MOD: In frame or not.
 // ===============================================================================================================================
 
-/*
-This is a pretty expensive function, but it's easier than triggering it based on dragstart, zoomend, etc. Deal with it.
-*/
 let IN_FRAME_INTERVAL;
 
 const updateInFrame = (forceState = null) => {

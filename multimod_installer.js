@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Tpebop's Geoguessr Mods
 // @description  Various mods to make the game interesting in various ways (Auto-updating Main Branch)
-// @version      0.9.1
+// @version      0.9.2
 // @author       tpebop
 // @match        *://*.geoguessr.com/*
 // @icon         https://www.google.com/s2/favicons?domain=geoguessr.com
