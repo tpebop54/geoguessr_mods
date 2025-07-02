@@ -116,6 +116,73 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     button.addEventListener('click', onClick);
 };
 
+// Set lottery-specific map interaction mode (allow zoom/pan, block clicks)
+const setLotteryMapMode = (enabled = true) => {
+    const container = getSmallMapContainer();
+    if (!container) return;
+    
+    if (enabled) {
+        // Lottery mode: allow zoom/pan but block clicks
+        container.style.pointerEvents = 'auto';
+        
+        // Remove any existing lottery overlay
+        const existingOverlay = container.querySelector('.gg-lottery-overlay');
+        if (existingOverlay) {
+            existingOverlay.remove();
+        }
+        
+        // Add lottery-specific overlay to capture only click events
+        const overlay = document.createElement('div');
+        overlay.className = 'gg-lottery-overlay';
+        overlay.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: auto;
+            background: transparent;
+            z-index: 1000;
+        `;
+        
+        // Block click events but allow wheel (zoom) and drag (pan) to pass through
+        overlay.addEventListener('click', (evt) => {
+            evt.preventDefault();
+            evt.stopPropagation();
+        });
+        
+        overlay.addEventListener('mousedown', (evt) => {
+            // Only block left clicks (guessing), allow middle/right clicks and wheel
+            if (evt.button === 0) { // Left click
+                evt.preventDefault();
+                evt.stopPropagation();
+            }
+        });
+        
+        overlay.addEventListener('contextmenu', (evt) => {
+            debugMap(null, evt);
+        });
+        
+        // Allow wheel events to pass through for zooming
+        overlay.addEventListener('wheel', (evt) => {
+            // Let the wheel event pass through to the map below
+            overlay.style.pointerEvents = 'none';
+            setTimeout(() => {
+                overlay.style.pointerEvents = 'auto';
+            }, 10);
+        });
+        
+        container.appendChild(overlay);
+    } else {
+        // Normal mode: remove lottery overlay
+        container.style.pointerEvents = 'auto';
+        const overlay = container.querySelector('.gg-lottery-overlay');
+        if (overlay) {
+            overlay.remove();
+        }
+    }
+};
+
 const updateLottery = (forceState = null) => {
     const mod = MODS.lottery;
     const active = updateMod(mod, forceState);
@@ -128,14 +195,14 @@ const updateLottery = (forceState = null) => {
     if (active) {
         _LOTTERY_COUNT = getOption(mod, 'nGuesses'); // Reset lottery count to the configured number of guesses
         makeLotteryDisplay();
-        setGuessMapEvents(false);
+        setLotteryMapMode(true); // Enable lottery mode (zoom/pan allowed, clicks blocked)
     } else {
         console.log('GeoGuessr MultiMod: Lottery deactivated');
         const container = document.querySelector(`#gg-lottery`);
         if (container) {
             container.parentElement.removeChild(container);
         }
-        setGuessMapEvents(true);
+        setLotteryMapMode(false); // Restore normal map mode
     }
 };
 
