@@ -21,13 +21,13 @@ const QUOTES = {
         `And those who were seen dancing were thought to be insane by those who could not hear the music. — Friedrich Nietzsche`,
         `There are no regrets in life, just lessons. — Jennifer Aniston`,
         `You must be the change you wish to see in the world. — Mahatma Gandhi`,
-        `Don’t count the days, make the days count. — Muhammad Ali`,
+        `Don't count the days, make the days count. — Muhammad Ali`,
         `I have not failed. I've just found 10,000 ways that won't work. — Thomas Edison`,
-        `Don’t watch the clock. Do what it does. Keep going. — Sam Levenson`,
+        `Don't watch the clock. Do what it does. Keep going. — Sam Levenson`,
         `The best way to predict the future is to create it. — Peter Drucker`,
         `Do not go where the path may lead, go instead where there is no path and leave a trail. — Ralph Waldo Emerson`,
         `Those who mind don't matter, those who matter don't mind. — Dr. Seuss`,
-        `Never stop never stopping.`,
+        `I've had a lot of worries in my life, most of which never happened. — Mark Twain`,
     ],
 
     heavy: [
@@ -40,11 +40,11 @@ const QUOTES = {
         `To live is to suffer. To survive is to find meaning in the suffering. — Friedrich Nietzsche`,
         `Of all sad words of tongue or pen, the saddest are these, "It might have been." — John Greenleaf Whittier`,
         `If you try to please audiences, uncritically accepting their tastes, it can only mean that you have no respect for them. — Andrei Tarkovsky`,
-        `In the end… We only regret the chances we didn’t take. — Lewis Carroll`,
-        `There’s no feeling more intense than starting over. Starting over is harder than starting up. — Bennett Foddy`,
+        `In the end… We only regret the chances we didn't take. — Lewis Carroll`,
+        `There's no feeling more intense than starting over. Starting over is harder than starting up. — Bennett Foddy`,
         `Imaginary mountains build themselves from our efforts to climb them, and it's our repeated attempts to reach the summit that turns those mountains into something real. — Bennett Foddy`,
         `Be yourself. Everyone else is already taken. — Oscar Wilde`,
-        `Whether you think you can or you think you can’t, you’re right. — Henry Ford`,
+        `Whether you think you can or you think you can't, you're right. — Henry Ford`,
         `The only true wisdom is in knowing you know nothing. — Socrates`,
         `Painting is silent poetry, and poetry is painting that speaks. — Plutarch`,
         `Muddy water is best cleared by leaving it alone. — Alan Watts`,
@@ -75,6 +75,8 @@ const QUOTES = {
         `Time to deliver a pizza ball! — Eric Andre`,
         `I don't know how to put this, but I'm kind of a big deal. — Ron Burgundy`,
         `Be excellent to each other. — Bill and Ted`,
+        `Never stop never stopping. — Andy Samberg`,
+        `I am the Globglogabgalab, the shwabble-dabble-wabble-gabble-flibba-blabba-blab — The Globglogabgalab`,
     ],
 
     jokes: [
@@ -120,6 +122,23 @@ const QUOTES = {
         `Broccoli, cauliflower, bok choy, turnip, cabbage, kale, and brussels sprouts all come from plants in the same genus`,
         `Michelin stars were originally given to restaurants to encourage people to drive more and buy more tires.`,
         `The longest place name in the world is 85 characters long and is in New Zealand (Taumatawhakatangihangakoauauotamateaturipukakapikimaungahoronukupokaiwhenuakitanatahu).`,
+        `Siphonophores are made up of multiple organisms that work together as one. They can be up to 40 meters long.`,
+        `The world's largest living organism is a fungus in Oregon that covers 2,385 acres (965 hectares).`,
+        `The world's largest snowflake on record was 15 inches wide and 8 inches thick.`
+    ],
+
+    tongueTwisters: [
+        `She sells seashells by the seashore.`,
+        `How can a clam cram in a clean cream can?`,
+        `I saw Susie sitting in a shoeshine shop.`,
+        `Specific Pacific statistics persistently perplex particularly perceptive political physicists.`,
+        `Fred fed Ted bread, and Ted fed Fred bread.`,
+        `The sixth sick sheik's sixth sheep's sick.`,
+        `Shy Shelly says she shall sew sheets swiftly, surely, and silently.`,
+        `Scissors sizzle, thistles whistle, brittle bristles bristle briskly.`,
+        `Pre-shrunk silk shirts should be strictly short-sleeved.`,
+        `Scissors sizzle, thistles whistle, brittle bristles bristle briskly.`,
+        `Zippy zipper-zaggers zipped zigzag zones with zany zest.`,
     ],
 
 };
