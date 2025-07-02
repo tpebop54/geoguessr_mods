@@ -126,13 +126,8 @@ const updateLottery = (forceState = null) => {
 
     const smallMap = getSmallMap();
     if (active) {
-        // Reset lottery count to the configured number of guesses
-        _LOTTERY_COUNT = getOption(mod, 'nGuesses');
-        console.log('GeoGuessr MultiMod: Lottery activated, token count:', _LOTTERY_COUNT);
-        
-        // Always show the display when mod is active
+        _LOTTERY_COUNT = getOption(mod, 'nGuesses'); // Reset lottery count to the configured number of guesses
         makeLotteryDisplay();
-        
         setGuessMapEvents(false);
     } else {
         console.log('GeoGuessr MultiMod: Lottery deactivated');
