@@ -34,6 +34,7 @@ const THE_WINDOW = unsafeWindow || window;
                 }
             });
             THE_WINDOW.GEFFetchEvents.addEventListener('received_data', (event) => {
+                console.log('GeoGuessr MultiMod: Received data event at:', new Date().toISOString(), event.detail);
                 this.parseData(event.detail);
             });
         }
@@ -139,8 +140,10 @@ const THE_WINDOW = unsafeWindow || window;
             }
             this.saveState();
             if (this.state.current_round === 1) {
+                console.log('GeoGuessr MultiMod: Dispatching game_start event at:', new Date().toISOString());
                 this.events.dispatchEvent(new CustomEvent('game_start', { detail: this.state }));
             }
+            console.log('GeoGuessr MultiMod: Dispatching round_start event at:', new Date().toISOString(), 'for round:', this.state.current_round);
             this.events.dispatchEvent(new CustomEvent('round_start', { detail: this.state }));
         }
         stopRound(data) {
@@ -204,6 +207,7 @@ const THE_WINDOW = unsafeWindow || window;
                 };
             }
             this.saveState();
+            console.log('GeoGuessr MultiMod: Dispatching round_end event at:', new Date().toISOString(), 'for round:', this.state.current_round);
             this.events.dispatchEvent(new CustomEvent('round_end', { detail: this.state }));
             if (this.state.current_round === 5) {
                 this.events.dispatchEvent(new CustomEvent('game_end', { detail: this.state }));

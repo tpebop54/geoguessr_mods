@@ -256,13 +256,11 @@ if (document.readyState === 'loading') {
     initializeMods();
 }
 
-// Initialize GeoGuessrEventFramework after a small delay to ensure all modules are loaded
+// Initialize GeoGuessrEventFramework immediately - no delay needed since we need to catch early events
 let initRetryCount = 0;
 const maxRetries = 10;
 
-setTimeout(() => {
-    initializeEventFramework();
-}, 1000); // Increased delay for better compatibility
+initializeEventFramework();
 
 function initializeEventFramework() {
     // Initialize GeoGuessrEventFramework for round events and map data
@@ -299,8 +297,8 @@ function initializeEventFramework() {
                 console.error('GeoGuessr MultiMod: Failed to initialize GeoGuessrEventFramework after maximum retries');
                 return;
             }
-            console.error('GeoGuessr MultiMod: GeoGuessrEventFramework is not defined, retrying in 2 seconds...');
-            setTimeout(initializeEventFramework, 2000); // Increased retry delay
+            console.error('GeoGuessr MultiMod: GeoGuessrEventFramework is not defined, retrying in 100ms...');
+            setTimeout(initializeEventFramework, 100); // Much shorter retry delay to catch early events
             return;
         }
         
@@ -311,8 +309,8 @@ function initializeEventFramework() {
                 console.error('GeoGuessr MultiMod: GeoGuessrEventFramework found but not properly initialized after maximum retries');
                 return;
             }
-            console.error('GeoGuessr MultiMod: GeoGuessrEventFramework found but not properly initialized, retrying in 2 seconds...');
-            setTimeout(initializeEventFramework, 2000);
+            console.error('GeoGuessr MultiMod: GeoGuessrEventFramework found but not properly initialized, retrying in 100ms...');
+            setTimeout(initializeEventFramework, 100);
             return;
         }
         
@@ -323,7 +321,8 @@ function initializeEventFramework() {
         console.log('GeoGuessr MultiMod: GEF.events:', GEF.events);
         
         GEF.events.addEventListener('round_start', (evt) => {
-            console.log('GeoGuessr MultiMod: Round start event received');
+            console.log('GeoGuessr MultiMod: Round start event received at:', new Date().toISOString());
+            console.log('GeoGuessr MultiMod: Round start event detail:', evt.detail);
             window.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
             try {
                 const round = evt.detail.rounds[evt.detail.rounds.length - 1];
@@ -346,7 +345,7 @@ function initializeEventFramework() {
         });
         
         GEF.events.addEventListener('round_end', (evt) => {
-            console.log('GeoGuessr MultiMod: Round end event received');
+            console.log('GeoGuessr MultiMod: Round end event received at:', new Date().toISOString());
             GG_ROUND = undefined;
             GG_CLICK = undefined;
         });
@@ -367,14 +366,58 @@ function initializeEventFramework() {
             }
         });
         
-        console.log('GeoGuessr MultiMod: Event listeners successfully registered');
+        console.log('GeoGuessr MultiMod: Event listeners successfully registered at:', new Date().toISOString());
+        
+        // Check if we're already in a game/round and need to catch up with current state
+        if (GEF.state && GEF.state.round_in_progress) {
+            console.log('GeoGuessr MultiMod: Detected ongoing round, syncing state...');
+            // Simulate a round_start event with current state to sync our mods
+            try {
+                GG_ROUND = GEF.state.rounds[GEF.state.current_round - 1];
+                if (GEF.state.map && GEF.state.map.id) {
+                    const mapID = GEF.state.map.id;
+                    console.log('GeoGuessr MultiMod: Fetching map data for current game mapID:', mapID);
+                    
+                    fetch(`https://www.geoguessr.com/api/maps/${mapID}`)
+                        .then(data => data.json())
+                        .then(data => {
+                            GG_MAP = data;
+                            console.log('GeoGuessr MultiMod: GG_MAP loaded for current game:', GG_MAP);
+                        })
+                        .catch(err => {
+                            console.error('GeoGuessr MultiMod: Failed to fetch map data for current game:', err);
+                        });
+                }
+            } catch (err) {
+                console.error('GeoGuessr MultiMod: Error syncing with current game state:', err);
+            }
+        } else {
+            console.log('GeoGuessr MultiMod: No ongoing round detected, waiting for new game events...');
+        }
+        
+        // Additional fallback: Set up a delayed check to see if we missed any events
+        setTimeout(() => {
+            if (!GG_ROUND && !GG_MAP) {
+                console.log('GeoGuessr MultiMod: No round data detected after 5 seconds, checking if we missed events...');
+                // Check if we're on a game page but missed the events
+                const currentUrl = window.location.href;
+                if (currentUrl.includes('/game/') || currentUrl.includes('/challenge/') || currentUrl.includes('/duels/')) {
+                    console.log('GeoGuessr MultiMod: On a game page but no round data - attempting to sync with current state');
+                    if (GEF.state && GEF.state.rounds && GEF.state.rounds.length > 0) {
+                        // Try to recover from GEF state
+                        GG_ROUND = GEF.state.rounds[GEF.state.current_round - 1];
+                        console.log('GeoGuessr MultiMod: Recovered round data from GEF state:', GG_ROUND);
+                    }
+                }
+            }
+        }, 5000);
         
     } catch (err) {
         console.error('GeoGuessr MultiMod: Exception during GeoGuessrEventFramework setup:', err);
         initRetryCount++;
         if (initRetryCount < maxRetries) {
             // Retry if there was an exception
-            setTimeout(initializeEventFramework, 2000);
+            setTimeout(initializeEventFramework, 100);
         } else {
             console.error('GeoGuessr MultiMod: Failed to initialize GeoGuessrEventFramework after maximum retries');
         }
