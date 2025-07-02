@@ -153,9 +153,8 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
         
         bindButtons();
 
-        // Use classList toggle for better Opera compatibility
+        // Button menu toggler.
         modMenuToggle.addEventListener('click', function () {
-            // Opera sometimes fails to update style.display reliably, so use a class
             buttonContainer.classList.toggle('hidden');
             if (buttonContainer.classList.contains('hidden')) {
                 modMenuToggle.textContent = '▶';
@@ -163,9 +162,6 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
                 modMenuToggle.textContent = '▼';
             }
         });
-        // Ensure initial state is visible
-        buttonContainer.classList.remove('hidden');
-        
         return true;
     } catch (err) {
         console.error(err);
