@@ -1,7 +1,4 @@
 // ==UserScript==
-// @name         GG Styling
-// @description  CSS styling for GeoGuessr mods
-// @version      1.0
 // @author       tpebop
 
 // ==/UserScript==

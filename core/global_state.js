@@ -1,7 +1,4 @@
 // ==UserScript==
-// @name         GG Global State
-// @description  Global state management for GeoGuessr mods
-// @version      1.0
 // @author       tpebop
 
 // ==/UserScript==

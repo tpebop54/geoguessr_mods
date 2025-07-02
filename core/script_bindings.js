@@ -1,7 +1,4 @@
 // ==UserScript==
-// @name         GG Script Bindings
-// @description  Script bindings and initialization for GeoGuessr mods
-// @version      1.0
 // @author       tpebop
 
 // ==/UserScript==

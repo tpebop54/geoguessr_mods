@@ -1,7 +1,4 @@
 // ==UserScript==
-// @name         GG Debug Utilities
-// @description  Debug utilities for GeoGuessr mods
-// @version      1.0
 // @author       tpebop
 
 // ==/UserScript==

@@ -1,7 +1,4 @@
 // ==UserScript==
-// @name         GG Mod Flashlight
-// @description  Flashlight effect mod for GeoGuessr
-// @version      1.0
 // @author       tpebop
 
 // ==/UserScript==

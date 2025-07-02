@@ -1,7 +1,4 @@
 // ==UserScript==
-// @name         GG Mod Utils
-// @description  Utility functions for GeoGuessr mods
-// @version      1.0
 // @author       tpebop
 
 // ==/UserScript==

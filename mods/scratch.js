@@ -1,7 +1,4 @@
 // ==UserScript==
-// @name         GG Mod Scratch
-// @description  Scratch/test mod for GeoGuessr
-// @version      1.0
 // @author       tpebop
 
 // ==/UserScript==
