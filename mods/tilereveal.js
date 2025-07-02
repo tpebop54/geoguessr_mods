@@ -11,7 +11,7 @@ let _TILE_COUNT; // How many remaining tiles the user has.
 let _TILE_COUNT_DRAGGING = false;
 let _TILE_COUNT_OFFSET_X = 0;
 let _TILE_COUNT_OFFSET_Y = 0;
-let _CURRENT_LOCATION = window.location.href; // Track current location for reset detection
+let _TILEREVEAL_CURRENT_LOCATION = window.location.href; // Track current location for reset detection
 let _LOCATION_CHECK_INTERVAL; // Interval for checking location changes
 let _ROUND_START_LISTENER_ADDED = false; // Track if round start listener is added
 
@@ -155,11 +155,11 @@ const resetTileReveal = () => {
     makeTiles(nRows, nCols);
     
     // Update current location tracking
-    _CURRENT_LOCATION = window.location.href;
+    _TILEREVEAL_CURRENT_LOCATION = window.location.href;
 };
 
 const checkForLocationChange = () => {
-    if (window.location.href !== _CURRENT_LOCATION) {
+    if (window.location.href !== _TILEREVEAL_CURRENT_LOCATION) {
         resetTileReveal();
     }
 };
@@ -222,7 +222,7 @@ const updateTileReveal = (forceState = null) => {
         startLocationTracking();
         
         // Update current location
-        _CURRENT_LOCATION = window.location.href;
+        _TILEREVEAL_CURRENT_LOCATION = window.location.href;
     } else {
         removeTiles();
         removeTileCounter();

@@ -11,7 +11,7 @@ let _LOTTERY_COUNT; // How many remaining guesses you have.
 let _LOTTERY_DRAGGING = false; // Makes lottery display draggable because it overlaps the menu.
 let _LOTTERY_DRAGGING_OFFSET_X; // X offset from mouse to element edge when dragging starts.
 let _LOTTERY_DRAGGING_OFFSET_Y; // Y offset from mouse to element edge when dragging starts.
-let _CURRENT_LOCATION = window.location.href; // Track current location for reset detection
+let _LOTTERY_CURRENT_LOCATION = window.location.href; // Track current location for reset detection
 let _LOCATION_CHECK_INTERVAL; // Interval for checking location changes
 
 const removeLotteryDisplay = () => {
@@ -181,7 +181,7 @@ const setLotteryMapMode = (enabled = true) => {
 };
 
 const checkForLocationChange = () => {
-    if (window.location.href !== _CURRENT_LOCATION) {
+    if (window.location.href !== _LOTTERY_CURRENT_LOCATION) {
         resetLotteryCount();
     }
 };
@@ -204,7 +204,7 @@ const resetLotteryCount = () => {
     }
     
     // Update current location tracking
-    _CURRENT_LOCATION = window.location.href;
+    _LOTTERY_CURRENT_LOCATION = window.location.href;
 };
 
 const startLocationTracking = () => {
@@ -253,7 +253,7 @@ const updateLottery = (forceState = null) => {
         startLocationTracking();
         
         // Update current location
-        _CURRENT_LOCATION = window.location.href;
+        _LOTTERY_CURRENT_LOCATION = window.location.href;
     } else {
         const container = document.querySelector(`#gg-lottery`);
         if (container) {
