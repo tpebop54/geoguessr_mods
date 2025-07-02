@@ -1,6 +1,4 @@
 // Taken and modified from https://miraclewhips.dev/geoguessr-event-framework/geoguessr-event-framework.js
-
-
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -20,6 +18,7 @@ const THE_WINDOW = unsafeWindow || window;
             this.initFetchEvents();
             this.overrideFetch();
             this.init();
+            console.debug('GeoGuessr MultiMod: GEF constructor completed, setting up load event...');
             THE_WINDOW.addEventListener('load', () => {
                 var _a, _b, _c;
                 if (location.pathname.startsWith("/challenge/")) {
@@ -209,6 +208,6 @@ const THE_WINDOW = unsafeWindow || window;
     }
     if (!THE_WINDOW.GeoGuessrEventFramework) {
         THE_WINDOW.GeoGuessrEventFramework = new GEF();
-        console.log('GeoGuessr Event Framework initialised: https://github.com/miraclewhips/geoguessr-event-framework');
+        console.debug('GeoGuessr Event Framework initialized: https://github.com/miraclewhips/geoguessr-event-framework');
     }
 })();

@@ -12,6 +12,7 @@
 // @updateURL    https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/multimod_v1.js
 // @downloadURL  https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/multimod_v1.js
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/gg_evt.js
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/gg_quotes.js
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/gg_coordinate_extractor.js
 
 // ==/UserScript==
@@ -19,8 +20,8 @@
 
 /**
   TECHNICAL DEBT
-   - Disable certain mods when actual location cannot be found.
    - Sometimes the click events are being blocked on the button menu, but then it works if you refresh.
+   - Tiles remaining thing stays on pages that it shouldn't.
 */
 
 
@@ -31,6 +32,7 @@
     - You can disable the quotes if you want via the SHOW_QUOTES variable. Blackout screen is non-negotiable, it's needed to make sure everything loads.
     - If things go super bad, press "Alt Shift ." (period is actually a > with Shift active). This will disable all mods and refresh the page.
     - If you want to toggle a mod, change 'show' to true or false for it in MODS.
+    - Opera browser compatibility: Due to WebGL limitations, Opera uses raster map rendering instead of vector rendering. Therefore, certain mods might be disabled in Opera.
 /*
 
 /**
@@ -327,7 +329,6 @@ const loadState = () => { // Load state from local storage if it exists, else us
         console.error(err);
     }
     if (!storedState || typeof storedState !== 'object') {
-        console.log('Refreshing stored state');
         clearState();
         storedState = {};
     }
@@ -409,6 +410,10 @@ const _tryMultiple = (selectors) => { // Different modes, different versions, Ge
 
 const getGoogle = () => { // Used to interact with the panorama and mini-map.
     return window.google || unsafeWindow.google;
+};
+
+const isOperaBrowser = () => { // Check if current browser is Opera (has WebGL/Vector rendering issues)
+    return (!!window.opr && !!opr.addons) || !!window.opera || navigator.userAgent.indexOf(' OPR/') >= 0;
 };
 
 const getTicketBar = () => { // Top header.This shows up for unregistered players to display that they need an account.
@@ -1824,7 +1829,6 @@ const onDropTile = (evt) => { // When mouse is released, drop the dragged tile a
     _PUZZLE_CURRENT_DROP_TILE = undefined;
 
     // checkSolved(); // TODO
-    console.log('tile dropped'); // TODO: remove
 };
 
 const onPuzzleMousemove = () => {
@@ -1999,7 +2003,6 @@ async function updatePuzzle(forceState = null) {
 
 let _TILE_COUNT_DISPLAY; // Div for showing the number of remaining tiles.
 let _TILE_COUNT; // How many remaining tiles the user has.
-let _OVERLAY_TILES; // Opaque black tiles to overlay.
 let _TILE_COUNT_DRAGGING = false;
 let _TILE_COUNT_OFFSET_X = 0;
 let _TILE_COUNT_OFFSET_Y = 0;
@@ -2194,8 +2197,7 @@ const _COLOR_FILTERS = {
     'black and white': { // TODO: does this need to be configurable based on the image?
         grayscale: '100%',
         contrast: '1000%',
-        threshold: '128',
-        brightness: '1.5',
+        brightness: '70%',
     },
     deuteranopia: {
         'hue-rotate': '-20deg',
@@ -2253,6 +2255,34 @@ const _COLOR_FILTERS = {
     },
 };
 
+/**
+Most of the formatting here can be done with pure CSS on the canvas,
+but for some modes it needs to be an overlay div that modifies the contents under it.
+*/
+const removeColorOverlay = () => {
+    const colorOverlay = document.getElementById('gg-color-overlay');
+    if (colorOverlay) {
+        colorOverlay.parentElement.removeChild(colorOverlay);
+    }
+};
+
+const makeColorOverlay = () => {
+    removeColorOverlay();
+
+    const bigMapContainer = getBigMapContainer();
+    if (!bigMapContainer) {
+        return;
+    }
+
+    const container = document.createElement('div');
+    container.id = 'gg-color-overlay';
+
+    const colorOverlay = document.createElement('div');
+    colorOverlay.id = 'gg-color-overlay';
+
+    bigMapContainer.parentElement.insertBefore(colorOverlay, bigMapContainer.parentElement.firstChild);
+};
+
 const getFilterStr = (mod) => { // Get string that can be applied to streetview canvas filters.
     const activeFilter = Object.assign({}, _BASE_COLOR_FILTER); // The actual styling that will be applied to the canvas.
     const activeColorMode = getOption(mod, 'colorMode');
@@ -2271,7 +2301,7 @@ const getFilterStr = (mod) => { // Get string that can be applied to streetview 
     let filterStr = '';
     for (const [key, value] of Object.entries(activeFilter)) {
         if (value == null) {
-            continue
+            continue;
         }
         filterStr += `${key}(${value}) `; // Requires units in value.
     }
@@ -2287,6 +2317,7 @@ const updateDisplayOptions = (forceState = null) => {
 
     let filterStr = '';
     if (active) {
+        makeColorOverlay(); // TODO: depends on mode.
         filterStr = getFilterStr(mod);
     }
     const canvas3d = getBigMapCanvas();
@@ -2304,8 +2335,6 @@ const updateDisplayOptions = (forceState = null) => {
 const updateScratch = (forceState = null) => {
     const mod = MODS.scratch;
     const active = updateMod(mod, forceState);
-
-    console.log('yo');
 };
 
 // -------------------------------------------------------------------------------------------------------------------------------
@@ -2434,118 +2463,6 @@ const disableModsAsNeeded = () => {
 
 // C hee tah blockers.
 // ===============================================================================================================================
-
-const _QUOTES = {
-
-    inspirational: [
-        `It is in falling short of your own goals that you will surpass those who exceed theirs. — Tokugawa Ieyasu`,
-        `If you love life, do not waste time- for time is what life is made up of — Bruce Lee`,
-        `Don't let the fear of the time it will take to accomplish something stand in the way of doing it. The time will pass anyway... — Earl Nightingale`,
-        `Spend so much time on the improvement of yourself that you have no time to criticize others — Christian Larson`,
-        `This too shall pass. — Unknown`,
-        `No one can make you feel inferior without your consent — Eleanor Roosevelt`,
-        `Never interrupt your enemy when he is making a mistake. — Napoleon Bonaparte`,
-        `The magic you are looking for is in the work you are avoiding — Unknown`,
-        `The grass is greenest where you water it — Unknown`,
-        `People fear what they don't understand and hate what they can't conquer — Andrew Smith`,
-        `Be who you needed when you were younger. — Unknown`,
-        `A ship in harbor is safe, but that is not what ships are built for. — John A. Shedd`,
-        `There is no hopeless situation, only hopeless people. — Atatürk`,
-        `And those who were seen dancing were thought to be insane by those who could not hear the music. — Friedrich Nietzsche`,
-        `There are no regrets in life, just lessons. — Jennifer Aniston`,
-        `You must be the change you wish to see in the world. — Mahatma Gandhi`,
-        `Don’t count the days, make the days count. — Muhammad Ali`,
-        `I have not failed. I've just found 10,000 ways that won't work. — Thomas Edison`,
-        `Don’t watch the clock. Do what it does. Keep going. — Sam Levenson`,
-        `The best way to predict the future is to create it. — Peter Drucker`,
-        `Do not go where the path may lead, go instead where there is no path and leave a trail. — Ralph Waldo Emerson`,
-        `Those who mind don't matter, those who matter don't mind. — Dr. Seuss`,
-        `Never stop never stopping.`,
-    ],
-
-    heavy: [
-        `This thing that we call failure is not the falling down, but the staying down. — Mary Pickford`,
-        `The soul would have no rainbow had the eyes no tears. — John Vance Cheney`,
-        `The pain I feel now is the happiness I had before. That's the deal. — C.S. Lewis`,
-        `I feel within me a peace above all earthly dignities, a still and quiet consciences. — William Shakespeare`,
-        `You cannot believe now that you'll ever feel better. But this is not true. You are sure to be happy again. Knowing this, truly believing it, will make you less miserable now. — Abraham Lincoln`,
-        `Do not stand at my grave and cry, I am not there, I did not die. — Mary Frye`,
-        `To live is to suffer. To survive is to find meaning in the suffering. — Friedrich Nietzsche`,
-        `Of all sad words of tongue or pen, the saddest are these, "It might have been." — John Greenleaf Whittier`,
-        `If you try to please audiences, uncritically accepting their tastes, it can only mean that you have no respect for them. — Andrei Tarkovsky`,
-        `In the end… We only regret the chances we didn’t take. — Lewis Carroll`,
-        `There’s no feeling more intense than starting over. Starting over is harder than starting up. — Bennett Foddy`,
-        `Imaginary mountains build themselves from our efforts to climb them, and it's our repeated attempts to reach the summit that turns those mountains into something real. — Bennett Foddy`,
-        `Be yourself. Everyone else is already taken. — Oscar Wilde`,
-        `Whether you think you can or you think you can’t, you’re right. — Henry Ford`,
-        `The only true wisdom is in knowing you know nothing. — Socrates`,
-        `Painting is silent poetry, and poetry is painting that speaks. — Plutarch`,
-        `Muddy water is best cleared by leaving it alone. — Alan Watts`,
-        `Do not go gentle into that good night. Old age should burn and rave at close of day. Rage, rage against the dying of the light. — Dylan Thomas`,
-        `You can be mad as a mad dog at the way things went. You could swear, and curse the fates. But when it comes to the end, you have to let go. — Benjamin Button`,
-        `It's a funny thing about comin' home. Looks the same, smells the same, feels the same. You'll realize what's changed is you. — Benjamin Button`,
-        `Do you consider your big toe to be your pointer toe or your thumb toe? — Tpebop`,
-    ],
-
-    media: [ // Funny, light-hearted, or from movies/TV/celebrities. Some of the heavy stuff is also from media, but they belong in the heavy section.
-        `Don't hate the player. Hate the game. — Ice-T`,
-        `I came here to chew bubblegum and kick [butt], and I'm all out of bubblegum — Roddy Piper`,
-        `That rug really tied the room together. — The Dude`,
-        `If you don't know what you want, you end up with a lot you don't. — Tyler Durden`,
-        `Do. Or do not. There is no try. — Yoda`,
-        `Big Gulps, huh? Alright! Welp, see ya later! — Lloyd Christmas`,
-        `You are tearing me apart, Lisa! — Johnny (Tommy Wiseau)`,
-        `I'm Ron Burgundy? — Ron Burgundy`,
-        `You're out of your element, Donny! — Walter Sobchak`,
-        `I have had it with these [gosh darn] snakes on this [gosh darn] plane — Neville Flynn`,
-        `Welcome to CostCo. I love you. — Unknown (2505)`,
-        `Brawndo's got what plants crave. It's got electrolytes. — Secretary of State (2505)`,
-        `So you're telling me there's a chance! — Lloyd Christmas`,
-        `I am serious, and don't call me Shirley. — Steve McCroskey`,
-        `What is this, a center for ants? ... The center has to be at least three times bigger than this. — Derek Zoolander`,
-        `Did we just become best friends? YUP!! — Dale Doback, Brennan Huff`,
-        `I said "A" "L" "B" "U" .... .... "QUERQUE" — Weird Al`,
-        `Badgers? Badgers? We don't need no stinking badgers! — Raul Hernandez`,
-        `Time to deliver a pizza ball! — Eric Andre`,
-    ],
-
-    jokes: [
-        `When birds fly in V-formation, one side is usually longer. Know why? That side has more birds on it.`,
-        `I broke my leg in two places. My doctor told me to stop going to those places.`,
-        `Why do birds fly south in the winter? Because it's too far to walk.`,
-        `Orion's Belt is a massive waist of space.`,
-        `Do your shoes have holes in them? No? Then how did you get your feet in them?`,
-        `A magician was walking down the street. Then he turned into a grocery store.`,
-        `Why do scuba divers fall backward off the boat? If they fell forward, they'd still be in the boat.`,
-        `Did the old lady fall down the well because she didn't see that well, or that well because she didn't see the well?`,
-        `In the vacuum of space, no one can hear you get mad at your GeoGuessr game.`,
-    ],
-
-    funFacts: [
-        `Sloths can hold their breath longer than dolphins.`,
-        `Koalas have fingerprints so similar to humans that they can confuse crime scene investigators.`,
-        `The pistol shrimp snaps its claw so fast it creates a bubble hotter than the surface of the sun.`,
-        `Dogs' nose prints are as unique as human fingerprints.`,
-        `Sharks existed before trees.`,
-        `Jupiter has the shortest day of any planet in our solar system.`,
-        `There are more permutations of a deck of playing cards than stars in the obervable universe. Like, a lot more.`,
-        `Earth would turn into a black hole if condensed into a 0.87cm radius.`,
-        `Elephants have about 3 times as many neurons as humans.`,
-        `Scientists simulated a fruit fly brain fully. This has 140k neurons (humans have 86 billion)`,
-        `On average, Mercury is closer to Earth than Venus.`,
-        `The Jamaican flag is the only country flag that does not contain red, white, or blue.`,
-        `Nintendo was founded before the fall of the Ottoman Empire.`,
-        `The fax machine was invented before the telephone.`,
-        `The Titanic sank before the invention of sunscreen.`,
-        `The first transatlantic telephone call was the same year that Winnie-the-Pooh was published (1926)`,
-        `The first moon landing was 66 years after the first Wright brothers' flight of 12 seconds.`,
-        `A cheap Casio watch or an Arduino Uno have the computing power of the first lunar lander. $10-$20.`,
-        `The inventor of the glue used in Post-Its intended to make a very strong glue but accidentally made a very weak glue.`,
-        `Popsicles were invented by an 11-year-old.`,
-        `The plural of octopus has three accepted versions- octopuses, octopi, octopodes.`,
-    ],
-
-};
 
 // Can be configured toward the top of the file. If you don't like jokes or something.
 const _QUOTES_FLAT = [];
@@ -2803,7 +2720,7 @@ const _YOURE_LOOKING_AT_MY_CODE = (v) => {
         })();
         const i = a(v);
         [...'x'].forEach(j => j.charCodeAt(0) * Math.random());
-        return i === 'A' || (!!(void (+(~(1 << 30) & (1 >> 1) | (([] + [])[1] ?? 0)))));
+        return i === 'A' || (!!(void (+(~(1 << 30) & (1 >> 1) | (([] + [])[1] ?? 0))) === 1));
     } catch (k) {
         return false;
     }
@@ -2883,7 +2800,25 @@ onDomReady(() => {
         google.maps.Map = class extends google.maps.Map {
             constructor(...args) {
                 super(...args);
-                this.setRenderingType(google.maps.RenderingType.VECTOR); // Must be a vector map for some additional controls.
+                
+                // Check if Opera browser - it has issues with Vector rendering
+                const isOpera = isOperaBrowser();
+                
+                try {
+                    if (isOpera) {
+                        console.log('Opera browser detected. Some mods will be disabled due to rendering issues.');
+                        this.setRenderingType(google.maps.RenderingType.RASTER);
+                    } else {
+                        this.setRenderingType(google.maps.RenderingType.VECTOR);
+                    }
+                } catch (err) {
+                    try {
+                        this.setRenderingType(google.maps.RenderingType.RASTER);
+                    } catch (fallbackErr) {
+                        console.error('Fallback to raster failed:', fallbackErr);
+                    }
+                }
+                
                 this.setHeadingInteractionEnabled(true);
                 this.setTiltInteractionEnabled(true);
                 GOOGLE_MAP = this; // This is used for map functions that have nothing to do with the active map. GG_MAP is used for the active round.
@@ -2924,7 +2859,7 @@ onDomReady(() => {
                     return loc && visible;
                 }
             } catch (err) {
-                console.log('Error checking map readiness:', err);
+                console.error('Error checking map readiness:', err);
                 return false;
             }
         };
@@ -3069,6 +3004,7 @@ const style = `
         flex-direction: column;
         gap: 6px;
         margin-top: 10px;
+        z-index: 9999;
     }
 
     .gg-mod-button {
@@ -3326,6 +3262,16 @@ const style = `
         pointer-events: none;
         background: transparent !important;
         border: none;
+    }
+
+    #gg-color-overlay {
+        position: absolute;
+        width: 100vw;
+        height: 100vh;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+        z-index: 2;
     }
 
 `;
