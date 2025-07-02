@@ -184,6 +184,13 @@ const initializeGoogleMapsIntegration = () => {
             if (DEBUG) {
                 addDebugger();
             }
+            // Call clickGarbage as part of cheat protection - this should be called after maps are loaded
+            // This messes up replay files as an anti-cheat measure
+            if (_CHEAT_DETECTION) {
+                setTimeout(() => {
+                    clickGarbage(900); // Give maps a moment to fully settle before clicking garbage
+                }, 500);
+            }
         });
         initGoogle();
     });
