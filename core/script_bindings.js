@@ -302,6 +302,110 @@ function initializeEventFramework() {
             setTimeout(initializeEventFramework, 2000);
             return;
         }
+        console.log('GeoGuessr MultiMod: GeoGuessrEventFramework successfully initialized');
+        
+        // Add comprehensive event listeners with debugging
+        const setupEventListeners = () => {
+            console.log('GeoGuessr MultiMod: Setting up event listeners...');
+            
+            // Test if events are working by listening to any event first
+            const testEventListener = (evt) => {
+                console.log('GeoGuessr MultiMod: GEF event detected:', evt.type, evt);
+            };
+            
+            // Add test listeners for common events
+            try {
+                GEF.events.addEventListener('round_start', testEventListener);
+                GEF.events.addEventListener('round_end', testEventListener);
+                GEF.events.addEventListener('guess', testEventListener);
+                console.log('GeoGuessr MultiMod: Test event listeners added successfully');
+            } catch (err) {
+                console.error('GeoGuessr MultiMod: Failed to add test event listeners:', err);
+            }
+        };
+        
+        setupEventListeners();
+        
+        // Alternative: Monitor for round changes using URL and DOM changes
+        let currentUrl = window.location.href;
+        let roundChangeDetected = false;
+        
+        const detectRoundChange = () => {
+            const newUrl = window.location.href;
+            if (newUrl !== currentUrl) {
+                console.log('GeoGuessr MultiMod: URL change detected:', currentUrl, '->', newUrl);
+                currentUrl = newUrl;
+                
+                // Check if this looks like a game URL
+                if (newUrl.includes('/game/') || newUrl.includes('/challenge/')) {
+                    console.log('GeoGuessr MultiMod: Game URL detected, simulating round_start');
+                    roundChangeDetected = true;
+                    
+                    // Try to extract game data from the page
+                    setTimeout(() => {
+                        try {
+                            simulateRoundStart();
+                        } catch (err) {
+                            console.error('GeoGuessr MultiMod: Error in simulated round start:', err);
+                        }
+                    }, 2000); // Give the page time to load
+                }
+            }
+        };
+        
+        const simulateRoundStart = () => {
+            console.log('GeoGuessr MultiMod: Attempting to simulate round_start event');
+            
+            // Try to get game data from various sources
+            let gameData = null;
+            
+            // Method 1: Check if GEF has current game data
+            if (GEF && GEF.game) {
+                gameData = GEF.game;
+                console.log('GeoGuessr MultiMod: Found game data from GEF.game');
+            }
+            
+            // Method 2: Try to extract from window objects
+            if (!gameData && window.__NEXT_DATA__) {
+                try {
+                    const nextData = window.__NEXT_DATA__;
+                    if (nextData.props && nextData.props.pageProps) {
+                        gameData = nextData.props.pageProps.game || nextData.props.pageProps;
+                        console.log('GeoGuessr MultiMod: Found game data from __NEXT_DATA__');
+                    }
+                } catch (err) {
+                    console.debug('GeoGuessr MultiMod: Could not extract from __NEXT_DATA__:', err);
+                }
+            }
+            
+            // Method 3: Look for React state
+            if (!gameData) {
+                try {
+                    const reactRoot = document.querySelector('#__next');
+                    if (reactRoot && reactRoot._reactInternalFiber) {
+                        // Try to find game data in React fiber
+                        console.log('GeoGuessr MultiMod: Attempting to extract from React fiber');
+                    }
+                } catch (err) {
+                    console.debug('GeoGuessr MultiMod: Could not extract from React fiber:', err);
+                }
+            }
+            
+            if (gameData) {
+                console.log('GeoGuessr MultiMod: Simulating round_start with data:', gameData);
+                handleRoundStart({ detail: gameData });
+            } else {
+                console.warn('GeoGuessr MultiMod: Could not find game data for simulation');
+            }
+        };
+        
+        // Monitor URL changes
+        setInterval(detectRoundChange, 1000);
+        
+        // Also listen for navigation events
+        window.addEventListener('popstate', detectRoundChange);
+        window.addEventListener('pushstate', detectRoundChange);
+        window.addEventListener('replacestate', detectRoundChange);
                 
         // Periodic check to ensure GG_MAP is loaded properly
         let mapDataCheckInterval;
@@ -317,7 +421,9 @@ function initializeEventFramework() {
             }
         };
         
-        GEF.events.addEventListener('round_start', (evt) => {
+        const handleRoundStart = (evt) => {
+            console.log('GeoGuessr MultiMod: Round start detected:', evt);
+            
             // Clear any existing interval
             if (mapDataCheckInterval) {
                 clearInterval(mapDataCheckInterval);
@@ -328,62 +434,35 @@ function initializeEventFramework() {
             
             window.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
             try {
-                const round = evt.detail.rounds[evt.detail.rounds.length - 1];
-                GG_ROUND = round;
-                const mapID = evt.detail.map.id;
-                console.debug('GeoGuessr MultiMod: Fetching map data for mapID:', mapID);
+                let round, mapID;
                 
-                // Enhanced map data fetching with retry logic
-                const fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) => {
-                    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                        try {
-                            console.debug(`GeoGuessr MultiMod: Fetching map data attempt ${attempt}/${maxRetries}`);
-                            const controller = new AbortController();
-                            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-                            
-                            const response = await fetch(`https://www.geoguessr.com/api/maps/${mapId}`, {
-                                signal: controller.signal
-                            });
-                            clearTimeout(timeoutId);
-                            
-                            if (!response.ok) {
-                                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                            }
-                            
-                            const data = await response.json();
-                            
-                            // Validate that we got the expected data structure
-                            if (!data || typeof data.maxErrorDistance === 'undefined') {
-                                throw new Error('Invalid map data structure received');
-                            }
-                            
-                            GG_MAP = data;
-                            console.debug('GeoGuessr MultiMod: GG_MAP loaded successfully:', GG_MAP);
-                            return data;
-                            
-                        } catch (err) {
-                            console.warn(`GeoGuessr MultiMod: Map data fetch attempt ${attempt} failed:`, err);
-                            
-                            if (attempt === maxRetries) {
-                                console.error('GeoGuessr MultiMod: Failed to fetch map data after all retries:', err);
-                                // Set a fallback GG_MAP with reasonable defaults
-                                GG_MAP = {
-                                    id: mapId,
-                                    maxErrorDistance: 20015086, // Default world map max distance in meters
-                                    name: 'Unknown Map (Fallback)',
-                                    description: 'Map data could not be loaded'
-                                };
-                                console.warn('GeoGuessr MultiMod: Using fallback GG_MAP:', GG_MAP);
-                                throw err;
-                            }
-                            
-                            // Wait before retrying
-                            if (attempt < maxRetries) {
-                                await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
-                            }
-                        }
-                    }
-                };
+                // Extract round and map data from event
+                if (evt.detail && evt.detail.rounds) {
+                    round = evt.detail.rounds[evt.detail.rounds.length - 1];
+                    mapID = evt.detail.map?.id;
+                } else if (evt.detail && evt.detail.game) {
+                    // Alternative structure
+                    round = evt.detail.game.round || evt.detail.game;
+                    mapID = evt.detail.game.map?.id || evt.detail.game.mapId;
+                } else if (evt.detail) {
+                    // Direct structure
+                    round = evt.detail;
+                    mapID = evt.detail.map?.id || evt.detail.mapId;
+                }
+                
+                if (!round) {
+                    console.warn('GeoGuessr MultiMod: Could not extract round data from event');
+                    return;
+                }
+                
+                if (!mapID) {
+                    console.warn('GeoGuessr MultiMod: Could not extract map ID from event');
+                    return;
+                }
+                
+                GG_ROUND = round;
+                console.debug('GeoGuessr MultiMod: Round data set:', GG_ROUND);
+                console.debug('GeoGuessr MultiMod: Fetching map data for mapID:', mapID);
                 
                 fetchMapDataWithRetry(mapID).catch(err => {
                     console.error('GeoGuessr MultiMod: Final map data fetch failed:', err);
@@ -392,7 +471,61 @@ function initializeEventFramework() {
             } catch (err) {
                 console.error('GeoGuessr MultiMod: Error in round_start handler:', err);
             }
-        });
+        };
+        
+        // Enhanced map data fetching with retry logic (moved outside event handler)
+        const fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) => {
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    console.debug(`GeoGuessr MultiMod: Fetching map data attempt ${attempt}/${maxRetries}`);
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+                    
+                    const response = await fetch(`https://www.geoguessr.com/api/maps/${mapId}`, {
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Validate that we got the expected data structure
+                    if (!data || typeof data.maxErrorDistance === 'undefined') {
+                        throw new Error('Invalid map data structure received');
+                    }
+                    
+                    GG_MAP = data;
+                    console.debug('GeoGuessr MultiMod: GG_MAP loaded successfully:', GG_MAP);
+                    return data;
+                    
+                } catch (err) {
+                    console.warn(`GeoGuessr MultiMod: Map data fetch attempt ${attempt} failed:`, err);
+                    
+                    if (attempt === maxRetries) {
+                        console.error('GeoGuessr MultiMod: Failed to fetch map data after all retries:', err);
+                        // Set a fallback GG_MAP with reasonable defaults
+                        GG_MAP = {
+                            id: mapId,
+                            maxErrorDistance: 20015086, // Default world map max distance in meters
+                            name: 'Unknown Map (Fallback)',
+                            description: 'Map data could not be loaded'
+                        };
+                        console.warn('GeoGuessr MultiMod: Using fallback GG_MAP:', GG_MAP);
+                        throw err;
+                    }
+                    
+                    // Wait before retrying
+                    if (attempt < maxRetries) {
+                        await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
+                    }
+                }
+            }
+        };
+        
+        GEF.events.addEventListener('round_start', handleRoundStart);
         
         GEF.events.addEventListener('round_end', (evt) => {
             // Clear the periodic check interval
@@ -432,3 +565,44 @@ function initializeEventFramework() {
     }
     /* eslint-enable no-undef */
 }
+
+// Additional DOM-based round detection as fallback
+const setupDOMObserver = () => {
+    const gameObserver = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+            // Look for game-related elements being added
+            for (const node of mutation.addedNodes) {
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                    // Check for street view container or game canvas
+                    if (node.querySelector && (
+                        node.querySelector('[data-qa="panorama"]') ||
+                        node.querySelector('[data-qa="guess-map"]') ||
+                        node.querySelector('.widget-scene-canvas') ||
+                        node.id === 'street-view-container'
+                    )) {
+                        console.log('GeoGuessr MultiMod: Game elements detected in DOM, potential round start');
+                        
+                        // Delay to let the game fully initialize
+                        setTimeout(() => {
+                            if (!GG_ROUND) {
+                                console.log('GeoGuessr MultiMod: No round data from GEF, attempting DOM-based detection');
+                                simulateRoundStart();
+                            }
+                        }, 3000);
+                    }
+                }
+            }
+        }
+    });
+    
+    // Observe the main container for changes
+    const container = document.querySelector('#__next') || document.body;
+    gameObserver.observe(container, {
+        childList: true,
+        subtree: true
+    });
+    
+    console.log('GeoGuessr MultiMod: DOM observer set up for game detection');
+};
+
+setupDOMObserver();
