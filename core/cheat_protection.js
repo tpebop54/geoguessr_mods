@@ -116,8 +116,10 @@ const initQuotesFlat = () => {
 
 const getRandomQuote = () => {
     if (!_QUOTES_FLAT.length) {
-        // Try to initialize quotes if not already done
-        initQuotesFlat();
+        // Try to initialize quotes if not already done, but only if function is available
+        if (typeof initQuotesFlat === 'function') {
+            initQuotesFlat();
+        }
         if (!_QUOTES_FLAT.length) {
             return 'Loading...';
         }
@@ -143,13 +145,34 @@ const clearCheatOverlay = () => {
 const createQuoteOverlay = () => {
     clearCheatOverlay();
     
-    // Initialize quotes if needed - wait a bit for quotes to be available
-    if (!window._QUOTES || _QUOTES_FLAT.length === 0) {
+    // Check if quotes system is ready
+    if (!window._QUOTES) {
+        // Quotes not loaded yet, try again after a delay
         setTimeout(() => {
-            initQuotesFlat();
-            createQuoteOverlayNow();
-        }, 100);
+            createQuoteOverlay();
+        }, 200);
         return;
+    }
+    
+    // Initialize quotes if needed
+    if (_QUOTES_FLAT.length === 0) {
+        try {
+            if (typeof initQuotesFlat === 'function') {
+                initQuotesFlat();
+            } else {
+                console.warn('initQuotesFlat function not available yet');
+            }
+        } catch (error) {
+            console.warn('Error initializing quotes:', error);
+        }
+        
+        // If still no quotes after initialization, try again later
+        if (_QUOTES_FLAT.length === 0) {
+            setTimeout(() => {
+                createQuoteOverlay();
+            }, 200);
+            return;
+        }
     }
     
     createQuoteOverlayNow();
@@ -277,5 +300,8 @@ const enforceCheatProtection = () => {
 
 // Initialize cheat protection with window load event (matches legacy implementation)
 window.addEventListener('load', () => {
-    initCheatProtection();
+    // Use setTimeout to ensure all scripts are fully loaded
+    setTimeout(() => {
+        initCheatProtection();
+    }, 250);
 });
