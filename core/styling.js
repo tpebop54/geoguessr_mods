@@ -122,6 +122,7 @@ const applyModStyles = () => {
         .gg-option-label {
             white-space: nowrap;
             padding-right: 20px;
+            text-shadow: none;
         }
 
         .gg-option-input {

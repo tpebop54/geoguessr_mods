@@ -1,3 +1,2 @@
-const VERSION = '0.9.8';
-
-export default VERSION;
+let MOD_VERSION = '0.9.0';
+// 
