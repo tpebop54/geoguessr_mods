@@ -108,7 +108,7 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
                 buttonContainer.appendChild(modButton);
                 buttonCount++;
             } catch (err) {
-                console.error(`GeoGuessr MultiMod: Error creating button for ${key}:`, err);
+                console.error(err);
             }
         }
 
@@ -165,7 +165,7 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
         
         return true;
     } catch (err) {
-        console.error('GeoGuessr MultiMod: Error in addButtons():', err);
+        console.error(err);
         return false;
     }
 };
@@ -210,7 +210,7 @@ const initializeMods = () => {
                 }
                 return buttonsAdded;
             } catch (err) {
-                console.error('GeoGuessr MultiMod: Error in MutationObserver:', err);
+                console.error(err);
             }
         });
 
@@ -244,7 +244,7 @@ const initializeMods = () => {
             }
         }
     } catch (err) {
-        console.error('GeoGuessr MultiMod: Initialization failed:', err);
+        console.error(err);
     }
 };
 
@@ -259,16 +259,14 @@ if (document.readyState === 'loading') {
 // Global functions for round detection
 let handleRoundStart, fetchMapDataWithRetry;
 
-const simulateRoundStart = () => {
-    console.log('GeoGuessr MultiMod: Attempting to simulate round_start event');
-    
+const simulateRoundStart = () => {    
     // Try to get game data from various sources
     let gameData = null;
     
     // Method 1: Check if GEF has current game data
     if (typeof GeoGuessrEventFramework !== 'undefined' && GeoGuessrEventFramework.game) {
         gameData = GeoGuessrEventFramework.game;
-        console.log('GeoGuessr MultiMod: Found game data from GEF.game');
+        console.log('GEF Game data loaded.');
     }
     
     // Method 2: Try to extract from window objects
@@ -281,19 +279,6 @@ const simulateRoundStart = () => {
             }
         } catch (err) {
             console.debug('GeoGuessr MultiMod: Could not extract from __NEXT_DATA__:', err);
-        }
-    }
-    
-    // Method 3: Look for React state
-    if (!gameData) {
-        try {
-            const reactRoot = document.querySelector('#__next');
-            if (reactRoot && reactRoot._reactInternalFiber) {
-                // Try to find game data in React fiber
-                console.log('GeoGuessr MultiMod: Attempting to extract from React fiber');
-            }
-        } catch (err) {
-            console.debug('GeoGuessr MultiMod: Could not extract from React fiber:', err);
         }
     }
     

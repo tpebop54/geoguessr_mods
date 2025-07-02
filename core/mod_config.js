@@ -300,5 +300,3 @@ const SHOW_QUOTES = {
 
 // Callback registry for mod updates
 const UPDATE_CALLBACKS = {};
-
-console.log('GeoGuessr MultiMod: mod_config.js loaded successfully');

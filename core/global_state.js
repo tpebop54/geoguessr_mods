@@ -6,8 +6,6 @@
 
 // ==/UserScript==
 
-console.debug('GeoGuessr MultiMod: global_state.js loading...');
-
 // Global state. Load from local storage if it exists. Values used in this script will be from this global variable after loading.
 // ===============================================================================================================================
 
