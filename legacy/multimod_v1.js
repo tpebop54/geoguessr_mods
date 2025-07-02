@@ -1512,11 +1512,16 @@ const updateLottery = (forceState = null) => {
     const active = updateMod(mod, forceState);
 
     removeLotteryDisplay();
-    _LOTTERY_COUNT = getOption(mod, 'nGuesses');
 
     const smallMap = getSmallMap();
     if (active) {
-        makeLotteryDisplay();
+        // Reset lottery count to the configured number of guesses
+        _LOTTERY_COUNT = getOption(mod, 'nGuesses');
+        
+        // Only show the display if we're in an active round
+        if (typeof GG_ROUND !== 'undefined' && GG_ROUND) {
+            makeLotteryDisplay();
+        }
         setGuessMapEvents(false);
     } else {
         const container = document.querySelector(`#gg-lottery`);
@@ -1526,6 +1531,72 @@ const updateLottery = (forceState = null) => {
         setGuessMapEvents(true);
     }
 };
+
+// Function to handle round start events for the lottery mod
+const onLotteryRoundStart = () => {
+    const mod = MODS.lottery;
+    if (isModActive(mod)) {
+        // Reset lottery count for new round
+        _LOTTERY_COUNT = getOption(mod, 'nGuesses');
+        
+        // Remove existing display and create new one
+        removeLotteryDisplay();
+        makeLotteryDisplay();
+        
+        // Update the counter display
+        const counter = document.getElementById('gg-lottery-counter');
+        if (counter) {
+            counter.innerText = _LOTTERY_COUNT;
+        }
+        
+        console.log('GeoGuessr MultiMod: Lottery reset for new round, tokens:', _LOTTERY_COUNT);
+    }
+};
+
+// Function to handle round end events for the lottery mod
+const onLotteryRoundEnd = () => {
+    const mod = MODS.lottery;
+    if (isModActive(mod)) {
+        // Hide the display when round ends
+        removeLotteryDisplay();
+        console.log('GeoGuessr MultiMod: Lottery display hidden for round end');
+    }
+};
+
+// Monitor for round changes to show/hide lottery display appropriately
+const monitorRoundStateForLottery = () => {
+    let lastRoundState = typeof GG_ROUND !== 'undefined' && GG_ROUND;
+    
+    setInterval(() => {
+        const mod = MODS.lottery;
+        if (!isModActive(mod)) return;
+        
+        const currentRoundState = typeof GG_ROUND !== 'undefined' && GG_ROUND;
+        
+        // Round just started
+        if (!lastRoundState && currentRoundState) {
+            onLotteryRoundStart();
+        }
+        // Round just ended
+        else if (lastRoundState && !currentRoundState) {
+            onLotteryRoundEnd();
+        }
+        
+        lastRoundState = currentRoundState;
+    }, 1000); // Check every second
+};
+
+// Start monitoring when this module loads
+if (typeof GG_ROUND !== 'undefined') {
+    monitorRoundStateForLottery();
+} else {
+    // If GG_ROUND isn't defined yet, wait a bit and try again
+    setTimeout(() => {
+        if (typeof GG_ROUND !== 'undefined') {
+            monitorRoundStateForLottery();
+        }
+    }, 2000);
+}
 
 // -------------------------------------------------------------------------------------------------------------------------------
 
