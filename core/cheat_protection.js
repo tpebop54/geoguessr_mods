@@ -99,8 +99,8 @@ const initQuotesFlat = () => {
         questions: true,
     };
     
-    // Use SHOW_QUOTES if available, otherwise use defaults
-    const quotesConfig = (typeof SHOW_QUOTES !== 'undefined') ? SHOW_QUOTES : defaultShowQuotes;
+    // Use window.SHOW_QUOTES if available, otherwise use defaults
+    const quotesConfig = (typeof window.SHOW_QUOTES !== 'undefined') ? window.SHOW_QUOTES : defaultShowQuotes;
     
     for (const [key, value] of Object.entries(quotesConfig)) {
         if (value) {
