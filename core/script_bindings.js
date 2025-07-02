@@ -154,11 +154,11 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
         bindButtons();
 
         modMenuToggle.addEventListener('click', function () {
-            if (buttonContainer.classList.contains('hidden')) {
-                buttonContainer.classList.remove('hidden');
+            if (buttonContainer.style.display === 'none') {
+                buttonContainer.style.display = 'flex';
                 modMenuToggle.textContent = '▼';
             } else {
-                buttonContainer.classList.add('hidden');
+                buttonContainer.style.display = 'none';
                 modMenuToggle.textContent = '▶';
             }
         });
