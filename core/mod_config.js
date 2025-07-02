@@ -87,7 +87,6 @@ const MODS = {
         key: 'flashlight',
         name: 'Flashlight',
         tooltip: 'Uses cursor as a "flashlight" where you can only see part of the screen',
-        disableInOpera: true, // Disable in Opera due to CSS filter and rendering performance issues
         options: {
             radius: {
                 label: 'Radius',
@@ -138,7 +137,7 @@ const MODS = {
     },
 
     inFrame: {
-        show: false, // Doesn't work in duels.
+        show: true,
         key: 'in-frame',
         name: 'Show In-Frame',
         tooltip: 'Shows if the location is in or out of your current guess map view.',
@@ -295,15 +294,6 @@ const GG_DEFAULT = {} // Used for default options and restoring options.
 for (const mod of Object.values(MODS)) {
     GG_DEFAULT[mod.key] = JSON.parse(JSON.stringify(mod));
 }
-
-// On page load, show random quotes, jokes, facts, etc. The blackout screen cannot be turned off without changing code.
-const SHOW_QUOTES = {
-    inspirational: true,
-    heavy: true, // I'll understand if you want to turn this one off.
-    media: true, // From movies and stuff. Generally light-hearted.
-    jokes: true,
-    funFacts: true,
-};
 
 // Callback registry for mod updates
 const UPDATE_CALLBACKS = {};

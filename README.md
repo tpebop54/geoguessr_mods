@@ -1,3 +1,5 @@
-Update core/_version.js for auto updates in TamperMonkey
+Currently, the version has to be updated in 3 places.
 
-In TamperMonkey, change Settings -> Updates -> Update URL to https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/core/_version.js (or dev branch for dev)
+_version.js
+multimod_installer.js
+multimod_installer_dev.js

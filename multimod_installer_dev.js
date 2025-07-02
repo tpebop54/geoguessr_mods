@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Tpebop's Geoguessr Mods (DEV)
 // @description  Various mods to make the game interesting in various ways (Auto-updating Dev Branch)
-// @version      0.9
+// @version      0.9.7
 // @author       tpebop
 // @match        *://*.geoguessr.com/*
 // @icon         https://www.google.com/s2/favicons?domain=geoguessr.com
@@ -42,5 +42,19 @@
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/core/script_bindings.js?v=1.2
 
 // ==/UserScript==
+
+// Configure which quote categories to show during loading screens
+// Use window.SHOW_QUOTES to avoid potential conflicts with other declarations
+if (typeof window.SHOW_QUOTES === 'undefined') {
+    window.SHOW_QUOTES = {
+        inspirational: true,  // Motivational and inspirational quotes
+        heavy: true,          // Thought provoking stuff, nothing morbid
+        media: true,          // Quotes from movies, TV shows, celebrities - generally light-hearted
+        jokes: true,          // Dad jokes and puns
+        funFacts: true,       // Interesting facts
+        tongueTwisters: true, // See if you can say them...
+        questions: true,      // Mostly silly questions, some real ones
+    };
+}
 
 console.log(`Tpebop's mods loaded (DEV).`);
