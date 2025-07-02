@@ -145,7 +145,7 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
         `;
         
         buttonContainer.style.cssText = `
-            display: flex !important;
+            display: flex;
             flex-direction: column !important;
             gap: 6px !important;
             margin-top: 10px !important;
@@ -153,17 +153,30 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
         
         bindButtons();
 
-        // Button menu toggler - use direct style manipulation for Opera compatibility
+        // Button menu toggler - use cssText to override everything for Opera compatibility
         let isMenuVisible = true; // Track state explicitly
         modMenuToggle.addEventListener('click', function () {
+            console.log('Toggle clicked, current state:', isMenuVisible); // Debug log
             if (isMenuVisible) {
-                buttonContainer.style.display = 'none';
+                buttonContainer.style.cssText = `
+                    display: none !important;
+                    flex-direction: column !important;
+                    gap: 6px !important;
+                    margin-top: 10px !important;
+                `;
                 modMenuToggle.textContent = '▶';
                 isMenuVisible = false;
+                console.log('Hidden menu'); // Debug log
             } else {
-                buttonContainer.style.display = 'flex';
+                buttonContainer.style.cssText = `
+                    display: flex !important;
+                    flex-direction: column !important;
+                    gap: 6px !important;
+                    margin-top: 10px !important;
+                `;
                 modMenuToggle.textContent = '▼';
                 isMenuVisible = true;
+                console.log('Showed menu'); // Debug log
             }
         });
         return true;
