@@ -1,1 +1,1 @@
-core/_version.js
+Update core/_version.js for auto updates in TamperMonkey

@@ -194,8 +194,6 @@ const disableModsAsNeeded = () => {
     const pathname = window.location.pathname;
     if (pathname.indexOf('live-challenge') !== -1) {
         disableMods([
-            MODS.showScore,
-            MODS.bopIt,
         ], true);
     }
 };
