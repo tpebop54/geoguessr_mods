@@ -13,10 +13,12 @@ const STATE_KEY = 'gg_state'; // Key in window.localStorage.
 
 const saveState = () => {
     window.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
+    console.debug('Saved state to localStorage with mods:', Object.keys(MODS));
 };
 
 const clearState = () => {
     window.localStorage.removeItem(STATE_KEY);
+    console.debug('Cleared state from localStorage');
 };
 
 const loadState = () => { // Load state from local storage if it exists, else use default.
@@ -24,12 +26,14 @@ const loadState = () => { // Load state from local storage if it exists, else us
     let storedState;
     try {
         storedState = JSON.parse(stateStr);
+        console.debug('Loaded state from localStorage:', Object.keys(storedState));
     } catch (err) {
-        console.error(err);
+        console.error('Error parsing stored state:', err);
     }
     if (!storedState || typeof storedState !== 'object') {
         clearState();
         storedState = {};
+        console.debug('No valid stored state found, using defaults');
     }
 
     // Create a clean starting state, with the previous state if it existed.
@@ -46,10 +50,14 @@ const loadState = () => { // Load state from local storage if it exists, else us
         if (typeof storedMod.options !== 'object') {
             storedMod.options = {};
         }
-        const validKeys = new Set(Object.keys(mod));
-        for (const [key, storedOption] of Object.entries(storedMod.options)) {
-            if (validKeys.has(key) && storedOption.value != null) {
-                mod.options[key].value = storedOption.value;
+        const validKeys = new Set(Object.keys(mod.options));
+        console.debug(`Restoring options for mod '${key}', valid keys:`, [...validKeys]);
+        for (const [optKey, storedOption] of Object.entries(storedMod.options)) {
+            if (validKeys.has(optKey) && storedOption.value != null) {
+                mod.options[optKey].value = storedOption.value;
+                console.debug(`Restored option '${optKey}' for mod '${key}' with value:`, storedOption.value);
+            } else if (!validKeys.has(optKey)) {
+                console.debug(`Skipped invalid option '${optKey}' for mod '${key}'`);
             }
         }
     }
@@ -75,3 +83,38 @@ let _IS_DRAGGING_SMALL_MAP = false; // true when user is actively dragging the g
 let SCORE_FUNC;
 
 let _MODS_LOADED = false;
+
+// Add a verification function to check if display options were properly restored
+const verifyDisplayOptions = () => {
+    const displayMod = MODS.displayOptions;
+    if (!displayMod) {
+        console.warn("Display options mod not found!");
+        return;
+    }
+    
+    console.debug("Display options mod state:", {
+        active: displayMod.active,
+        options: displayMod.options
+    });
+    
+    // Check if the options have values
+    if (displayMod.options) {
+        for (const [key, option] of Object.entries(displayMod.options)) {
+            console.debug(`Display option '${key}':`, option.value !== undefined ? option.value : "(using default)");
+        }
+    }
+};
+
+// Call verification after state is loaded
+const originalLoadState = loadState;
+window.loadState = function() {
+    const result = originalLoadState.apply(this, arguments);
+    
+    // Verify display options specifically
+    setTimeout(() => {
+        console.debug("Verifying display options after load...");
+        verifyDisplayOptions();
+    }, 500);
+    
+    return result;
+};
