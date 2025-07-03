@@ -409,28 +409,45 @@ const reactivateActiveMods = () => {
     const activeMods = _BINDINGS.filter(([mod]) => mod.active && mod.show).map(([mod]) => mod.name);
     console.debug('Active mods to reactivate:', activeMods);
     
-    // Wait for maps to be ready before reactivating mods
-    waitForMapsReady(() => {
-        console.debug('Maps ready, reactivating active mods now');
-        
-        for (const [mod, callback] of _BINDINGS) {
-            if (mod.active && mod.show) {
-                console.debug(`Reactivating mod: ${mod.name}`);
-                try {
-                    // Force reactivation by setting forceState to true
-                    callback(true);
-                } catch (err) {
-                    console.error(`Error reactivating mod ${mod.name}:`, err);
-                }
+    // Ensure buttons are available before reactivation
+    const ensureButtonsAndReactivate = () => {
+        // First try to add buttons if they don't exist
+        if (!getModDiv()) {
+            const buttonsAdded = addButtons();
+            if (buttonsAdded) {
+                bindButtons();
+                console.debug('Created and bound mod buttons before reactivation');
             }
         }
-    }, {
-        timeout: 8000,             // Longer timeout to ensure maps are fully loaded
-        intervalMs: 200,           // Check more frequently
-        require2D: true,           // Most mods need the 2D map
-        require3D: true,           // Most mods need the 3D map
-        modName: 'ModReactivation' // For logging
-    });
+        
+        // Wait for maps to be ready before reactivating mods
+        waitForMapsReady(() => {
+            console.debug('Maps ready, reactivating active mods now');
+            
+            for (const [mod, callback] of _BINDINGS) {
+                if (mod.active && mod.show) {
+                    console.debug(`Reactivating mod: ${mod.name}`);
+                    try {
+                        // Force reactivation by setting forceState to true
+                        callback(true);
+                    } catch (err) {
+                        console.error(`Error reactivating mod ${mod.name}:`, err);
+                    }
+                }
+            }
+        }, {
+            timeout: 8000,             // Longer timeout to ensure maps are fully loaded
+            intervalMs: 200,           // Check more frequently
+            require2D: true,           // Most mods need the 2D map
+            require3D: true,           // Most mods need the 3D map
+            modName: 'ModReactivation' // For logging
+        });
+    };
+    
+    // Try immediately and also schedule a retry after a short delay
+    // This ensures buttons are recreated if needed
+    ensureButtonsAndReactivate();
+    setTimeout(ensureButtonsAndReactivate, 1000);
 };
 
 // Round start event handler
