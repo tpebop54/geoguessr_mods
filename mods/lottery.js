@@ -264,23 +264,31 @@ const updateLottery = (forceState = null) => {
 
     const smallMap = getSmallMap();
     if (active) {
-        // If display doesn't exist, create it
-        if (!_LOTTERY_DISPLAY) {
-            _LOTTERY_COUNT = getOption(mod, 'nGuesses'); // Reset lottery count to the configured number of guesses
-            makeLotteryDisplay();
-        }
-        
-        // Ensure lottery map mode is properly set
-        setLotteryMapMode(true); // Enable lottery mode (zoom/pan allowed, clicks blocked)
-        
-        // Start location tracking when the mod is activated
-        startLotteryLocationTracking();
-        
-        // Update the counter display to reflect current state
-        const counter = document.getElementById('gg-lottery-counter');
-        if (counter) {
-            counter.innerText = _LOTTERY_COUNT;
-        }
+        // Use waitForMapsReady to ensure the 2D map is ready before proceeding
+        waitForMapsReady(() => {
+            // If display doesn't exist, create it
+            if (!_LOTTERY_DISPLAY) {
+                _LOTTERY_COUNT = getOption(mod, 'nGuesses'); // Reset lottery count to the configured number of guesses
+                makeLotteryDisplay();
+            }
+            
+            // Ensure lottery map mode is properly set
+            setLotteryMapMode(true); // Enable lottery mode (zoom/pan allowed, clicks blocked)
+            
+            // Start location tracking when the mod is activated
+            startLotteryLocationTracking();
+            
+            // Update the counter display to reflect current state
+            const counter = document.getElementById('gg-lottery-counter');
+            if (counter) {
+                counter.innerText = _LOTTERY_COUNT;
+            }
+        }, {
+            require2D: true,
+            require3D: false,
+            modName: 'Lottery',
+            timeout: 8000
+        });
     } else {
         const container = document.querySelector(`#gg-lottery`);
         if (container) {
@@ -300,19 +308,27 @@ const updateLottery = (forceState = null) => {
 const onLotteryRoundStart = () => {
     const mod = MODS.lottery;
     if (isModActive(mod)) {
-        // Reset lottery count for new round
-        _LOTTERY_COUNT = getOption(mod, 'nGuesses');
-        
-        // Update the counter display
-        const counter = document.getElementById('gg-lottery-counter');
-        if (counter) {
-            counter.innerText = _LOTTERY_COUNT;
-        }
-        
-        // Ensure lottery map mode is properly set
-        setLotteryMapMode(true);
-        
-        console.log('GeoGuessr MultiMod: Lottery reset for new round, tokens:', _LOTTERY_COUNT);
+        // Wait for maps to be ready before applying changes
+        waitForMapsReady(() => {
+            // Reset lottery count for new round
+            _LOTTERY_COUNT = getOption(mod, 'nGuesses');
+            
+            // Update the counter display
+            const counter = document.getElementById('gg-lottery-counter');
+            if (counter) {
+                counter.innerText = _LOTTERY_COUNT;
+            }
+            
+            // Ensure lottery map mode is properly set
+            setLotteryMapMode(true);
+            
+            console.log('GeoGuessr MultiMod: Lottery reset for new round, tokens:', _LOTTERY_COUNT);
+        }, {
+            require2D: true,
+            require3D: false,
+            modName: 'Lottery-RoundStart',
+            timeout: 8000
+        });
     }
 };
 

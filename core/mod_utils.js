@@ -390,7 +390,7 @@ const getGGMapWithFallback = async (maxWaitTime = 5000) => {
 // Utility function for mods to wait for both 2D and 3D maps to be ready
 const waitForMapsReady = (callback, options = {}) => {
     const {
-        timeout = 5000,
+        timeout = 8000,        // Increased timeout
         intervalMs = 100,
         require2D = true,
         require3D = true,
@@ -401,8 +401,21 @@ const waitForMapsReady = (callback, options = {}) => {
     
     const checkMapsReady = () => {
         try {
-            const map2dReady = !require2D || (GOOGLE_MAP && GOOGLE_MAP.getBounds && GOOGLE_MAP.getBounds());
-            const map3dReady = !require3D || (GOOGLE_STREETVIEW && GOOGLE_STREETVIEW.getPosition && GOOGLE_STREETVIEW.getPosition());
+            // Enhanced 2D map detection with fallbacks
+            const map2dReady = !require2D || (
+                // Primary check: Google Map object with bounds
+                (GOOGLE_MAP && GOOGLE_MAP.getBounds && GOOGLE_MAP.getBounds()) ||
+                // Secondary check: Map DOM elements
+                (document.querySelector('.gm-style') && document.querySelector('.guess-map_canvas__'))
+            );
+            
+            // Enhanced 3D map detection with fallbacks
+            const map3dReady = !require3D || (
+                // Primary check: Google StreetView object with position
+                (GOOGLE_STREETVIEW && GOOGLE_STREETVIEW.getPosition && GOOGLE_STREETVIEW.getPosition()) ||
+                // Secondary check: Canvas DOM elements
+                (document.querySelector('.widget-scene-canvas'))
+            );
             
             if (map2dReady && map3dReady) {
                 console.debug(`${modName}: Maps ready, executing callback`);
@@ -410,15 +423,22 @@ const waitForMapsReady = (callback, options = {}) => {
                 return true;
             }
             
+            // Log detailed status for debugging
+            if (Date.now() - startTime > 3000 && (Date.now() - startTime) % 1000 < intervalMs) {
+                console.debug(`${modName}: Still waiting for maps: 2D=${map2dReady}, 3D=${map3dReady}, elapsed=${Date.now() - startTime}ms`);
+            }
+            
             if (Date.now() - startTime > timeout) {
                 console.warn(`${modName}: Timeout waiting for maps, executing callback anyway`);
+                console.warn(`${modName}: 2D ready: ${map2dReady}, 3D ready: ${map3dReady}`);
                 callback();
                 return true;
             }
             
             return false;
         } catch (err) {
-            console.debug(`${modName}: Error checking map readiness:`, err);
+            console.error(`${modName}: Error checking map readiness:`, err);
+            // Continue waiting rather than failing completely
             return false;
         }
     };

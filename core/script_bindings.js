@@ -405,17 +405,32 @@ const reactivateActiveMods = () => {
     });
     window.dispatchEvent(reactivationEvent);
     
-    for (const [mod, callback] of _BINDINGS) {
-        if (mod.active && mod.show) {
-            console.debug(`Reactivating mod: ${mod.name}`);
-            try {
-                // Force reactivation by setting forceState to true
-                callback(true);
-            } catch (err) {
-                console.error(`Error reactivating mod ${mod.name}:`, err);
+    // Log which mods are active and should be reactivated
+    const activeMods = _BINDINGS.filter(([mod]) => mod.active && mod.show).map(([mod]) => mod.name);
+    console.debug('Active mods to reactivate:', activeMods);
+    
+    // Wait for maps to be ready before reactivating mods
+    waitForMapsReady(() => {
+        console.debug('Maps ready, reactivating active mods now');
+        
+        for (const [mod, callback] of _BINDINGS) {
+            if (mod.active && mod.show) {
+                console.debug(`Reactivating mod: ${mod.name}`);
+                try {
+                    // Force reactivation by setting forceState to true
+                    callback(true);
+                } catch (err) {
+                    console.error(`Error reactivating mod ${mod.name}:`, err);
+                }
             }
         }
-    }
+    }, {
+        timeout: 8000,             // Longer timeout to ensure maps are fully loaded
+        intervalMs: 200,           // Check more frequently
+        require2D: true,           // Most mods need the 2D map
+        require3D: true,           // Most mods need the 3D map
+        modName: 'ModReactivation' // For logging
+    });
 };
 
 // Round start event handler
@@ -441,10 +456,8 @@ handleRoundStart = (evt) => {
         detail: evt.detail || {} 
     }));
     
-    // Re-activate all currently active mods after maps are loaded
-    setTimeout(() => {
-        reactivateActiveMods();
-    }, 1500); // Give maps time to load
+    // Re-activate all currently active mods (waitForMapsReady is called inside)
+    reactivateActiveMods();
     
     try {
         let round, mapID;
