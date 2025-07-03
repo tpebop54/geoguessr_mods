@@ -174,6 +174,24 @@ const startTileRevealLocationTracking = () => {
         console.log('Tile reveal: Round start listener added');
     }
     
+    // Also listen for our custom round start event
+    window.addEventListener('gg_round_start', (evt) => {
+        console.log('Tile reveal: Custom round start event detected, resetting tiles');
+        setTimeout(() => {
+            resetTileReveal();
+        }, 500);
+    });
+    
+    // Listen for mod reactivation events
+    window.addEventListener('gg_mods_reactivate', (evt) => {
+        if (isModActive(MODS.tileReveal)) {
+            console.log('Tile reveal: Mod reactivation event detected, resetting tiles');
+            setTimeout(() => {
+                resetTileReveal();
+            }, 500);
+        }
+    });
+    
     // Add beforeunload listener for page refresh detection
     window.addEventListener('beforeunload', () => {
         console.log('Tile reveal: Page unload detected, will reset on next load');

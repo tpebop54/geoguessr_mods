@@ -292,3 +292,24 @@ const applyDisplayFilters = (filterStr, transformStr) => {
         canvas3d.style.transform = transformStr;
     }
 };
+
+// Add round start and reactivation event listeners
+window.addEventListener('gg_round_start', (evt) => {
+    console.debug('Display mod: Custom round start event detected');
+    const mod = MODS.displayOptions;
+    if (isModActive(mod)) {
+        setTimeout(() => {
+            updateDisplayOptions(true); // Force reapplication
+        }, 500);
+    }
+});
+
+window.addEventListener('gg_mods_reactivate', (evt) => {
+    console.debug('Display mod: Mod reactivation event detected');
+    const mod = MODS.displayOptions;
+    if (isModActive(mod)) {
+        setTimeout(() => {
+            updateDisplayOptions(true); // Force reapplication
+        }, 500);
+    }
+});

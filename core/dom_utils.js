@@ -323,8 +323,10 @@ const makeOptionMenu = (mod) => {
 };
 
 const updateMod = (mod, forceState = null) => {
+    // If mods aren't loaded, log a warning but continue with the update
+    // This allows mods to be activated during round transitions
     if (!_MODS_LOADED) {
-        return;
+        console.debug(`Warning: Updating mod ${mod.name} while _MODS_LOADED is false. This may indicate a round transition.`);
     }
 
     const previousState = isModActive(mod);
@@ -339,7 +341,14 @@ const updateMod = (mod, forceState = null) => {
     }
 
     mod.active = newState;
-    getModButton(mod).textContent = getButtonText(mod);
+    
+    // Safety check: only try to update button text if the button exists
+    const button = getModButton(mod);
+    if (button) {
+        button.textContent = getButtonText(mod);
+    } else {
+        console.debug(`Button for mod ${mod.name} not found, may be during round transition`);
+    }
 
     saveState();
     return newState;
