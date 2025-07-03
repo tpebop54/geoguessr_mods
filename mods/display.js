@@ -184,9 +184,42 @@ const getFilterStr = (mod) => { // Get string that can be applied to streetview 
     return filterStr;
 };
 
+// Location tracking for display options persistence
+let displayLocationTrackingActive = false;
+
+const setupDisplayLocationTracking = () => {
+    if (displayLocationTrackingActive) return;
+    
+    if (!window.GG_LOCATION_TRACKER) {
+        console.warn('Display mod: Location tracker not available, options may not persist');
+        return;
+    }
+    
+    window.GG_LOCATION_TRACKER.subscribe('display-options', (newUrl, oldUrl) => {
+        console.debug('Display mod: Location change detected, restoring display options');
+        
+        // Small delay to allow the page to settle
+        setTimeout(() => {
+            const mod = MODS.displayOptions;
+            if (isModActive(mod)) {
+                console.debug('Display mod: Reapplying display options after location change');
+                updateDisplayOptions(true); // Force reapplication
+            }
+        }, 500);
+    }, 1000);
+    
+    displayLocationTrackingActive = true;
+    console.debug('Display mod: Location tracking enabled for options persistence');
+};
+
 const updateDisplayOptions = (forceState = null) => {
     const mod = MODS.displayOptions;
     const active = updateMod(mod, forceState);
+
+    // Setup location tracking if not already active and mod is being enabled
+    if (active && !displayLocationTrackingActive) {
+        setupDisplayLocationTracking();
+    }
 
     _updateTidy(mod);
 
@@ -220,25 +253,42 @@ const updateDisplayOptions = (forceState = null) => {
         if (canvas3d && IS_OPERA) {
             canvas3d.classList.remove('opera-friendly-filter');
         }
+        
+        // Cleanup location tracking if mod is disabled
+        if (displayLocationTrackingActive && window.GG_LOCATION_TRACKER) {
+            window.GG_LOCATION_TRACKER.unsubscribe('display-options');
+            displayLocationTrackingActive = false;
+            console.debug('Display mod: Location tracking disabled');
+        }
     }
     
+    // Apply the filters and transforms
+    applyDisplayFilters(filterStr, transformStr);
+};
+
+const applyDisplayFilters = (filterStr, transformStr) => {
     const canvas3d = getBigMapCanvas();
-    if (canvas3d) {
-        // For Opera, apply filters more efficiently
-        if (IS_OPERA) {
-            // Add Opera-friendly CSS class for better performance
-            canvas3d.classList.add('opera-friendly-filter');
-            
-            console.debug('Opera: Applying filters with optimization:', filterStr, transformStr);
-            
-            // Use requestAnimationFrame to avoid blocking the main thread
-            requestAnimationFrame(() => {
-                canvas3d.style.filter = filterStr;
-                canvas3d.style.transform = transformStr;
-            });
-        } else {
+    if (!canvas3d) {
+        console.debug('Display mod: Canvas not available yet, retrying...');
+        // Retry after a short delay if canvas is not available
+        setTimeout(() => applyDisplayFilters(filterStr, transformStr), 200);
+        return;
+    }
+    
+    // For Opera, apply filters more efficiently
+    if (IS_OPERA) {
+        // Add Opera-friendly CSS class for better performance
+        canvas3d.classList.add('opera-friendly-filter');
+        
+        console.debug('Opera: Applying filters with optimization:', filterStr, transformStr);
+        
+        // Use requestAnimationFrame to avoid blocking the main thread
+        requestAnimationFrame(() => {
             canvas3d.style.filter = filterStr;
             canvas3d.style.transform = transformStr;
-        }
+        });
+    } else {
+        canvas3d.style.filter = filterStr;
+        canvas3d.style.transform = transformStr;
     }
 };
