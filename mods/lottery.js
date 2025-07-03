@@ -73,8 +73,25 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         evt.stopPropagation();
     });
 
+    // Create reset button with circular arrow symbol
+    const resetButton = document.createElement('button');
+    resetButton.id = 'gg-lottery-reset-button';
+    resetButton.innerHTML = '↻'; // Circular arrow reset symbol
+    resetButton.title = 'Reset token count'; // Tooltip
+    
+    // Prevent dragging when clicking the reset button
+    resetButton.addEventListener('mousedown', (evt) => {
+        evt.stopPropagation();
+    });
+
+    // Create a button container to hold both buttons side by side
+    const buttonContainer = document.createElement('div');
+    buttonContainer.id = 'gg-lottery-button-container';
+    buttonContainer.appendChild(button);
+    buttonContainer.appendChild(resetButton);
+
     container.appendChild(counterDiv);
-    container.appendChild(button);
+    container.appendChild(buttonContainer);
     document.body.appendChild(container);
 
     _LOTTERY_DISPLAY = container;
@@ -111,6 +128,15 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         setMapCenter(lat, lng);
     };
     button.addEventListener('click', onClick);
+
+    // Reset button functionality
+    const onReset = () => {
+        const mod = MODS.lottery;
+        _LOTTERY_COUNT = getOption(mod, 'nGuesses'); // Reset to original amount
+        counter.innerText = _LOTTERY_COUNT;
+        console.log('Lottery: Token count reset to', _LOTTERY_COUNT);
+    };
+    resetButton.addEventListener('click', onReset);
 };
 
 // Set lottery-specific map interaction mode (allow zoom/pan, block clicks)

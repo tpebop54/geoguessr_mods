@@ -322,13 +322,36 @@ const lotteryStyles = `
 
     #gg-lottery-button {
         font-size: 25px;
-        margin-top: 0.5em;
         border-radius: 10px;
         padding: 5px 20px;
         color: white;
         background: black;
         opacity: 75%;
         cursor: pointer;
+        border: none;
+    }
+
+    #gg-lottery-button-container {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-top: 0.5em;
+    }
+
+    #gg-lottery-reset-button {
+        font-size: 25px;
+        border-radius: 10px;
+        padding: 5px 12px;
+        color: white;
+        background: #c41e3a;
+        opacity: 75%;
+        cursor: pointer;
+        border: none;
+        transition: opacity 0.2s ease;
+    }
+
+    #gg-lottery-reset-button:hover {
+        opacity: 90%;
     }
 `;
 
