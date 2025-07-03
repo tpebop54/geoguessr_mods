@@ -11,8 +11,6 @@ let _LOTTERY_COUNT; // How many remaining guesses you have.
 let _LOTTERY_DRAGGING = false; // Makes lottery display draggable because it overlaps the menu.
 let _LOTTERY_DRAGGING_OFFSET_X; // X offset from mouse to element edge when dragging starts.
 let _LOTTERY_DRAGGING_OFFSET_Y; // Y offset from mouse to element edge when dragging starts.
-let _LOTTERY_CURRENT_LOCATION = window.location.href; // Track current location for reset detection
-let _LOCATION_CHECK_INTERVAL; // Interval for checking location changes
 
 const removeLotteryDisplay = () => {
     if (_LOTTERY_DISPLAY) {
@@ -180,12 +178,6 @@ const setLotteryMapMode = (enabled = true) => {
     }
 };
 
-const checkForLocationChange = () => {
-    if (window.location.href !== _LOTTERY_CURRENT_LOCATION) {
-        resetLotteryCount();
-    }
-};
-
 const resetLotteryCount = () => {
     const mod = MODS.lottery;
     if (!mod.active) {
@@ -202,19 +194,16 @@ const resetLotteryCount = () => {
     if (counter) {
         counter.innerText = _LOTTERY_COUNT;
     }
-    
-    // Update current location tracking
-    _LOTTERY_CURRENT_LOCATION = window.location.href;
 };
 
 const startLocationTracking = () => {
-    // Clear any existing interval
-    if (_LOCATION_CHECK_INTERVAL) {
-        clearInterval(_LOCATION_CHECK_INTERVAL);
-    }
-    
-    // Start checking for location changes every 2 seconds
-    _LOCATION_CHECK_INTERVAL = setInterval(checkForLocationChange, 2000);
+    // Register with the global location tracker
+    window.GG_LOCATION_TRACKER.subscribe('lottery', (newUrl, oldUrl) => {
+        // Check if this is a significant location change (new round/page)
+        if (window.GG_LOCATION_TRACKER.isSignificantLocationChange(oldUrl, newUrl)) {
+            resetLotteryCount();
+        }
+    }, 2000); // Check every 2 seconds
     
     // Add beforeunload listener for page refresh detection
     window.addEventListener('beforeunload', () => {
@@ -224,17 +213,18 @@ const startLocationTracking = () => {
     // Add visibility change listener for tab focus/reload detection
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
-            // Page became visible again, check if we need to reset
-            setTimeout(checkForLocationChange, 100);
+            // Page became visible again, trigger a check
+            setTimeout(() => {
+                const currentUrl = window.GG_LOCATION_TRACKER.getCurrentUrl();
+                resetLotteryCount();
+            }, 100);
         }
     });
 };
 
 const stopLocationTracking = () => {
-    if (_LOCATION_CHECK_INTERVAL) {
-        clearInterval(_LOCATION_CHECK_INTERVAL);
-        _LOCATION_CHECK_INTERVAL = null;
-    }
+    // Unregister from the global location tracker
+    window.GG_LOCATION_TRACKER.unsubscribe('lottery');
 };
 
 const updateLottery = (forceState = null) => {
@@ -251,9 +241,6 @@ const updateLottery = (forceState = null) => {
         
         // Start location tracking when the mod is activated
         startLocationTracking();
-        
-        // Update current location
-        _LOTTERY_CURRENT_LOCATION = window.location.href;
     } else {
         const container = document.querySelector(`#gg-lottery`);
         if (container) {
