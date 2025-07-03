@@ -196,7 +196,7 @@ const resetLotteryCount = () => {
     }
 };
 
-const startLocationTracking = () => {
+const startLotteryLocationTracking = () => {
     // Register with the global location tracker
     window.GG_LOCATION_TRACKER.subscribe('lottery', (newUrl, oldUrl) => {
         // Check if this is a significant location change (new round/page)
@@ -222,7 +222,7 @@ const startLocationTracking = () => {
     });
 };
 
-const stopLocationTracking = () => {
+const stopLotteryLocationTracking = () => {
     // Unregister from the global location tracker
     window.GG_LOCATION_TRACKER.unsubscribe('lottery');
 };
@@ -240,7 +240,7 @@ const updateLottery = (forceState = null) => {
         setLotteryMapMode(true); // Enable lottery mode (zoom/pan allowed, clicks blocked)
         
         // Start location tracking when the mod is activated
-        startLocationTracking();
+        startLotteryLocationTracking();
     } else {
         const container = document.querySelector(`#gg-lottery`);
         if (container) {
@@ -249,7 +249,7 @@ const updateLottery = (forceState = null) => {
         setLotteryMapMode(false); // Restore normal map mode
         
         // Stop location tracking when the mod is deactivated
-        stopLocationTracking();
+        stopLotteryLocationTracking();
     }
 };
 
@@ -314,4 +314,4 @@ if (typeof GG_ROUND !== 'undefined') {
 }
 
 // Start tracking location changes
-startLocationTracking();
+startLotteryLocationTracking();

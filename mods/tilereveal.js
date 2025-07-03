@@ -153,7 +153,7 @@ const resetTileReveal = () => {
     makeTiles(nRows, nCols);
 };
 
-const startLocationTracking = () => {
+const startTileRevealLocationTracking = () => {
     // Register with the global location tracker
     window.GG_LOCATION_TRACKER.subscribe('tilereveal', (newUrl, oldUrl) => {
         // Check if this is a significant location change (new round/page)
@@ -190,7 +190,7 @@ const startLocationTracking = () => {
     });
 };
 
-const stopLocationTracking = () => {
+const stopTileRevealLocationTracking = () => {
     // Unregister from the global location tracker
     window.GG_LOCATION_TRACKER.unsubscribe('tilereveal');
 };
@@ -208,12 +208,12 @@ const updateTileReveal = (forceState = null) => {
         _TILE_COUNT = getTileCount(); // Fix any weird inputs.
         
         // Start location tracking when the mod is activated
-        startLocationTracking();
+        startTileRevealLocationTracking();
     } else {
         removeTiles();
         removeTileCounter();
         
         // Stop location tracking when the mod is deactivated
-        stopLocationTracking();
+        stopTileRevealLocationTracking();
     }
 };
