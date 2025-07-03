@@ -171,17 +171,62 @@ const splitQuote = (quote) => {
 };
 
 const clearCheatOverlay = () => {
-    if (_CHEAT_OVERLAY) {
-        _CHEAT_OVERLAY.parentElement.removeChild(_CHEAT_OVERLAY);
-        _CHEAT_OVERLAY = undefined;
+    if (_CHEAT_OVERLAY && document.body.contains(_CHEAT_OVERLAY)) {
+        // Verify that maps are actually ready before removing
+        const mapsAreReady = (
+            // Check Google Maps objects
+            (typeof getGoogle === 'function' && getGoogle()) ||
+            (typeof GOOGLE_MAP !== 'undefined' && GOOGLE_MAP) ||
+            // Check for DOM elements
+            document.querySelector('.gm-style') ||
+            document.querySelector('.widget-scene-canvas') ||
+            document.querySelector('canvas')
+        );
+        
+        if (!mapsAreReady) {
+            console.debug('Cheat protection: Maps not ready yet, delaying overlay removal');
+            setTimeout(clearCheatOverlay, 500);
+            return;
+        }
+        
+        // Fade out the overlay for a smoother transition
+        _CHEAT_OVERLAY.style.transition = 'opacity 0.5s ease-out';
+        _CHEAT_OVERLAY.style.opacity = '0';
+        
+        // Remove after transition completes
+        setTimeout(() => {
+            if (_CHEAT_OVERLAY && document.body.contains(_CHEAT_OVERLAY)) {
+                try {
+                    _CHEAT_OVERLAY.parentElement.removeChild(_CHEAT_OVERLAY);
+                } catch (err) {
+                    console.error('Cheat protection: Error removing overlay:', err);
+                    // Fallback removal if parent element reference fails
+                    document.body.removeChild(_CHEAT_OVERLAY);
+                }
+                _CHEAT_OVERLAY = undefined;
+                console.debug('Cheat protection: Overlay removed from DOM');
+            }
+        }, 500);
     }
 };
 
 const createQuoteOverlay = () => {
-    clearCheatOverlay();
+    // If overlay already exists, don't create another one
+    if (_CHEAT_OVERLAY && document.body.contains(_CHEAT_OVERLAY)) {
+        console.debug('Cheat protection: Overlay already exists, not recreating');
+        return;
+    }
+    
+    // If body isn't ready, wait for it
+    if (!document.body) {
+        console.debug('Cheat protection: Document body not available for overlay, waiting...');
+        setTimeout(createQuoteOverlay, 100);
+        return;
+    }
     
     // Check if quotes system is ready
     if (!window._QUOTES) {
+        console.debug('Cheat protection: Quotes not loaded yet, waiting...');
         // Quotes not loaded yet, try again after a delay
         setTimeout(() => {
             createQuoteOverlay();
@@ -194,15 +239,17 @@ const createQuoteOverlay = () => {
         try {
             if (typeof initQuotesFlat === 'function') {
                 initQuotesFlat();
+                console.debug('Cheat protection: Quotes initialized, count:', _QUOTES_FLAT.length);
             } else {
-                console.warn('initQuotesFlat function not available yet');
+                console.warn('Cheat protection: initQuotesFlat function not available yet');
             }
         } catch (error) {
-            console.warn('Error initializing quotes:', error);
+            console.warn('Cheat protection: Error initializing quotes:', error);
         }
         
         // If still no quotes after initialization, try again later
         if (_QUOTES_FLAT.length === 0) {
+            console.debug('Cheat protection: Still no quotes after initialization, waiting...');
             setTimeout(() => {
                 createQuoteOverlay();
             }, 200);
@@ -210,10 +257,17 @@ const createQuoteOverlay = () => {
         }
     }
     
+    // Create the overlay now that everything is ready
     createQuoteOverlayNow();
 };
 
 const createQuoteOverlayNow = () => {
+    // If there's already an overlay, don't create another one
+    if (_CHEAT_OVERLAY && document.body.contains(_CHEAT_OVERLAY)) {
+        console.debug('Cheat protection: Overlay already exists, not creating another');
+        return;
+    }
+    
     const cheatOverlay = document.createElement('div'); // Opaque black div that covers everything while the page loads.
     cheatOverlay.id = 'on-your-honor';
     Object.assign(cheatOverlay.style, { // Intentionally not in CSS to make it harder for people to figure out.
@@ -226,6 +280,7 @@ const createQuoteOverlayNow = () => {
         left: '0',
         'overflow-wrap': 'break-word',
         'pointer-events': 'none',
+        transition: 'opacity 0.5s ease-out', // Smooth fade-out transition
     });
     
     const quoteDiv = document.createElement('div');
@@ -275,12 +330,73 @@ const createQuoteOverlayNow = () => {
     // On page load, black out everything. Then, we listen for the google map load event, add a time buffer, and remove it after that.
     // We have to have the map loaded to do the anti-cheat clicks. This is done down below in the map load event bubble.
     cheatOverlay.appendChild(quoteDiv);
-    _CHEAT_OVERLAY = document.body.insertBefore(cheatOverlay, document.body.firstChild);
+    
+    // First check if body is available
+    if (document.body) {
+        _CHEAT_OVERLAY = document.body.insertBefore(cheatOverlay, document.body.firstChild);
+        console.debug('Cheat protection: Overlay added to document body');
+    } else {
+        // If body is not available yet, wait for it
+        console.debug('Cheat protection: Document body not available, waiting...');
+        const bodyCheckInterval = setInterval(() => {
+            if (document.body) {
+                clearInterval(bodyCheckInterval);
+                _CHEAT_OVERLAY = document.body.insertBefore(cheatOverlay, document.body.firstChild);
+                console.debug('Cheat protection: Overlay added to document body after waiting');
+            }
+        }, 50);
+    }
 
-    // Other measures are taken, but no matter what we can't let this div brick the entire site,
-    //   e.g. if they change the URL naming scheme. Race condition with map loading, but so be it.
-    // This also should allow ample time for mods to load after the initial GOOGLE_MAP load. There may be a better way to do this.
-    setTimeout(clearCheatOverlay, 5000);
+    // Use our map waiting utility instead of a simple interval
+    const checkMapsReadyAndRemoveOverlay = () => {
+        try {
+            // Define which elements to look for to determine map readiness
+            const googleLoaded = typeof getGoogle === 'function' && getGoogle();
+            const googleMapsReady = typeof GOOGLE_MAP !== 'undefined' && GOOGLE_MAP && GOOGLE_MAP.getBounds;
+            const googleStreetViewReady = typeof GOOGLE_STREETVIEW !== 'undefined' && GOOGLE_STREETVIEW && GOOGLE_STREETVIEW.getPosition;
+            const canvasElements = document.querySelectorAll('.gm-style, canvas, .widget-scene-canvas');
+            const domElementsReady = canvasElements && canvasElements.length > 0;
+            
+            // Multiple detection strategies for better reliability
+            const strategy1 = googleLoaded && (googleMapsReady || googleStreetViewReady);
+            const strategy2 = domElementsReady;
+            
+            if (strategy1 || strategy2) {
+                console.debug('Cheat protection: Maps are loaded, will remove overlay soon');
+                // Wait a bit after map elements are detected before removing overlay
+                setTimeout(() => {
+                    console.debug('Cheat protection: Removing overlay after map detection');
+                    clearCheatOverlay();
+                }, 1000); // Wait 1 second after map is detected
+                return true;
+            }
+            
+            return false;
+        } catch (err) {
+            console.error('Cheat protection: Error checking map readiness:', err);
+            return false;
+        }
+    };
+
+    // Check immediately first
+    if (checkMapsReadyAndRemoveOverlay()) {
+        return;
+    }
+
+    // If not ready, start interval checking
+    const mapCheckInterval = setInterval(() => {
+        if (checkMapsReadyAndRemoveOverlay()) {
+            clearInterval(mapCheckInterval);
+        }
+    }, 250);
+
+    // Safety timeout - don't let this overlay brick the site
+    const maxOverlayTime = 15000; // 15 seconds max (increased from 10 seconds)
+    setTimeout(() => {
+        clearInterval(mapCheckInterval);
+        console.debug('Cheat protection: Safety timeout reached, removing overlay');
+        clearCheatOverlay();
+    }, maxOverlayTime);
 };
 
 /**
@@ -314,6 +430,35 @@ const initCheatProtection = () => {
     }
     
     createQuoteOverlay();
+    
+    // Add a MutationObserver to watch for the Google Maps canvas insertion
+    // This provides an additional method to detect map loading
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach(mutation => {
+            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                mutation.addedNodes.forEach(node => {
+                    // Look for canvas elements or Google Maps containers
+                    if (node.tagName === 'CANVAS' || 
+                        (node.classList && 
+                         (node.classList.contains('gm-style') || 
+                          node.classList.contains('widget-scene-canvas')))) {
+                        console.debug('Cheat protection: Map element detected by observer');
+                    }
+                });
+            }
+        });
+    });
+    
+    // Start observing the document with the configured parameters
+    observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true
+    });
+    
+    // Safety - stop observing after a reasonable time
+    setTimeout(() => {
+        observer.disconnect();
+    }, 15000);
 };
 
 // Cheat protection enforcement
@@ -333,10 +478,43 @@ const enforceCheatProtection = () => {
     });
 };
 
-// Initialize cheat protection with window load event (matches legacy implementation)
-window.addEventListener('load', () => {
-    // Use setTimeout to ensure all scripts are fully loaded
-    setTimeout(() => {
+// Initialize cheat protection as early as possible
+(() => {
+    // Try to initialize immediately for the fastest possible overlay creation
+    console.debug(`Cheat protection: Initializing (document.readyState=${document.readyState})`);
+    
+    // Create overlay immediately for the fastest path
+    if (_CHEAT_DETECTION && !_YOURE_LOOKING_AT_MY_CODE()) {
+        createQuoteOverlay();
+    }
+    
+    // Add multiple initialization paths to ensure the overlay appears as early as possible
+    if (document.readyState === 'loading') {
+        // Add both DOMContentLoaded and load handlers to ensure overlay appears as early as possible
+        document.addEventListener('DOMContentLoaded', () => {
+            console.debug('Cheat protection: DOMContentLoaded event, creating overlay');
+            initCheatProtection();
+        });
+        
+        window.addEventListener('load', () => {
+            // Make sure overlay is still active after full page load
+            console.debug('Cheat protection: Window load event, checking overlay');
+            if (!_CHEAT_OVERLAY || !document.body.contains(_CHEAT_OVERLAY)) {
+                console.debug('Cheat protection: Overlay not found after load, recreating');
+                initCheatProtection();
+            }
+        });
+    } else {
+        // Document already loaded, initialize immediately
+        console.debug('Cheat protection: Document already loaded, creating overlay immediately');
         initCheatProtection();
-    }, 250);
-});
+    }
+    
+    // Extra insurance - also check after a small delay in case the other methods fail
+    setTimeout(() => {
+        if (!_CHEAT_OVERLAY || !document.body.contains(_CHEAT_OVERLAY)) {
+            console.debug('Cheat protection: Overlay not found after timeout, recreating');
+            initCheatProtection();
+        }
+    }, 100);
+})();
