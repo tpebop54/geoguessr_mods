@@ -127,6 +127,18 @@ const initializeGoogleMapsIntegration = () => {
                 google.maps.event.addListener(this, 'click', (evt) => {
                     onMapClick(evt);
                 });
+                
+                // Add map ready detection for better mod synchronization
+                google.maps.event.addListener(this, 'tilesloaded', () => {
+                    console.debug('Google Maps: 2D map tiles loaded');
+                    // Dispatch custom event that mods can listen for
+                    window.dispatchEvent(new CustomEvent('gg_map_2d_ready', { detail: this }));
+                });
+                
+                google.maps.event.addListener(this, 'idle', () => {
+                    console.debug('Google Maps: 2D map idle (fully loaded)');
+                    window.dispatchEvent(new CustomEvent('gg_map_2d_idle', { detail: this }));
+                });
             }
         }
 
@@ -134,6 +146,25 @@ const initializeGoogleMapsIntegration = () => {
             constructor(...args) {
                 super(...args);
                 GOOGLE_STREETVIEW = this;
+                
+                // Add event listeners for Street View readiness
+                google.maps.event.addListener(this, 'position_changed', () => {
+                    console.debug('Google Maps: Street View position changed');
+                    window.dispatchEvent(new CustomEvent('gg_streetview_position_changed', { detail: this }));
+                });
+                
+                google.maps.event.addListener(this, 'pano_changed', () => {
+                    console.debug('Google Maps: Street View panorama changed');
+                    window.dispatchEvent(new CustomEvent('gg_streetview_pano_changed', { detail: this }));
+                });
+                
+                // Listen for when the panorama is fully loaded
+                this.addListener('status_changed', () => {
+                    if (this.getStatus() === google.maps.StreetViewStatus.OK) {
+                        console.debug('Google Maps: Street View panorama loaded successfully');
+                        window.dispatchEvent(new CustomEvent('gg_streetview_ready', { detail: this }));
+                    }
+                });
             }
         };
 

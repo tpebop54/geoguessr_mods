@@ -211,9 +211,106 @@ const disableModsAsNeeded = () => {
 // Initialize the mod system
 // ===============================================================================================================================
 
+// Track map readiness states
+let mapReadinessState = {
+    map2d: false,
+    map3d: false,
+    streetViewReady: false,
+    tilesLoaded: false,
+    lastRoundStart: 0
+};
+
+// Enhanced map event listeners for more reliable mod activation
+const setupMapEventListeners = () => {
+    // Listen for 2D map events
+    window.addEventListener('gg_map_2d_ready', () => {
+        console.debug('GeoGuessr MultiMod: 2D map ready event received');
+        mapReadinessState.map2d = true;
+        mapReadinessState.tilesLoaded = true;
+        checkAndActivateModsIfReady();
+    });
+    
+    window.addEventListener('gg_map_2d_idle', () => {
+        console.debug('GeoGuessr MultiMod: 2D map idle event received');
+        mapReadinessState.map2d = true;
+        checkAndActivateModsIfReady();
+    });
+    
+    // Listen for Street View events
+    window.addEventListener('gg_streetview_ready', () => {
+        console.debug('GeoGuessr MultiMod: Street View ready event received');
+        mapReadinessState.map3d = true;
+        mapReadinessState.streetViewReady = true;
+        checkAndActivateModsIfReady();
+    });
+    
+    window.addEventListener('gg_streetview_position_changed', () => {
+        console.debug('GeoGuessr MultiMod: Street View position changed');
+        mapReadinessState.map3d = true;
+        checkAndActivateModsIfReady();
+    });
+    
+    // Listen for round start events to reset state
+    window.addEventListener('gg_round_start', (evt) => {
+        console.debug('GeoGuessr MultiMod: Round start event - resetting map readiness state');
+        mapReadinessState = {
+            map2d: false,
+            map3d: false,
+            streetViewReady: false,
+            tilesLoaded: false,
+            lastRoundStart: Date.now()
+        };
+    });
+};
+
+// Check if both maps are ready and activate mods if needed
+const checkAndActivateModsIfReady = () => {
+    // Only proceed if we've had a recent round start
+    if (Date.now() - mapReadinessState.lastRoundStart > 30000) {
+        return; // Too old, ignore
+    }
+    
+    const bothMapsReady = mapReadinessState.map2d && mapReadinessState.map3d;
+    
+    console.debug('GeoGuessr MultiMod: Map readiness check:', {
+        map2d: mapReadinessState.map2d,
+        map3d: mapReadinessState.map3d,
+        bothReady: bothMapsReady,
+        timeSinceRoundStart: Date.now() - mapReadinessState.lastRoundStart
+    });
+    
+    if (bothMapsReady) {
+        console.log('GeoGuessr MultiMod: Both maps are ready, activating mods now!');
+        
+        // Small delay to ensure everything is settled
+        setTimeout(() => {
+            // Ensure buttons exist
+            if (!getModDiv()) {
+                addButtons();
+                bindButtons();
+            }
+            
+            // Reactivate all active mods
+            for (const [mod, callback] of _BINDINGS) {
+                if (mod.active && mod.show) {
+                    console.debug(`Event-triggered reactivation of mod: ${mod.name}`);
+                    try {
+                        callback(true);
+                    } catch (err) {
+                        console.error(`Error in event-triggered reactivation of mod ${mod.name}:`, err);
+                    }
+                }
+            }
+        }, 1000); // 1 second delay for stability
+    }
+};
+
 // Initialize when DOM is ready
 const initializeMods = () => {
     try {
+        // Setup enhanced map event listeners first
+        setupMapEventListeners();
+        
         // Enforce cheat protection
         enforceCheatProtection();
         
@@ -409,6 +506,48 @@ const reactivateActiveMods = () => {
     const activeMods = _BINDINGS.filter(([mod]) => mod.active && mod.show).map(([mod]) => mod.name);
     console.debug('Active mods to reactivate:', activeMods);
     
+    // Enhanced map readiness detection
+    const checkAdvancedMapReadiness = () => {
+        try {
+            // Check for Google API availability
+            const google = getGoogle();
+            if (!google || !google.maps) {
+                console.debug('Google Maps API not available yet');
+                return false;
+            }
+            
+            // Check for 2D map readiness with enhanced detection
+            const map2dReady = (
+                GOOGLE_MAP && 
+                GOOGLE_MAP.getBounds && 
+                typeof GOOGLE_MAP.getBounds === 'function' &&
+                GOOGLE_MAP.getBounds() &&
+                GOOGLE_MAP.getCenter &&
+                typeof GOOGLE_MAP.getCenter === 'function' &&
+                // Also check DOM elements
+                document.querySelector('.gm-style') &&
+                document.querySelector('div[class^="guess-map_canvas__"]')
+            );
+            
+            // Check for 3D map readiness with enhanced detection
+            const map3dReady = (
+                GOOGLE_STREETVIEW && 
+                GOOGLE_STREETVIEW.getPosition &&
+                typeof GOOGLE_STREETVIEW.getPosition === 'function' &&
+                // Check for street view canvas
+                document.querySelector('.widget-scene-canvas') &&
+                // Check that the panorama is actually loaded
+                document.querySelector('[data-qa="panorama"]')
+            );
+            
+            console.debug(`Map readiness check: 2D=${map2dReady}, 3D=${map3dReady}`);
+            return map2dReady && map3dReady;
+        } catch (err) {
+            console.error('Error checking map readiness:', err);
+            return false;
+        }
+    };
+    
     // Ensure buttons are available before reactivation
     const ensureButtonsAndReactivate = () => {
         // First try to add buttons if they don't exist
@@ -420,34 +559,62 @@ const reactivateActiveMods = () => {
             }
         }
         
-        // Wait for maps to be ready before reactivating mods
-        waitForMapsReady(() => {
-            console.debug('Maps ready, reactivating active mods now');
+        // Use enhanced map readiness checking
+        const attemptReactivation = (attempt = 1, maxAttempts = 40) => {
+            if (checkAdvancedMapReadiness()) {
+                console.debug('Maps fully ready, reactivating active mods now');
+                
+                // Add a small additional delay to ensure everything is stable
+                setTimeout(() => {
+                    for (const [mod, callback] of _BINDINGS) {
+                        if (mod.active && mod.show) {
+                            console.debug(`Reactivating mod: ${mod.name}`);
+                            try {
+                                // Force reactivation by setting forceState to true
+                                callback(true);
+                            } catch (err) {
+                                console.error(`Error reactivating mod ${mod.name}:`, err);
+                            }
+                        }
+                    }
+                }, 500); // Small additional delay for stability
+                
+                return;
+            }
             
-            for (const [mod, callback] of _BINDINGS) {
-                if (mod.active && mod.show) {
-                    console.debug(`Reactivating mod: ${mod.name}`);
-                    try {
-                        // Force reactivation by setting forceState to true
-                        callback(true);
-                    } catch (err) {
-                        console.error(`Error reactivating mod ${mod.name}:`, err);
+            if (attempt >= maxAttempts) {
+                console.warn(`Map readiness timeout after ${attempt} attempts, forcing mod reactivation`);
+                
+                // Force reactivation even if maps aren't fully ready
+                for (const [mod, callback] of _BINDINGS) {
+                    if (mod.active && mod.show) {
+                        console.debug(`Force reactivating mod: ${mod.name}`);
+                        try {
+                            callback(true);
+                        } catch (err) {
+                            console.error(`Error force reactivating mod ${mod.name}:`, err);
+                        }
                     }
                 }
+                return;
             }
-        }, {
-            timeout: 8000,             // Longer timeout to ensure maps are fully loaded
-            intervalMs: 200,           // Check more frequently
-            require2D: true,           // Most mods need the 2D map
-            require3D: true,           // Most mods need the 3D map
-            modName: 'ModReactivation' // For logging
-        });
+            
+            // Log progress every few attempts
+            if (attempt % 10 === 0) {
+                console.debug(`Still waiting for maps to be ready, attempt ${attempt}/${maxAttempts}`);
+            }
+            
+            // Try again after a short delay
+            setTimeout(() => attemptReactivation(attempt + 1, maxAttempts), 250);
+        };
+        
+        attemptReactivation();
     };
     
-    // Try immediately and also schedule a retry after a short delay
-    // This ensures buttons are recreated if needed
-    ensureButtonsAndReactivate();
-    setTimeout(ensureButtonsAndReactivate, 1000);
+    // Schedule reactivation with increased delays
+    setTimeout(ensureButtonsAndReactivate, 2000);  // Wait 2 seconds initially
+    setTimeout(ensureButtonsAndReactivate, 4000);  // Retry after 4 seconds
+    setTimeout(ensureButtonsAndReactivate, 6000);  // Final retry after 6 seconds
 };
 
 // Round start event handler
@@ -667,10 +834,23 @@ function initializeEventFramework() {
             
             window.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
             
-            // Re-activate all currently active mods after maps are loaded
+            // Dispatch round_start as a window event so mods can listen for it
+            window.dispatchEvent(new CustomEvent('gg_round_start', { 
+                detail: evt.detail || {} 
+            }));
+            
+            // Delay mod reactivation to allow maps to fully load
+            // Use multiple attempts with increasing delays
             setTimeout(() => {
+                console.log('GeoGuessr MultiMod: First reactivation attempt...');
                 reactivateActiveMods();
-            }, 1500); // Give maps time to load
+            }, 3000); // Increased initial delay to 3 seconds
+            
+            // Backup reactivation attempt in case the first one fails
+            setTimeout(() => {
+                console.log('GeoGuessr MultiMod: Backup reactivation attempt...');
+                reactivateActiveMods();
+            }, 6000); // Backup attempt after 6 seconds
             
             try {
                 let round, mapID;
@@ -890,4 +1070,74 @@ const stopGlobalMapLoading = () => {
         lastAttemptedMapId = null;
         console.log('GeoGuessr MultiMod: Stopped global background map loading');
     }
+};
+
+// Enhanced debugging for mod activation issues
+const debugModActivation = () => {
+    console.group('🔧 GeoGuessr MultiMod Debug Information');
+    
+    console.log('📍 Current Location:', window.location.href);
+    console.log('🎯 Game Elements Check:');
+    console.log('  - Big Map Container:', !!getBigMapContainer());
+    console.log('  - Small Map Container:', !!getSmallMapContainer());
+    console.log('  - Game Content:', !!getGameContent());
+    console.log('  - Panorama Element:', !!document.querySelector('[data-qa="panorama"]'));
+    console.log('  - Canvas Element:', !!document.querySelector('.widget-scene-canvas'));
+    
+    console.log('🗺️ Google Maps State:');
+    console.log('  - GOOGLE_MAP exists:', !!GOOGLE_MAP);
+    if (GOOGLE_MAP) {
+        try {
+            console.log('  - GOOGLE_MAP has getBounds:', typeof GOOGLE_MAP.getBounds === 'function');
+            console.log('  - GOOGLE_MAP bounds:', GOOGLE_MAP.getBounds ? GOOGLE_MAP.getBounds() : 'N/A');
+            console.log('  - GOOGLE_MAP center:', GOOGLE_MAP.getCenter ? GOOGLE_MAP.getCenter() : 'N/A');
+        } catch (err) {
+            console.log('  - Error checking GOOGLE_MAP:', err.message);
+        }
+    }
+    
+    console.log('  - GOOGLE_STREETVIEW exists:', !!GOOGLE_STREETVIEW);
+    if (GOOGLE_STREETVIEW) {
+        try {
+            console.log('  - GOOGLE_STREETVIEW has getPosition:', typeof GOOGLE_STREETVIEW.getPosition === 'function');
+            console.log('  - GOOGLE_STREETVIEW position:', GOOGLE_STREETVIEW.getPosition ? GOOGLE_STREETVIEW.getPosition() : 'N/A');
+        } catch (err) {
+            console.log('  - Error checking GOOGLE_STREETVIEW:', err.message);
+        }
+    }
+    
+    console.log('🎮 Game State:');
+    console.log('  - GG_ROUND:', !!GG_ROUND);
+    console.log('  - GG_MAP:', !!GG_MAP);
+    console.log('  - Map Readiness State:', mapReadinessState);
+    
+    console.log('🔲 Mod Buttons:');
+    console.log('  - Mod container exists:', !!getModDiv());
+    console.log('  - Button count:', document.querySelectorAll('.gg-mod-button').length);
+    console.log('  - _MODS_LOADED:', _MODS_LOADED);
+    
+    console.log('🎛️ Active Mods:');
+    const activeMods = _BINDINGS.filter(([mod]) => mod.active && mod.show);
+    activeMods.forEach(([mod]) => {
+        console.log(`  - ${mod.name}: ${mod.active ? '✅' : '❌'}`);
+    });
+    
+    console.groupEnd();
+};
+
+// Add debug command to global scope for easy access
+window.debugGGMods = debugModActivation;
+
+// Manual reactivation function for debugging
+window.reactivateGGMods = () => {
+    console.log('🔄 Manually triggering mod reactivation...');
+    debugModActivation();
+    reactivateActiveMods();
+};
+
+// Function to force check map readiness
+window.checkGGMapsReady = () => {
+    console.log('🔍 Checking map readiness...');
+    debugModActivation();
+    checkAndActivateModsIfReady();
 };

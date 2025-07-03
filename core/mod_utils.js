@@ -390,8 +390,8 @@ const getGGMapWithFallback = async (maxWaitTime = 5000) => {
 // Utility function for mods to wait for both 2D and 3D maps to be ready
 const waitForMapsReady = (callback, options = {}) => {
     const {
-        timeout = 8000,        // Increased timeout
-        intervalMs = 100,
+        timeout = 10000,       // Increased timeout to 10 seconds
+        intervalMs = 200,
         require2D = true,
         require3D = true,
         modName = 'Unknown'
@@ -401,36 +401,84 @@ const waitForMapsReady = (callback, options = {}) => {
     
     const checkMapsReady = () => {
         try {
-            // Enhanced 2D map detection with fallbacks
-            const map2dReady = !require2D || (
-                // Primary check: Google Map object with bounds
-                (GOOGLE_MAP && GOOGLE_MAP.getBounds && GOOGLE_MAP.getBounds()) ||
-                // Secondary check: Map DOM elements
-                (document.querySelector('.gm-style') && document.querySelector('.guess-map_canvas__'))
+            // Check Google API availability first
+            const google = getGoogle();
+            if (!google || !google.maps) {
+                return false;
+            }
+            
+            // Enhanced 2D map detection with multiple fallbacks
+            let map2dReady = !require2D;
+            if (require2D) {
+                map2dReady = (
+                    // Primary check: Google Map object with proper methods and data
+                    (GOOGLE_MAP && 
+                     GOOGLE_MAP.getBounds && 
+                     typeof GOOGLE_MAP.getBounds === 'function' &&
+                     GOOGLE_MAP.getCenter &&
+                     typeof GOOGLE_MAP.getCenter === 'function' &&
+                     GOOGLE_MAP.getBounds() && 
+                     GOOGLE_MAP.getCenter()) ||
+                    // Secondary check: Map DOM elements with actual content
+                    (document.querySelector('.gm-style') && 
+                     document.querySelector('.guess-map_canvas__') &&
+                     document.querySelector('.gm-style img')) // Check for actual map tiles
+                );
+            }
+            
+            // Enhanced 3D map detection with multiple fallbacks
+            let map3dReady = !require3D;
+            if (require3D) {
+                map3dReady = (
+                    // Primary check: Google StreetView object with proper methods and data
+                    (GOOGLE_STREETVIEW && 
+                     GOOGLE_STREETVIEW.getPosition && 
+                     typeof GOOGLE_STREETVIEW.getPosition === 'function' &&
+                     GOOGLE_STREETVIEW.getPov &&
+                     typeof GOOGLE_STREETVIEW.getPov === 'function' &&
+                     GOOGLE_STREETVIEW.getPosition()) ||
+                    // Secondary check: Street view canvas with actual content
+                    (document.querySelector('.widget-scene-canvas') &&
+                     document.querySelector('[data-qa="panorama"]') &&
+                     // Check that the canvas has actual rendering
+                     (() => {
+                         const canvas = document.querySelector('.widget-scene-canvas');
+                         return canvas && canvas.width > 0 && canvas.height > 0;
+                     })())
+                );
+            }
+            
+            // Additional check: ensure basic game elements are present
+            const gameElementsReady = (
+                document.querySelector('div[class^="game_content__"]') ||
+                document.querySelector('[data-qa="panorama"]')
             );
             
-            // Enhanced 3D map detection with fallbacks
-            const map3dReady = !require3D || (
-                // Primary check: Google StreetView object with position
-                (GOOGLE_STREETVIEW && GOOGLE_STREETVIEW.getPosition && GOOGLE_STREETVIEW.getPosition()) ||
-                // Secondary check: Canvas DOM elements
-                (document.querySelector('.widget-scene-canvas'))
-            );
+            const allReady = map2dReady && map3dReady && gameElementsReady;
             
-            if (map2dReady && map3dReady) {
-                console.debug(`${modName}: Maps ready, executing callback`);
+            if (allReady) {
+                console.debug(`${modName}: All maps ready, executing callback`);
                 callback();
                 return true;
             }
             
-            // Log detailed status for debugging
-            if (Date.now() - startTime > 3000 && (Date.now() - startTime) % 1000 < intervalMs) {
-                console.debug(`${modName}: Still waiting for maps: 2D=${map2dReady}, 3D=${map3dReady}, elapsed=${Date.now() - startTime}ms`);
+            // Enhanced logging for debugging
+            const elapsed = Date.now() - startTime;
+            if (elapsed > 2000 && elapsed % 2000 < intervalMs) {
+                console.debug(`${modName}: Still waiting for maps: 2D=${map2dReady}, 3D=${map3dReady}, gameElements=${gameElementsReady}, elapsed=${elapsed}ms`);
+                
+                // Additional debugging info
+                if (!map2dReady && require2D) {
+                    console.debug(`${modName}: 2D map issues - GOOGLE_MAP exists: ${!!GOOGLE_MAP}, getBounds: ${!!(GOOGLE_MAP && GOOGLE_MAP.getBounds)}, DOM: ${!!document.querySelector('.gm-style')}`);
+                }
+                if (!map3dReady && require3D) {
+                    console.debug(`${modName}: 3D map issues - GOOGLE_STREETVIEW exists: ${!!GOOGLE_STREETVIEW}, getPosition: ${!!(GOOGLE_STREETVIEW && GOOGLE_STREETVIEW.getPosition)}, Canvas: ${!!document.querySelector('.widget-scene-canvas')}`);
+                }
             }
             
-            if (Date.now() - startTime > timeout) {
-                console.warn(`${modName}: Timeout waiting for maps, executing callback anyway`);
-                console.warn(`${modName}: 2D ready: ${map2dReady}, 3D ready: ${map3dReady}`);
+            if (elapsed > timeout) {
+                console.warn(`${modName}: Timeout waiting for maps after ${timeout}ms, executing callback anyway`);
+                console.warn(`${modName}: Final state - 2D ready: ${map2dReady}, 3D ready: ${map3dReady}, gameElements: ${gameElementsReady}`);
                 callback();
                 return true;
             }
@@ -438,7 +486,7 @@ const waitForMapsReady = (callback, options = {}) => {
             return false;
         } catch (err) {
             console.error(`${modName}: Error checking map readiness:`, err);
-            // Continue waiting rather than failing completely
+            // Continue waiting rather than failing completely, but log the error
             return false;
         }
     };
@@ -449,7 +497,7 @@ const waitForMapsReady = (callback, options = {}) => {
     }
 
     // If not ready, start interval checking
-    console.debug(`${modName}: Maps not ready, waiting...`);
+    console.debug(`${modName}: Maps not ready, starting wait cycle...`);
     const checkInterval = setInterval(() => {
         if (checkMapsReady()) {
             clearInterval(checkInterval);
