@@ -73,10 +73,22 @@ async function drawCanvas2d() {
     CANVAS_2D_IS_REDRAWING = true;
 
     try {
+        if (!GOOGLE_STREETVIEW) {
+            throw new Error('GOOGLE_STREETVIEW not available');
+        }
+        
         const loc = GOOGLE_STREETVIEW.getPosition();
+        if (!loc) {
+            throw new Error('Street view position not available');
+        }
+        
         const lat = loc.lat();
         const lng = loc.lng();
         const pov = GOOGLE_STREETVIEW.getPov();
+        if (!pov) {
+            throw new Error('Street view POV not available');
+        }
+        
         const zoom = pov.zoom;
 
         // Calculate tile dimensions based on zoom level
@@ -92,6 +104,9 @@ async function drawCanvas2d() {
         CANVAS_2D.height = nRows * tileSize.height;
         const ctx2d = CANVAS_2D.getContext('2d');
         const panoID = GOOGLE_STREETVIEW.getPano();
+        if (!panoID) {
+            throw new Error('Street view panorama ID not available');
+        }
 
         let tilesLoaded = 0;
         const totalTiles = nCols * nRows;
@@ -367,7 +382,7 @@ const onPuzzleClick = () => {
     }
 };
 
-const updatePuzzle = async (forceState = null) => {
+const updatePuzzleLogic = async (forceState = null) => {
     const mod = MODS.puzzle;
     const active = updateMod(mod, forceState);
 
@@ -375,6 +390,12 @@ const updatePuzzle = async (forceState = null) => {
     clearCanvas2d();
 
     if (!active) {
+        console.debug('Puzzle: Deactivated');
+        return;
+    }
+
+    if (!GOOGLE_STREETVIEW) {
+        console.warn('Puzzle: GOOGLE_STREETVIEW not available');
         return;
     }
 
@@ -385,7 +406,7 @@ const updatePuzzle = async (forceState = null) => {
         try {
             await drawCanvas2d();
         } catch (err) {
-            console.error('Error creating puzzle:', err);
+            console.error('Puzzle: Error creating puzzle:', err);
             return;
         }
         const scattered = scatterCanvas2d(nRows, nCols);
@@ -400,10 +421,23 @@ const updatePuzzle = async (forceState = null) => {
     await makePuzzle();
 
     if (!CANVAS_2D) {
-        console.error(`Canvas is not loaded yet. Can't initiate puzzle.`);
+        console.error(`Puzzle: Canvas is not loaded yet. Can't initiate puzzle.`);
         updateMod(mod, false);
         return;
     }
 
     CANVAS_2D.onpointerdown = onPuzzleClick;
+    console.debug('Puzzle: Successfully activated');
+};
+
+const updatePuzzle = (forceState = null) => {
+    // Convert to sync wrapper since we need async inside but the mod system expects sync
+    waitForMapsReady(() => {
+        updatePuzzleLogic(forceState);
+    }, {
+        require2D: false,
+        require3D: true,
+        modName: 'Puzzle',
+        timeout: 5000
+    });
 };

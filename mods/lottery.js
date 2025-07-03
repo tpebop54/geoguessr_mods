@@ -73,8 +73,25 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         evt.stopPropagation();
     });
 
+    // Create reset button with circular arrow symbol
+    const resetButton = document.createElement('button');
+    resetButton.id = 'gg-lottery-reset-button';
+    resetButton.innerHTML = '↻'; // Circular arrow reset symbol
+    resetButton.title = 'Reset token count'; // Tooltip
+    
+    // Prevent dragging when clicking the reset button
+    resetButton.addEventListener('mousedown', (evt) => {
+        evt.stopPropagation();
+    });
+
+    // Create a button container to hold both buttons side by side
+    const buttonContainer = document.createElement('div');
+    buttonContainer.id = 'gg-lottery-button-container';
+    buttonContainer.appendChild(button);
+    buttonContainer.appendChild(resetButton);
+
     container.appendChild(counterDiv);
-    container.appendChild(button);
+    container.appendChild(buttonContainer);
     document.body.appendChild(container);
 
     _LOTTERY_DISPLAY = container;
@@ -111,6 +128,15 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         setMapCenter(lat, lng);
     };
     button.addEventListener('click', onClick);
+
+    // Reset button functionality
+    const onReset = () => {
+        const mod = MODS.lottery;
+        _LOTTERY_COUNT = getOption(mod, 'nGuesses'); // Reset to original amount
+        counter.innerText = _LOTTERY_COUNT;
+        console.log('Lottery: Token count reset to', _LOTTERY_COUNT);
+    };
+    resetButton.addEventListener('click', onReset);
 };
 
 // Set lottery-specific map interaction mode (allow zoom/pan, block clicks)
@@ -178,6 +204,55 @@ const setLotteryMapMode = (enabled = true) => {
     }
 };
 
+const resetLotteryCount = () => {
+    const mod = MODS.lottery;
+    if (!mod.active) {
+        return; // Only reset if the mod is active
+    }
+    
+    console.log('Lottery: Resetting count due to page/location change');
+    
+    // Reset the counter
+    _LOTTERY_COUNT = getOption(mod, 'nGuesses');
+    
+    // Update the counter display if it exists
+    const counter = document.getElementById('gg-lottery-counter');
+    if (counter) {
+        counter.innerText = _LOTTERY_COUNT;
+    }
+};
+
+const startLotteryLocationTracking = () => {
+    // Register with the global location tracker
+    window.GG_LOCATION_TRACKER.subscribe('lottery', (newUrl, oldUrl) => {
+        // Check if this is a significant location change (new round/page)
+        if (window.GG_LOCATION_TRACKER.isSignificantLocationChange(oldUrl, newUrl)) {
+            resetLotteryCount();
+        }
+    }, 2000); // Check every 2 seconds
+    
+    // Add beforeunload listener for page refresh detection
+    window.addEventListener('beforeunload', () => {
+        console.log('Lottery: Page unload detected, will reset on next load');
+    });
+    
+    // Add visibility change listener for tab focus/reload detection
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            // Page became visible again, trigger a check
+            setTimeout(() => {
+                const currentUrl = window.GG_LOCATION_TRACKER.getCurrentUrl();
+                resetLotteryCount();
+            }, 100);
+        }
+    });
+};
+
+const stopLotteryLocationTracking = () => {
+    // Unregister from the global location tracker
+    window.GG_LOCATION_TRACKER.unsubscribe('lottery');
+};
+
 const updateLottery = (forceState = null) => {
     const mod = MODS.lottery;
     const active = updateMod(mod, forceState);
@@ -189,12 +264,18 @@ const updateLottery = (forceState = null) => {
         _LOTTERY_COUNT = getOption(mod, 'nGuesses'); // Reset lottery count to the configured number of guesses
         makeLotteryDisplay();
         setLotteryMapMode(true); // Enable lottery mode (zoom/pan allowed, clicks blocked)
+        
+        // Start location tracking when the mod is activated
+        startLotteryLocationTracking();
     } else {
         const container = document.querySelector(`#gg-lottery`);
         if (container) {
             container.parentElement.removeChild(container);
         }
         setLotteryMapMode(false); // Restore normal map mode
+        
+        // Stop location tracking when the mod is deactivated
+        stopLotteryLocationTracking();
     }
 };
 
@@ -257,3 +338,6 @@ if (typeof GG_ROUND !== 'undefined') {
         }
     }, 2000);
 }
+
+// Start tracking location changes
+startLotteryLocationTracking();

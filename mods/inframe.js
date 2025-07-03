@@ -7,33 +7,7 @@
 // ===============================================================================================================================
 
 let IN_FRAME_INTERVAL;
-let IN_FRAME_INITIALIZATION_ATTEMPTS = 0;
-const MAX_INITIALIZATION_ATTEMPTS = 50; // 5 seconds worth of attempts
 let IN_FRAME_ROUND_START_LISTENER_ADDED = false;
-
-const isInFrameReady = () => {
-    const smallMapContainer = getSmallMapContainer();
-    const hasGoogleMap = typeof GOOGLE_MAP !== 'undefined' && GOOGLE_MAP;
-    const hasActualLoc = getActualLoc();
-    
-    return smallMapContainer && hasGoogleMap && hasActualLoc;
-};
-
-const initializeInFrame = (forceState = null) => {
-    if (!isInFrameReady()) {
-        IN_FRAME_INITIALIZATION_ATTEMPTS++;
-        if (IN_FRAME_INITIALIZATION_ATTEMPTS < MAX_INITIALIZATION_ATTEMPTS) {
-            console.debug(`InFrame: Dependencies not ready, attempt ${IN_FRAME_INITIALIZATION_ATTEMPTS}/${MAX_INITIALIZATION_ATTEMPTS}`);
-            setTimeout(() => initializeInFrame(forceState), 100);
-            return;
-        } else {
-            console.warn('InFrame: Max initialization attempts reached, some dependencies may not be available');
-        }
-    }
-    
-    console.debug('InFrame: Initializing with dependencies ready');
-    updateInFrameLogic(forceState);
-};
 
 const updateInFrameLogic = (forceState = null) => {
     const mod = MODS.inFrame;
@@ -48,6 +22,11 @@ const updateInFrameLogic = (forceState = null) => {
     }
 
     if (active && smallMapContainer) {
+        if (!GOOGLE_MAP) {
+            console.warn('InFrame: GOOGLE_MAP not available');
+            return;
+        }
+        
         const showInFrame = () => {
             try {
                 const actual = getActualLoc();
@@ -89,21 +68,20 @@ const updateInFrameLogic = (forceState = null) => {
 };
 
 const updateInFrame = (forceState = null) => {
-    // Reset initialization attempts for each activation
-    IN_FRAME_INITIALIZATION_ATTEMPTS = 0;
-    
-    // Check if this is an activation and dependencies aren't ready
-    const mod = MODS.inFrame;
-    const wouldBeActive = forceState !== null ? forceState : !mod.active;
-    
     // Add round start listener if not already added and mod is being activated
-    if (wouldBeActive && !IN_FRAME_ROUND_START_LISTENER_ADDED && typeof GEF !== 'undefined' && GEF.events) {
+    if (!IN_FRAME_ROUND_START_LISTENER_ADDED && typeof GEF !== 'undefined' && GEF.events) {
         GEF.events.addEventListener('round_start', () => {
             console.debug('InFrame: Round start detected, re-initializing');
             if (MODS.inFrame.active) {
                 setTimeout(() => {
-                    IN_FRAME_INITIALIZATION_ATTEMPTS = 0;
-                    initializeInFrame();
+                    waitForMapsReady(() => {
+                        updateInFrameLogic();
+                    }, {
+                        require2D: true,
+                        require3D: false,
+                        modName: 'InFrame (round start)',
+                        timeout: 5000
+                    });
                 }, 1000); // Wait a bit for round to fully initialize
             }
         });
@@ -111,11 +89,19 @@ const updateInFrame = (forceState = null) => {
         console.debug('InFrame: Round start listener added');
     }
     
-    if (wouldBeActive && !isInFrameReady()) {
-        console.debug('InFrame: Mod being activated but dependencies not ready, starting initialization');
-        initializeInFrame(forceState);
-    } else {
-        // Dependencies are ready or we're deactivating, proceed normally
+    // Use the map-safe update system
+    if (forceState === false) {
+        // Deactivating - no need to wait for maps
         updateInFrameLogic(forceState);
+    } else {
+        // Activating or toggling - wait for maps
+        waitForMapsReady(() => {
+            updateInFrameLogic(forceState);
+        }, {
+            require2D: true,
+            require3D: false,
+            modName: 'InFrame',
+            timeout: 5000
+        });
     }
 };

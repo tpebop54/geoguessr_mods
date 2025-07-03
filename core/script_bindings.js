@@ -395,6 +395,23 @@ const ensureGGMapLoaded = () => {
     }
 };
 
+// Function to reactivate all currently active mods
+const reactivateActiveMods = () => {
+    console.log('GeoGuessr MultiMod: Reactivating active mods after round start');
+    
+    for (const [mod, callback] of _BINDINGS) {
+        if (mod.active && mod.show) {
+            console.debug(`Reactivating mod: ${mod.name}`);
+            try {
+                // Force reactivation by setting forceState to true
+                callback(true);
+            } catch (err) {
+                console.error(`Error reactivating mod ${mod.name}:`, err);
+            }
+        }
+    }
+};
+
 // Round start event handler
 handleRoundStart = (evt) => {
     console.log('GeoGuessr MultiMod: Round start detected:', evt);
@@ -411,6 +428,12 @@ handleRoundStart = (evt) => {
     mapDataCheckInterval = setInterval(ensureGGMapLoaded, 3000); // Check every 3 seconds
     
     window.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
+    
+    // Re-activate all currently active mods after maps are loaded
+    setTimeout(() => {
+        reactivateActiveMods();
+    }, 1500); // Give maps time to load
+    
     try {
         let round, mapID;
         
@@ -589,6 +612,9 @@ function initializeEventFramework() {
         handleRoundStart = (evt) => {
             console.log('GeoGuessr MultiMod: Round start detected:', evt);
             
+            // Reset mod button binding state for new round
+            _MODS_LOADED = false;
+            
             // Clear any existing interval
             if (mapDataCheckInterval) {
                 clearInterval(mapDataCheckInterval);
@@ -598,6 +624,12 @@ function initializeEventFramework() {
             mapDataCheckInterval = setInterval(ensureGGMapLoaded, 3000); // Check every 3 seconds
             
             window.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
+            
+            // Re-activate all currently active mods after maps are loaded
+            setTimeout(() => {
+                reactivateActiveMods();
+            }, 1500); // Give maps time to load
+            
             try {
                 let round, mapID;
                 

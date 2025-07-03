@@ -233,6 +233,26 @@ const displayOptionsStyles = `
     }
 `;
 
+// Opera-specific performance optimizations for display filters
+const operaOptimizationStyles = `
+    /* Opera-specific optimizations for better filter performance */
+    canvas, 
+    .widget-panorama-canvas,
+    .widget-panorama-compass,
+    .map-canvas {
+        will-change: filter, transform;
+        backface-visibility: hidden;
+        perspective: 1000px;
+        transform: translateZ(0);
+    }
+    
+    /* Reduce composite layers in Opera for better performance */
+    .opera-friendly-filter {
+        transform: translateZ(0);
+        will-change: filter;
+    }
+`;
+
 // Tile Reveal mod styles
 const tileRevealStyles = `
     #gg-tile-count {
@@ -322,13 +342,36 @@ const lotteryStyles = `
 
     #gg-lottery-button {
         font-size: 25px;
-        margin-top: 0.5em;
         border-radius: 10px;
         padding: 5px 20px;
         color: white;
         background: black;
         opacity: 75%;
         cursor: pointer;
+        border: none;
+    }
+
+    #gg-lottery-button-container {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-top: 0.5em;
+    }
+
+    #gg-lottery-reset-button {
+        font-size: 25px;
+        border-radius: 10px;
+        padding: 5px 12px;
+        color: white;
+        background: #c41e3a;
+        opacity: 75%;
+        cursor: pointer;
+        border: none;
+        transition: opacity 0.2s ease;
+    }
+
+    #gg-lottery-reset-button:hover {
+        opacity: 90%;
     }
 `;
 
@@ -352,8 +395,10 @@ const applyModStyles = () => {
         showScoreStyles +
         flashlightStyles +
         displayOptionsStyles +
+        (IS_OPERA ? operaOptimizationStyles : '') +
         tileRevealStyles +
         lotteryStyles +
+        utilityStyles;
         utilityStyles;
         
     GM_addStyle(combinedStyles);
