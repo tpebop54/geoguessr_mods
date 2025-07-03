@@ -89,6 +89,40 @@ const updateInFrame = (forceState = null) => {
         console.debug('InFrame: Round start listener added');
     }
     
+    // Add custom round start event listener
+    window.addEventListener('gg_round_start', (evt) => {
+        console.debug('InFrame: Custom round start event detected, re-initializing');
+        if (MODS.inFrame.active) {
+            setTimeout(() => {
+                waitForMapsReady(() => {
+                    updateInFrameLogic();
+                }, {
+                    require2D: true,
+                    require3D: false,
+                    modName: 'InFrame (custom round start)',
+                    timeout: 5000
+                });
+            }, 1000);
+        }
+    });
+    
+    // Listen for mod reactivation events
+    window.addEventListener('gg_mods_reactivate', (evt) => {
+        if (MODS.inFrame.active) {
+            console.debug('InFrame: Mod reactivation event detected, re-initializing');
+            setTimeout(() => {
+                waitForMapsReady(() => {
+                    updateInFrameLogic();
+                }, {
+                    require2D: true,
+                    require3D: false,
+                    modName: 'InFrame (reactivation)',
+                    timeout: 5000
+                });
+            }, 1000);
+        }
+    });
+    
     // Use the map-safe update system
     if (forceState === false) {
         // Deactivating - no need to wait for maps

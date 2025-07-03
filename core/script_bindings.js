@@ -399,6 +399,12 @@ const ensureGGMapLoaded = () => {
 const reactivateActiveMods = () => {
     console.log('GeoGuessr MultiMod: Reactivating active mods after round start');
     
+    // Dispatch a custom event that mods can listen for
+    const reactivationEvent = new CustomEvent('gg_mods_reactivate', {
+        detail: { timestamp: Date.now() }
+    });
+    window.dispatchEvent(reactivationEvent);
+    
     for (const [mod, callback] of _BINDINGS) {
         if (mod.active && mod.show) {
             console.debug(`Reactivating mod: ${mod.name}`);
@@ -427,7 +433,13 @@ handleRoundStart = (evt) => {
     // Start periodic check for GG_MAP
     mapDataCheckInterval = setInterval(ensureGGMapLoaded, 3000); // Check every 3 seconds
     
-    window.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
+    // Save current state to localStorage
+    saveState();
+    
+    // Dispatch round_start as a window event so mods can listen for it
+    window.dispatchEvent(new CustomEvent('gg_round_start', { 
+        detail: evt.detail || {} 
+    }));
     
     // Re-activate all currently active mods after maps are loaded
     setTimeout(() => {

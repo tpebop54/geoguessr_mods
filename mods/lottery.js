@@ -257,16 +257,30 @@ const updateLottery = (forceState = null) => {
     const mod = MODS.lottery;
     const active = updateMod(mod, forceState);
 
-    removeLotteryDisplay();
+    // Only remove the display if we're deactivating
+    if (!active) {
+        removeLotteryDisplay();
+    }
 
     const smallMap = getSmallMap();
     if (active) {
-        _LOTTERY_COUNT = getOption(mod, 'nGuesses'); // Reset lottery count to the configured number of guesses
-        makeLotteryDisplay();
+        // If display doesn't exist, create it
+        if (!_LOTTERY_DISPLAY) {
+            _LOTTERY_COUNT = getOption(mod, 'nGuesses'); // Reset lottery count to the configured number of guesses
+            makeLotteryDisplay();
+        }
+        
+        // Ensure lottery map mode is properly set
         setLotteryMapMode(true); // Enable lottery mode (zoom/pan allowed, clicks blocked)
         
         // Start location tracking when the mod is activated
         startLotteryLocationTracking();
+        
+        // Update the counter display to reflect current state
+        const counter = document.getElementById('gg-lottery-counter');
+        if (counter) {
+            counter.innerText = _LOTTERY_COUNT;
+        }
     } else {
         const container = document.querySelector(`#gg-lottery`);
         if (container) {
@@ -277,6 +291,9 @@ const updateLottery = (forceState = null) => {
         // Stop location tracking when the mod is deactivated
         stopLotteryLocationTracking();
     }
+    
+    // Save state after updating
+    saveState();
 };
 
 // Function to handle round start events for the lottery mod
@@ -292,6 +309,9 @@ const onLotteryRoundStart = () => {
             counter.innerText = _LOTTERY_COUNT;
         }
         
+        // Ensure lottery map mode is properly set
+        setLotteryMapMode(true);
+        
         console.log('GeoGuessr MultiMod: Lottery reset for new round, tokens:', _LOTTERY_COUNT);
     }
 };
@@ -304,7 +324,19 @@ const onLotteryRoundEnd = () => {
     }
 };
 
-// Monitor for round changes to show/hide lottery display appropriately
+// Connect to global event system for round events
+window.addEventListener('gg_round_start', (evt) => {
+    onLotteryRoundStart();
+});
+
+// Listen for mod reactivation events
+window.addEventListener('gg_mods_reactivate', (evt) => {
+    if (isModActive(MODS.lottery)) {
+        onLotteryRoundStart();
+    }
+});
+
+// For backward compatibility, also keep the monitor in place
 const monitorRoundStateForLottery = () => {
     let lastRoundState = typeof GG_ROUND !== 'undefined' && GG_ROUND;
     
