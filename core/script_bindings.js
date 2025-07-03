@@ -233,6 +233,28 @@ const setupMapEventListeners = () => {
         }, 200); // Short delay to ensure map is fully initialized
     });
     
+    // Listen for map tiles being fully loaded (important for satellite view)
+    window.addEventListener('gg_map_tiles_loaded', () => {
+        console.debug('GeoGuessr MultiMod: Map tiles loaded, checking for satellite view mod');
+        // Specifically reapply satellite view if it's active
+        const satViewMod = _BINDINGS.find(([mod]) => mod.key === 'satView');
+        if (satViewMod && satViewMod[0].active) {
+            console.debug('GeoGuessr MultiMod: Reapplying satellite view after tiles loaded');
+            setTimeout(() => {
+                satViewMod[1](true); // Force reapply satellite view
+            }, 300);
+        }
+    });
+    
+    // Listen for map being fully ready (backup for all mods)
+    window.addEventListener('gg_map_fully_ready', () => {
+        console.debug('GeoGuessr MultiMod: Map fully ready, doing final mod check');
+        setTimeout(() => {
+            // Final reapplication of all active mods
+            reapplyActiveModsToNewMaps();
+        }, 500);
+    });
+    
     // Listen for 2D map events
     window.addEventListener('gg_map_2d_ready', () => {
         console.debug('GeoGuessr MultiMod: 2D map ready event received');
@@ -1211,4 +1233,58 @@ window.reapplyGGMods = () => {
     console.log('🔧 Manually reapplying mods to current maps...');
     debugModActivation();
     reapplyActiveModsToNewMaps();
+};
+
+// Debug function specifically for satellite view issues
+window.debugSatelliteView = () => {
+    console.group('🛰️ Satellite View Debug Information');
+    
+    const satViewMod = MODS.satView;
+    console.log('Satellite view mod state:', {
+        active: satViewMod?.active,
+        show: satViewMod?.show,
+        key: satViewMod?.key
+    });
+    
+    if (GOOGLE_MAP) {
+        try {
+            console.log('Current map state:', {
+                mapTypeId: GOOGLE_MAP.getMapTypeId(),
+                hasGetBounds: typeof GOOGLE_MAP.getBounds === 'function',
+                hasBounds: !!GOOGLE_MAP.getBounds(),
+                hasGetCenter: typeof GOOGLE_MAP.getCenter === 'function',
+                hasCenter: !!GOOGLE_MAP.getCenter(),
+                hasMapDiv: !!GOOGLE_MAP.getDiv(),
+                hasTiles: !!GOOGLE_MAP.getDiv()?.querySelector('.gm-style img')
+            });
+            
+            // Try to manually set satellite view
+            console.log('Attempting manual satellite view activation...');
+            GOOGLE_MAP.setMapTypeId('satellite');
+            
+            setTimeout(() => {
+                console.log('After manual activation:', {
+                    mapTypeId: GOOGLE_MAP.getMapTypeId()
+                });
+            }, 1000);
+            
+        } catch (err) {
+            console.error('Error in satellite view debug:', err);
+        }
+    } else {
+        console.log('GOOGLE_MAP not available');
+    }
+    
+    console.groupEnd();
+};
+
+// Function to manually force satellite view reapplication
+window.forceSatelliteView = () => {
+    console.log('🛰️ Manually forcing satellite view reapplication...');
+    const satViewBinding = _BINDINGS.find(([mod]) => mod.key === 'satView');
+    if (satViewBinding) {
+        satViewBinding[1](true); // Force reapply
+    } else {
+        console.warn('Satellite view binding not found');
+    }
 };

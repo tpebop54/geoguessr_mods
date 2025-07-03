@@ -133,11 +133,21 @@ const initializeGoogleMapsIntegration = () => {
                     console.debug('Google Maps: 2D map tiles loaded');
                     // Dispatch custom event that mods can listen for
                     window.dispatchEvent(new CustomEvent('gg_map_2d_ready', { detail: this }));
+                    
+                    // Apply any pending satellite view state
+                    setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent('gg_map_tiles_loaded', { detail: this }));
+                    }, 100);
                 });
                 
                 google.maps.event.addListener(this, 'idle', () => {
                     console.debug('Google Maps: 2D map idle (fully loaded)');
                     window.dispatchEvent(new CustomEvent('gg_map_2d_idle', { detail: this }));
+                    
+                    // Additional event for mods that need map to be completely settled
+                    setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent('gg_map_fully_ready', { detail: this }));
+                    }, 200);
                 });
                 
                 // Trigger immediate mod reapplication when this new map instance is created
