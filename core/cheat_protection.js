@@ -114,6 +114,10 @@ const initQuotesFlat = () => {
     }
 };
 
+// Keep track of recently shown quotes to avoid repetition
+const _RECENT_QUOTES = [];
+const MAX_RECENT_QUOTES = 10; // Don't show the same quote until at least this many others have been shown
+
 const getRandomQuote = () => {
     if (!_QUOTES_FLAT.length) {
         // Try to initialize quotes if not already done, but only if function is available
@@ -124,8 +128,39 @@ const getRandomQuote = () => {
             return 'Loading...';
         }
     }
-    const ix = Math.floor(Math.random() * _QUOTES_FLAT.length);
-    const quote = _QUOTES_FLAT[ix];
+    
+    // If we have too few quotes to avoid repetition, just use simple randomization
+    if (_QUOTES_FLAT.length <= MAX_RECENT_QUOTES) {
+        const ix = Math.floor(Math.random() * _QUOTES_FLAT.length);
+        return _QUOTES_FLAT[ix];
+    }
+    
+    // Try to find a quote that hasn't been shown recently
+    let attempts = 0;
+    let ix;
+    let quote;
+    
+    do {
+        // Use a different randomization technique for better distribution
+        // Combine two random calls for improved distribution
+        const r1 = Math.random();
+        const r2 = Math.random();
+        ix = Math.floor((r1 + r2) / 2 * _QUOTES_FLAT.length);
+        quote = _QUOTES_FLAT[ix];
+        attempts++;
+        
+        // Prevent infinite loops - if we've tried many times, just use whatever we have
+        if (attempts > 20) {
+            break;
+        }
+    } while (_RECENT_QUOTES.includes(quote));
+    
+    // Add this quote to recent quotes and remove oldest if needed
+    _RECENT_QUOTES.push(quote);
+    if (_RECENT_QUOTES.length > MAX_RECENT_QUOTES) {
+        _RECENT_QUOTES.shift(); // Remove oldest quote
+    }
+    
     return quote;
 };
 
