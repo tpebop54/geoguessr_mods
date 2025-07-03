@@ -222,6 +222,17 @@ let mapReadinessState = {
 
 // Enhanced map event listeners for more reliable mod activation
 const setupMapEventListeners = () => {
+    // Listen for new map instances being created (most important for immediate mod reapplication)
+    window.addEventListener('gg_new_map_instance', (evt) => {
+        const { type, map, streetView } = evt.detail;
+        console.log(`🗺️ GeoGuessr MultiMod: New ${type} map instance detected, reapplying mods immediately`);
+        
+        // Immediately reapply all active mods to the new map instance
+        setTimeout(() => {
+            reapplyActiveModsToNewMaps();
+        }, 200); // Short delay to ensure map is fully initialized
+    });
+    
     // Listen for 2D map events
     window.addEventListener('gg_map_2d_ready', () => {
         console.debug('GeoGuessr MultiMod: 2D map ready event received');
@@ -303,6 +314,40 @@ const checkAndActivateModsIfReady = () => {
             }
         }, 1000); // 1 second delay for stability
     }
+};
+
+// Immediately reapply active mods to newly created map instances
+const reapplyActiveModsToNewMaps = () => {
+    console.log('🔄 GeoGuessr MultiMod: Reapplying active mods to new map instances');
+    
+    // Get list of currently active mods
+    const activeMods = _BINDINGS.filter(([mod]) => mod.active && mod.show);
+    
+    if (activeMods.length === 0) {
+        console.debug('No active mods to reapply');
+        return;
+    }
+    
+    console.debug(`Reapplying ${activeMods.length} active mods to new maps:`, activeMods.map(([mod]) => mod.name));
+    
+    // Ensure mod buttons exist first
+    if (!getModDiv()) {
+        addButtons();
+        bindButtons();
+    }
+    
+    // Reapply each active mod immediately
+    activeMods.forEach(([mod, callback]) => {
+        console.debug(`🔧 Reapplying mod: ${mod.name}`);
+        try {
+            // Force the mod to reapply by calling with true
+            callback(true);
+        } catch (err) {
+            console.error(`❌ Error reapplying mod ${mod.name}:`, err);
+        }
+    });
+    
+    console.log('✅ GeoGuessr MultiMod: Finished reapplying active mods to new maps');
 };
 
 // Initialize when DOM is ready
@@ -1091,6 +1136,8 @@ const debugModActivation = () => {
             console.log('  - GOOGLE_MAP has getBounds:', typeof GOOGLE_MAP.getBounds === 'function');
             console.log('  - GOOGLE_MAP bounds:', GOOGLE_MAP.getBounds ? GOOGLE_MAP.getBounds() : 'N/A');
             console.log('  - GOOGLE_MAP center:', GOOGLE_MAP.getCenter ? GOOGLE_MAP.getCenter() : 'N/A');
+            console.log('  - GOOGLE_MAP heading:', GOOGLE_MAP.getHeading ? GOOGLE_MAP.getHeading() : 'N/A');
+            console.log('  - GOOGLE_MAP mapTypeId:', GOOGLE_MAP.getMapTypeId ? GOOGLE_MAP.getMapTypeId() : 'N/A');
         } catch (err) {
             console.log('  - Error checking GOOGLE_MAP:', err.message);
         }
@@ -1101,6 +1148,7 @@ const debugModActivation = () => {
         try {
             console.log('  - GOOGLE_STREETVIEW has getPosition:', typeof GOOGLE_STREETVIEW.getPosition === 'function');
             console.log('  - GOOGLE_STREETVIEW position:', GOOGLE_STREETVIEW.getPosition ? GOOGLE_STREETVIEW.getPosition() : 'N/A');
+            console.log('  - GOOGLE_STREETVIEW pov:', GOOGLE_STREETVIEW.getPov ? GOOGLE_STREETVIEW.getPov() : 'N/A');
         } catch (err) {
             console.log('  - Error checking GOOGLE_STREETVIEW:', err.message);
         }
@@ -1119,7 +1167,23 @@ const debugModActivation = () => {
     console.log('🎛️ Active Mods:');
     const activeMods = _BINDINGS.filter(([mod]) => mod.active && mod.show);
     activeMods.forEach(([mod]) => {
-        console.log(`  - ${mod.name}: ${mod.active ? '✅' : '❌'}`);
+        console.log(`  - ${mod.name}: ${mod.active ? '✅' : '❌'} (Button state: ${mod.active ? 'enabled' : 'disabled'})`);
+        
+        // Show specific mod effects for debugging
+        if (mod.key === 'satView' && GOOGLE_MAP) {
+            try {
+                console.log(`    Current mapTypeId: ${GOOGLE_MAP.getMapTypeId()}`);
+            } catch (err) {
+                console.log(`    Error getting mapTypeId: ${err.message}`);
+            }
+        }
+        if (mod.key === 'rotateMap' && GOOGLE_MAP) {
+            try {
+                console.log(`    Current heading: ${GOOGLE_MAP.getHeading()}`);
+            } catch (err) {
+                console.log(`    Error getting heading: ${err.message}`);
+            }
+        }
     });
     
     console.groupEnd();
@@ -1140,4 +1204,11 @@ window.checkGGMapsReady = () => {
     console.log('🔍 Checking map readiness...');
     debugModActivation();
     checkAndActivateModsIfReady();
+};
+
+// Function to manually reapply mods to current maps
+window.reapplyGGMods = () => {
+    console.log('🔧 Manually reapplying mods to current maps...');
+    debugModActivation();
+    reapplyActiveModsToNewMaps();
 };

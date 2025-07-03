@@ -515,16 +515,29 @@ const createMapSafeModUpdate = (originalUpdateFunction, options = {}) => {
     } = options;
 
     return (forceState = null) => {
-        // If maps aren't needed (mod being disabled), we still need to check the mod state
-        // but we can try to determine this from function name or just execute for disable
+        // If mod is being disabled, execute immediately without waiting
         if (forceState === false) {
             console.debug(`${modName}: Deactivating, no need to wait for maps`);
             originalUpdateFunction(forceState);
             return;
         }
 
-        // For enabling or toggling, wait for maps to be ready
+        // Check if maps are immediately available for instant execution
+        const mapsInstantlyAvailable = (
+            (!require2D || (GOOGLE_MAP && GOOGLE_MAP.getBounds && GOOGLE_MAP.getCenter)) &&
+            (!require3D || (GOOGLE_STREETVIEW && GOOGLE_STREETVIEW.getPosition))
+        );
+        
+        if (mapsInstantlyAvailable) {
+            console.debug(`${modName}: Maps immediately available, executing without wait`);
+            originalUpdateFunction(forceState);
+            return;
+        }
+
+        // For enabling or toggling when maps aren't immediately ready, wait for them
+        console.debug(`${modName}: Maps not immediately ready, waiting...`);
         waitForMapsReady(() => {
+            console.debug(`${modName}: Maps became ready, executing now`);
             originalUpdateFunction(forceState);
         }, { require2D, require3D, modName, timeout });
     };

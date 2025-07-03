@@ -139,6 +139,14 @@ const initializeGoogleMapsIntegration = () => {
                     console.debug('Google Maps: 2D map idle (fully loaded)');
                     window.dispatchEvent(new CustomEvent('gg_map_2d_idle', { detail: this }));
                 });
+                
+                // Trigger immediate mod reapplication when this new map instance is created
+                console.debug('Google Maps: New 2D map instance created, scheduling mod reapplication');
+                setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('gg_new_map_instance', { 
+                        detail: { type: '2d', map: this } 
+                    }));
+                }, 100);
             }
         }
 
@@ -165,6 +173,14 @@ const initializeGoogleMapsIntegration = () => {
                         window.dispatchEvent(new CustomEvent('gg_streetview_ready', { detail: this }));
                     }
                 });
+                
+                // Trigger immediate mod reapplication when this new street view instance is created
+                console.debug('Google Maps: New Street View instance created, scheduling mod reapplication');
+                setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('gg_new_map_instance', { 
+                        detail: { type: '3d', streetView: this } 
+                    }));
+                }, 100);
             }
         };
 
