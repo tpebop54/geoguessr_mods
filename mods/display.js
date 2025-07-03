@@ -131,11 +131,6 @@ const removeColorOverlay = () => {
 const makeColorOverlay = () => {
     removeColorOverlay();
 
-    // Skip overlay creation in Opera due to performance issues
-    if (IS_OPERA) {
-        return;
-    }
-
     const bigMapContainer = getBigMapContainer();
     if (!bigMapContainer) {
         return;
@@ -151,11 +146,6 @@ const makeColorOverlay = () => {
 };
 
 const getFilterStr = (mod) => { // Get string that can be applied to streetview canvas filters.
-    // In Opera, CSS filters may have performance issues, so skip them
-    if (IS_OPERA) {
-        return '';
-    }
-    
     const activeFilter = Object.assign({}, _BASE_COLOR_FILTER); // The actual styling that will be applied to the canvas.
     const activeColorMode = getOption(mod, 'colorMode');
     const enabledFilter = _COLOR_FILTERS[activeColorMode] || {};
@@ -170,6 +160,19 @@ const getFilterStr = (mod) => { // Get string that can be applied to streetview 
     if (blurNumber > 0) {
         activeFilter.blur = `${blurNumber}px`;
     }
+    
+    // For Opera, use more performance-friendly filters
+    if (IS_OPERA) {
+        // Limit filters to basic ones that perform better in Opera
+        const operaFriendlyFilters = ['blur', 'brightness', 'contrast', 'saturate', 'grayscale'];
+        for (const key of Object.keys(activeFilter)) {
+            if (!operaFriendlyFilters.includes(key)) {
+                delete activeFilter[key];
+            }
+        }
+        console.debug('Opera: Using performance-optimized filters:', activeFilter);
+    }
+    
     let filterStr = '';
     for (const [key, value] of Object.entries(activeFilter)) {
         if (value == null) {
@@ -210,13 +213,32 @@ const updateDisplayOptions = (forceState = null) => {
             transformStr = transforms.join(' ');
         }
     } else {
-        // When mod is disabled, clear overlays
+        // When mod is disabled, clear overlays and classes
         removeColorOverlay();
+        
+        const canvas3d = getBigMapCanvas();
+        if (canvas3d && IS_OPERA) {
+            canvas3d.classList.remove('opera-friendly-filter');
+        }
     }
     
     const canvas3d = getBigMapCanvas();
     if (canvas3d) {
-        canvas3d.style.filter = filterStr;
-        canvas3d.style.transform = transformStr;
+        // For Opera, apply filters more efficiently
+        if (IS_OPERA) {
+            // Add Opera-friendly CSS class for better performance
+            canvas3d.classList.add('opera-friendly-filter');
+            
+            console.debug('Opera: Applying filters with optimization:', filterStr, transformStr);
+            
+            // Use requestAnimationFrame to avoid blocking the main thread
+            requestAnimationFrame(() => {
+                canvas3d.style.filter = filterStr;
+                canvas3d.style.transform = transformStr;
+            });
+        } else {
+            canvas3d.style.filter = filterStr;
+            canvas3d.style.transform = transformStr;
+        }
     }
 };

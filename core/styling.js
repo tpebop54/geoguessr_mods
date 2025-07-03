@@ -233,6 +233,26 @@ const displayOptionsStyles = `
     }
 `;
 
+// Opera-specific performance optimizations for display filters
+const operaOptimizationStyles = `
+    /* Opera-specific optimizations for better filter performance */
+    canvas, 
+    .widget-panorama-canvas,
+    .widget-panorama-compass,
+    .map-canvas {
+        will-change: filter, transform;
+        backface-visibility: hidden;
+        perspective: 1000px;
+        transform: translateZ(0);
+    }
+    
+    /* Reduce composite layers in Opera for better performance */
+    .opera-friendly-filter {
+        transform: translateZ(0);
+        will-change: filter;
+    }
+`;
+
 // Tile Reveal mod styles
 const tileRevealStyles = `
     #gg-tile-count {
@@ -375,8 +395,10 @@ const applyModStyles = () => {
         showScoreStyles +
         flashlightStyles +
         displayOptionsStyles +
+        (IS_OPERA ? operaOptimizationStyles : '') +
         tileRevealStyles +
         lotteryStyles +
+        utilityStyles;
         utilityStyles;
         
     GM_addStyle(combinedStyles);
