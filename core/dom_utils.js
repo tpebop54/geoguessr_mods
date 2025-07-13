@@ -296,7 +296,12 @@ const makeOptionMenu = (mod) => {
         lineDiv.appendChild(input);
         inputs.push([key, type, input]);
 
-        _OPTION_MENU.appendChild(lineDiv);
+        // Safety check before appending to menu
+        if (_OPTION_MENU) {
+            _OPTION_MENU.appendChild(lineDiv);
+        } else {
+            console.error('Option menu container is null, cannot add option line');
+        }
     };
 
     const onReset = () => {
