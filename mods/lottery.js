@@ -137,15 +137,25 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         // Generate location with criteria if any special options are enabled
         let location;
         if (onlyStreetView || onlyLand) {
-            // Show loading indicator
-            button.textContent = 'Finding location...';
+            // Show loading indicator with more specific message
+            const criteria = [];
+            if (onlyLand) criteria.push('land');
+            if (onlyStreetView) criteria.push('Street View');
+            
+            button.textContent = `Finding ${criteria.join(' + ')}...`;
             button.disabled = true;
             
             try {
-                location = await getRandomLocationWithCriteria(
-                    minLat, maxLat, minLng, maxLng,
-                    onlyStreetView, onlyLand
-                );
+                // Add timeout protection (30 seconds max)
+                location = await Promise.race([
+                    getRandomLocationWithCriteria(
+                        minLat, maxLat, minLng, maxLng,
+                        onlyStreetView, onlyLand
+                    ),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Location search timed out')), 30000)
+                    )
+                ]);
                 
                 if (!location) {
                     console.warn('Lottery: Could not find location meeting criteria, using fallback');
@@ -154,9 +164,17 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
             } catch (error) {
                 console.error('Lottery: Error generating location with criteria:', error);
                 location = getRandomLocSinusoidal(minLat, maxLat, minLng, maxLng);
+                
+                // Show brief error message to user
+                button.textContent = 'Error - using fallback';
+                setTimeout(() => {
+                    button.textContent = 'Insert token';
+                }, 1500);
             } finally {
-                // Restore button
-                button.textContent = 'Insert token';
+                // Restore button (unless we're showing error message)
+                if (!button.textContent.includes('Error')) {
+                    button.textContent = 'Insert token';
+                }
                 button.disabled = false;
             }
         } else {

@@ -792,6 +792,25 @@ const checkStreetViewAvailability = async (lat, lng, radius = 50) => {
 };
 
 /**
+ * Calculate distance between two coordinates in meters using Haversine formula
+ * @param {number} lat1 - First latitude
+ * @param {number} lng1 - First longitude
+ * @param {number} lat2 - Second latitude
+ * @param {number} lng2 - Second longitude
+ * @returns {number} Distance in meters
+ */
+const calculateDistance = (lat1, lng1, lat2, lng2) => {
+    const R = 6371000; // Earth's radius in meters
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+};
+
+/**
  * Find the nearest location with Street View coverage
  * @param {number} lat - Target latitude
  * @param {number} lng - Target longitude
@@ -799,7 +818,7 @@ const checkStreetViewAvailability = async (lat, lng, radius = 50) => {
  * @param {number} maxAttempts - Maximum number of search attempts
  * @returns {Promise<{lat: number, lng: number} | null>} Nearest Street View location or null
  */
-const findNearestStreetView = async (lat, lng, maxRadius = 1000, maxAttempts = 10) => {
+const findNearestStreetView = async (lat, lng, maxRadius = 1000, maxAttempts = 15) => {
     if (!hasGoogleApiKey()) {
         warnMissingApiKey('Street View location search');
         return { lat, lng }; // Return original location if no API key
@@ -810,24 +829,53 @@ const findNearestStreetView = async (lat, lng, maxRadius = 1000, maxAttempts = 1
         return { lat, lng };
     }
     
-    // Search in expanding circles
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        const searchRadius = (maxRadius / maxAttempts) * attempt;
+    let bestLocation = null;
+    let shortestDistance = Infinity;
+    
+    // Search in expanding rings with more systematic coverage
+    for (let radius = 100; radius <= maxRadius; radius += Math.max(100, maxRadius / 10)) {
+        const pointsInRing = Math.max(8, Math.floor(radius / 100) * 8); // More points for larger rings
         
-        // Try multiple points in a circle around the target
-        const points = 8; // 8 points around the circle
-        for (let i = 0; i < points; i++) {
-            const angle = (2 * Math.PI * i) / points;
-            const offsetLat = (searchRadius / 111000) * Math.cos(angle); // ~111km per degree lat
-            const offsetLng = (searchRadius / (111000 * Math.cos(lat * Math.PI / 180))) * Math.sin(angle);
+        for (let i = 0; i < pointsInRing && maxAttempts > 0; i++) {
+            maxAttempts--;
             
-            const testLat = lat + offsetLat;
-            const testLng = lng + offsetLng;
+            const angle = (2 * Math.PI * i) / pointsInRing;
+            
+            // Convert radius to degrees more accurately
+            const latOffset = (radius / 111320) * Math.cos(angle); // 111.32 km per degree latitude
+            const lngOffset = (radius / (111320 * Math.cos(lat * Math.PI / 180))) * Math.sin(angle);
+            
+            const testLat = lat + latOffset;
+            const testLng = lng + lngOffset;
+            
+            // Check bounds
+            if (testLat < -85 || testLat > 85 || testLng < -180 || testLng > 180) {
+                continue;
+            }
             
             if (await checkStreetViewAvailability(testLat, testLng)) {
-                return { lat: testLat, lng: testLng };
+                const distance = calculateDistance(lat, lng, testLat, testLng);
+                if (distance < shortestDistance) {
+                    shortestDistance = distance;
+                    bestLocation = { lat: testLat, lng: testLng };
+                }
+                
+                // If we find something very close, return it immediately
+                if (distance < 50) {
+                    return bestLocation;
+                }
             }
         }
+        
+        // If we found something in this ring, consider stopping early
+        if (bestLocation && shortestDistance < radius * 0.7) {
+            return bestLocation;
+        }
+    }
+    
+    if (bestLocation) {
+        console.log(`Found Street View ${shortestDistance.toFixed(0)}m from target`);
+        return bestLocation;
     }
     
     console.warn(`No Street View found within ${maxRadius}m of ${lat}, ${lng}`);
@@ -848,20 +896,44 @@ const checkIsOnLand = async (lat, lng) => {
     
     return queueApiCall(async () => {
         try {
+            // First try a specific geocoding request
             const url = buildGoogleApiUrl('https://maps.googleapis.com/maps/api/geocode/json', {
                 latlng: `${lat},${lng}`,
-                result_type: 'natural_feature|country|administrative_area_level_1'
+                result_type: 'country|administrative_area_level_1|locality|natural_feature'
             });
             
             const response = await fetch(url);
             const data = await response.json();
             
             if (data.status === 'OK' && data.results.length > 0) {
-                // If we get any geocoding results, it's likely on land
-                return true;
+                // Analyze the results to determine if it's land
+                for (const result of data.results) {
+                    const types = result.types || [];
+                    
+                    // If we find any of these types, it's definitely land
+                    const landTypes = [
+                        'country', 'administrative_area_level_1', 'administrative_area_level_2',
+                        'locality', 'sublocality', 'neighborhood', 'premise', 'street_address',
+                        'route', 'intersection', 'natural_feature'
+                    ];
+                    
+                    if (types.some(type => landTypes.includes(type))) {
+                        return true;
+                    }
+                    
+                    // Check for water-related keywords in the formatted address
+                    const address = result.formatted_address?.toLowerCase() || '';
+                    const waterKeywords = ['ocean', 'sea', 'atlantic', 'pacific', 'indian', 'arctic', 'southern ocean'];
+                    
+                    if (waterKeywords.some(keyword => address.includes(keyword))) {
+                        return false;
+                    }
+                }
+                
+                return true; // If we got results but no water indicators, assume land
             }
             
-            // If no results, might be in water - try a broader search
+            // If no specific results, try a broader search
             const broadUrl = buildGoogleApiUrl('https://maps.googleapis.com/maps/api/geocode/json', {
                 latlng: `${lat},${lng}`
             });
@@ -869,8 +941,13 @@ const checkIsOnLand = async (lat, lng) => {
             const broadResponse = await fetch(broadUrl);
             const broadData = await broadResponse.json();
             
-            // If we get any address components, it's on land
-            return broadData.status === 'OK' && broadData.results.length > 0;
+            if (broadData.status === 'OK' && broadData.results.length > 0) {
+                // If we get any geocoding results at all, it's likely land
+                return true;
+            }
+            
+            // If no geocoding results, likely in water
+            return false;
             
         } catch (error) {
             console.error('Error checking if location is on land:', error);
@@ -890,34 +967,63 @@ const checkIsOnLand = async (lat, lng) => {
  * @param {number} maxAttempts - Maximum attempts to find valid location
  * @returns {Promise<{lat: number, lng: number} | null>} Valid location or null
  */
-const getRandomLocationWithCriteria = async (minLat, maxLat, minLng, maxLng, requireStreetView = false, requireLand = false, maxAttempts = 20) => {
+const getRandomLocationWithCriteria = async (minLat, maxLat, minLng, maxLng, requireStreetView = false, requireLand = false, maxAttempts = 25) => {
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
         // Generate random location using sinusoidal projection
         let location = getRandomLocSinusoidal(minLat, maxLat, minLng, maxLng);
         
-        // Check land requirement first (cheaper API call)
+        console.log(`Attempt ${attempt + 1}: Testing location ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`);
+        
+        // Check land requirement first (generally faster than Street View check)
         if (requireLand) {
             const isOnLand = await checkIsOnLand(location.lat, location.lng);
             if (!isOnLand) {
-                continue; // Try again
+                // Try to find nearest land instead of giving up
+                const nearestLand = await findNearestLand(location.lat, location.lng, 2000, 5);
+                if (!nearestLand) {
+                    console.log(`No land found near ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}, trying new location`);
+                    continue; // Try a completely new location
+                }
+                location = nearestLand;
+                console.log(`Moved to nearest land: ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`);
             }
         }
         
         // Check Street View requirement
         if (requireStreetView) {
-            const streetViewLocation = await findNearestStreetView(location.lat, location.lng);
-            if (!streetViewLocation) {
-                continue; // Try again
+            const hasStreetView = await checkStreetViewAvailability(location.lat, location.lng);
+            if (!hasStreetView) {
+                // Try to find nearest Street View location
+                const streetViewLocation = await findNearestStreetView(location.lat, location.lng, 1500, 10);
+                if (!streetViewLocation) {
+                    console.log(`No Street View found near ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}, trying new location`);
+                    continue; // Try a completely new location
+                }
+                location = streetViewLocation;
+                console.log(`Moved to nearest Street View: ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`);
             }
-            location = streetViewLocation;
         }
         
+        // Double-check that the final location still meets all criteria
+        if (requireLand && !(await checkIsOnLand(location.lat, location.lng))) {
+            console.log(`Final location check failed: not on land`);
+            continue;
+        }
+        
+        if (requireStreetView && !(await checkStreetViewAvailability(location.lat, location.lng))) {
+            console.log(`Final location check failed: no Street View`);
+            continue;
+        }
+        
+        console.log(`✓ Found valid location: ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`);
         return location;
     }
     
     console.warn(`Failed to find location meeting criteria after ${maxAttempts} attempts`);
     // Return a basic random location as fallback
-    return getRandomLocSinusoidal(minLat, maxLat, minLng, maxLng);
+    const fallback = getRandomLocSinusoidal(minLat, maxLat, minLng, maxLng);
+    console.log(`Using fallback location: ${fallback.lat.toFixed(4)}, ${fallback.lng.toFixed(4)}`);
+    return fallback;
 };
 
 // Rate limiting for API calls to avoid quota issues
@@ -964,4 +1070,123 @@ const processApiQueue = async () => {
     }
     
     _isProcessingQueue = false;
+};
+
+/**
+ * Find the nearest location that is on land
+ * @param {number} lat - Target latitude
+ * @param {number} lng - Target longitude
+ * @param {number} maxRadius - Maximum search radius in meters
+ * @param {number} maxAttempts - Maximum number of search attempts
+ * @returns {Promise<{lat: number, lng: number} | null>} Nearest land location or null
+ */
+const findNearestLand = async (lat, lng, maxRadius = 5000, maxAttempts = 20) => {
+    if (!hasGoogleApiKey()) {
+        warnMissingApiKey('Land location search');
+        return { lat, lng }; // Return original location if no API key
+    }
+    
+    // First check the exact location
+    if (await checkIsOnLand(lat, lng)) {
+        return { lat, lng };
+    }
+    
+    let bestLocation = null;
+    let shortestDistance = Infinity;
+    
+    // Search in expanding rings, but prioritize cardinal directions first (likely to hit coastlines)
+    const cardinalDirections = [0, Math.PI/2, Math.PI, 3*Math.PI/2]; // N, E, S, W
+    
+    for (let radius = 500; radius <= maxRadius; radius += Math.max(500, maxRadius / 10)) {
+        // First try cardinal directions (most likely to find coastlines)
+        for (const angle of cardinalDirections) {
+            if (maxAttempts <= 0) break;
+            maxAttempts--;
+            
+            const latOffset = (radius / 111320) * Math.cos(angle);
+            const lngOffset = (radius / (111320 * Math.cos(lat * Math.PI / 180))) * Math.sin(angle);
+            
+            const testLat = lat + latOffset;
+            const testLng = lng + lngOffset;
+            
+            // Check bounds
+            if (testLat < -85 || testLat > 85 || testLng < -180 || testLng > 180) {
+                continue;
+            }
+            
+            if (await checkIsOnLand(testLat, testLng)) {
+                const distance = calculateDistance(lat, lng, testLat, testLng);
+                if (distance < shortestDistance) {
+                    shortestDistance = distance;
+                    bestLocation = { lat: testLat, lng: testLng };
+                }
+                
+                // If we find something close, return it
+                if (distance < 1000) {
+                    return bestLocation;
+                }
+            }
+        }
+        
+        // Then try more points around the circle
+        const pointsInRing = Math.max(8, Math.floor(radius / 500) * 4);
+        for (let i = 0; i < pointsInRing && maxAttempts > 0; i++) {
+            maxAttempts--;
+            
+            const angle = (2 * Math.PI * i) / pointsInRing;
+            
+            // Skip cardinal directions as we already checked them
+            if (cardinalDirections.some(cardAngle => Math.abs(angle - cardAngle) < 0.1)) {
+                continue;
+            }
+            
+            const latOffset = (radius / 111320) * Math.cos(angle);
+            const lngOffset = (radius / (111320 * Math.cos(lat * Math.PI / 180))) * Math.sin(angle);
+            
+            const testLat = lat + latOffset;
+            const testLng = lng + lngOffset;
+            
+            // Check bounds
+            if (testLat < -85 || testLat > 85 || testLng < -180 || testLng > 180) {
+                continue;
+            }
+            
+            if (await checkIsOnLand(testLat, testLng)) {
+                const distance = calculateDistance(lat, lng, testLat, testLng);
+                if (distance < shortestDistance) {
+                    shortestDistance = distance;
+                    bestLocation = { lat: testLat, lng: testLng };
+                }
+            }
+        }
+        
+        // If we found land in this ring and it's reasonably close, return it
+        if (bestLocation && shortestDistance < radius * 0.8) {
+            return bestLocation;
+        }
+    }
+    
+    if (bestLocation) {
+        console.log(`Found land ${shortestDistance.toFixed(0)}m from target`);
+        return bestLocation;
+    }
+    
+    console.warn(`No land found within ${maxRadius}m of ${lat}, ${lng}`);
+    return null;
+};
+
+/**
+ * Add timeout protection to API operations
+ * @param {Promise} promise - The promise to add timeout to
+ * @param {number} timeoutMs - Timeout in milliseconds
+ * @param {string} operationName - Name of the operation for error messages
+ * @returns {Promise} Promise that rejects if timeout is reached
+ */
+const withTimeout = (promise, timeoutMs, operationName = 'API operation') => {
+    return Promise.race([
+        promise,
+        new Promise((_, reject) => 
+            setTimeout(() => reject(new Error(`${operationName} timed out after ${timeoutMs}ms`)), timeoutMs)
+        )
+    ]);
 };
