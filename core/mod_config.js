@@ -166,6 +166,16 @@ const MODS = {
                 default: 180,
                 tooltip: 'Guess up to this many degrees longitude away from the target',
             },
+            onlyStreetView: {
+                label: 'Only Street View',
+                default: false,
+                tooltip: 'Only generate guesses in locations with official Google Street View coverage. Requires Google Maps API key.',
+            },
+            onlyLand: {
+                label: 'Only Land',
+                default: false,
+                tooltip: 'Only generate guesses on land (not in water). Requires additional API calls.',
+            },
 
         },
     },

@@ -9,6 +9,11 @@
 // Lottery mod allows players to place random guesses within a specified radius of the actual location.
 // Uses sinusoidal projection for token distribution to ensure even spread across the Earth's surface,
 // avoiding the clustering near poles that occurs with uniform lat/lng distribution (Mercator issue).
+// 
+// NEW FEATURES:
+// - "Only Street View": Ensures generated locations have official Google Street View coverage (requires API key)
+// - "Only Land": Ensures generated locations are on land, not in water (requires API key)
+// Both features use Google Maps APIs for location validation and will fall back gracefully without API key.
 //
 
 let _LOTTERY_DISPLAY; // Display elements for lottery mod. (counter and button).
@@ -102,7 +107,7 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     _LOTTERY_DISPLAY = container;
 
     // Bind stuff.
-    const onClick = () => {
+    const onClick = async () => {
         if (_LOTTERY_COUNT === 0) {
             return;
         }
@@ -110,6 +115,8 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         const mod = MODS.lottery;
         const nDegLat = getOption(mod, 'nDegLat');
         const nDegLng = getOption(mod, 'nDegLng');
+        const onlyStreetView = getOption(mod, 'onlyStreetView');
+        const onlyLand = getOption(mod, 'onlyLand');
         const actual = getActualLoc();
         const minLat = actual.lat - nDegLat;
         const maxLat = actual.lat + nDegLat;
@@ -126,7 +133,38 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
             minLng = normalizedLng - nDegLng;
             maxLng = normalizedLng + nDegLng;
         }
-        const { lat, lng } = getRandomLocSinusoidal(minLat, maxLat, minLng, maxLng); // Use sinusoidal projection for even distribution
+        
+        // Generate location with criteria if any special options are enabled
+        let location;
+        if (onlyStreetView || onlyLand) {
+            // Show loading indicator
+            button.textContent = 'Finding location...';
+            button.disabled = true;
+            
+            try {
+                location = await getRandomLocationWithCriteria(
+                    minLat, maxLat, minLng, maxLng,
+                    onlyStreetView, onlyLand
+                );
+                
+                if (!location) {
+                    console.warn('Lottery: Could not find location meeting criteria, using fallback');
+                    location = getRandomLocSinusoidal(minLat, maxLat, minLng, maxLng);
+                }
+            } catch (error) {
+                console.error('Lottery: Error generating location with criteria:', error);
+                location = getRandomLocSinusoidal(minLat, maxLat, minLng, maxLng);
+            } finally {
+                // Restore button
+                button.textContent = 'Insert token';
+                button.disabled = false;
+            }
+        } else {
+            // Use simple random location generation
+            location = getRandomLocSinusoidal(minLat, maxLat, minLng, maxLng);
+        }
+        
+        const { lat, lng } = location;
         _LOTTERY_COUNT -= 1;
         counter.innerText = _LOTTERY_COUNT;
         clickAt(lat, lng);
@@ -288,6 +326,9 @@ const updateLottery = (forceState = null) => {
             if (counter) {
                 counter.innerText = _LOTTERY_COUNT;
             }
+            
+            // Check if requirements are met for special options
+            checkLotteryRequirements();
         }, {
             require2D: true,
             require3D: false,
@@ -394,3 +435,53 @@ if (typeof GG_ROUND !== 'undefined') {
 
 // Start tracking location changes
 startLotteryLocationTracking();
+
+/**
+ * Check if lottery mod requirements are met and show warnings if needed
+ */
+const checkLotteryRequirements = () => {
+    const mod = MODS.lottery;
+    if (!isModActive(mod)) return;
+    
+    const onlyStreetView = getOption(mod, 'onlyStreetView');
+    const onlyLand = getOption(mod, 'onlyLand');
+    
+    if ((onlyStreetView || onlyLand) && !hasGoogleApiKey()) {
+        console.warn('Lottery: "Only Street View" and "Only Land" options require a Google Maps API key');
+        
+        // Show user-friendly notification
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #ff9800;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            z-index: 9999;
+            max-width: 300px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        `;
+        notification.innerHTML = `
+            <strong>Lottery Mod Warning</strong><br>
+            "Only Street View" and "Only Land" options require a Google Maps API key.<br>
+            <small>See installer comments for setup instructions or type <code>configureGoogleApiKey()</code> in console.</small>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto-remove notification after 8 seconds
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.parentElement.removeChild(notification);
+            }
+        }, 8000);
+    }
+};
+
+// Check requirements initially and on mod update
+checkLotteryRequirements();
+updateLottery();

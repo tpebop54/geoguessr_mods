@@ -758,3 +758,210 @@ const showApiKeyConfigDialog = () => {
 
 // Add a way to access the config dialog (could be called from console or a button)
 window.configureGoogleApiKey = showApiKeyConfigDialog;
+
+/**
+ * Check if Street View is available at a given location using Google Street View API
+ * @param {number} lat - Latitude
+ * @param {number} lng - Longitude
+ * @param {number} radius - Search radius in meters (default 50m)
+ * @returns {Promise<boolean>} True if Street View is available
+ */
+const checkStreetViewAvailability = async (lat, lng, radius = 50) => {
+    if (!hasGoogleApiKey()) {
+        console.warn('Street View check requires Google Maps API key');
+        return false;
+    }
+    
+    return queueApiCall(async () => {
+        try {
+            const url = buildGoogleApiUrl('https://maps.googleapis.com/maps/api/streetview/metadata', {
+                location: `${lat},${lng}`,
+                radius: radius,
+                source: 'outdoor' // Only official Street View imagery
+            });
+            
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            return data.status === 'OK';
+        } catch (error) {
+            console.error('Error checking Street View availability:', error);
+            return false;
+        }
+    });
+};
+
+/**
+ * Find the nearest location with Street View coverage
+ * @param {number} lat - Target latitude
+ * @param {number} lng - Target longitude
+ * @param {number} maxRadius - Maximum search radius in meters
+ * @param {number} maxAttempts - Maximum number of search attempts
+ * @returns {Promise<{lat: number, lng: number} | null>} Nearest Street View location or null
+ */
+const findNearestStreetView = async (lat, lng, maxRadius = 1000, maxAttempts = 10) => {
+    if (!hasGoogleApiKey()) {
+        warnMissingApiKey('Street View location search');
+        return { lat, lng }; // Return original location if no API key
+    }
+    
+    // First check the exact location
+    if (await checkStreetViewAvailability(lat, lng)) {
+        return { lat, lng };
+    }
+    
+    // Search in expanding circles
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        const searchRadius = (maxRadius / maxAttempts) * attempt;
+        
+        // Try multiple points in a circle around the target
+        const points = 8; // 8 points around the circle
+        for (let i = 0; i < points; i++) {
+            const angle = (2 * Math.PI * i) / points;
+            const offsetLat = (searchRadius / 111000) * Math.cos(angle); // ~111km per degree lat
+            const offsetLng = (searchRadius / (111000 * Math.cos(lat * Math.PI / 180))) * Math.sin(angle);
+            
+            const testLat = lat + offsetLat;
+            const testLng = lng + offsetLng;
+            
+            if (await checkStreetViewAvailability(testLat, testLng)) {
+                return { lat: testLat, lng: testLng };
+            }
+        }
+    }
+    
+    console.warn(`No Street View found within ${maxRadius}m of ${lat}, ${lng}`);
+    return null;
+};
+
+/**
+ * Check if a location is on land (not water) using reverse geocoding
+ * @param {number} lat - Latitude
+ * @param {number} lng - Longitude
+ * @returns {Promise<boolean>} True if location is on land
+ */
+const checkIsOnLand = async (lat, lng) => {
+    if (!hasGoogleApiKey()) {
+        console.warn('Land check requires Google Maps API key');
+        return true; // Assume land if no API key
+    }
+    
+    return queueApiCall(async () => {
+        try {
+            const url = buildGoogleApiUrl('https://maps.googleapis.com/maps/api/geocode/json', {
+                latlng: `${lat},${lng}`,
+                result_type: 'natural_feature|country|administrative_area_level_1'
+            });
+            
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (data.status === 'OK' && data.results.length > 0) {
+                // If we get any geocoding results, it's likely on land
+                return true;
+            }
+            
+            // If no results, might be in water - try a broader search
+            const broadUrl = buildGoogleApiUrl('https://maps.googleapis.com/maps/api/geocode/json', {
+                latlng: `${lat},${lng}`
+            });
+            
+            const broadResponse = await fetch(broadUrl);
+            const broadData = await broadResponse.json();
+            
+            // If we get any address components, it's on land
+            return broadData.status === 'OK' && broadData.results.length > 0;
+            
+        } catch (error) {
+            console.error('Error checking if location is on land:', error);
+            return true; // Assume land on error
+        }
+    });
+};
+
+/**
+ * Generate a random location that meets the specified criteria
+ * @param {number} minLat - Minimum latitude
+ * @param {number} maxLat - Maximum latitude  
+ * @param {number} minLng - Minimum longitude
+ * @param {number} maxLng - Maximum longitude
+ * @param {boolean} requireStreetView - Require Street View availability
+ * @param {boolean} requireLand - Require location to be on land
+ * @param {number} maxAttempts - Maximum attempts to find valid location
+ * @returns {Promise<{lat: number, lng: number} | null>} Valid location or null
+ */
+const getRandomLocationWithCriteria = async (minLat, maxLat, minLng, maxLng, requireStreetView = false, requireLand = false, maxAttempts = 20) => {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        // Generate random location using sinusoidal projection
+        let location = getRandomLocSinusoidal(minLat, maxLat, minLng, maxLng);
+        
+        // Check land requirement first (cheaper API call)
+        if (requireLand) {
+            const isOnLand = await checkIsOnLand(location.lat, location.lng);
+            if (!isOnLand) {
+                continue; // Try again
+            }
+        }
+        
+        // Check Street View requirement
+        if (requireStreetView) {
+            const streetViewLocation = await findNearestStreetView(location.lat, location.lng);
+            if (!streetViewLocation) {
+                continue; // Try again
+            }
+            location = streetViewLocation;
+        }
+        
+        return location;
+    }
+    
+    console.warn(`Failed to find location meeting criteria after ${maxAttempts} attempts`);
+    // Return a basic random location as fallback
+    return getRandomLocSinusoidal(minLat, maxLat, minLng, maxLng);
+};
+
+// Rate limiting for API calls to avoid quota issues
+let _apiCallQueue = [];
+let _isProcessingQueue = false;
+const API_CALL_DELAY = 100; // 100ms between API calls
+
+/**
+ * Add an API call to the rate-limited queue
+ * @param {Function} apiCall - Function that returns a Promise for the API call
+ * @returns {Promise} Promise that resolves with the API call result
+ */
+const queueApiCall = (apiCall) => {
+    return new Promise((resolve, reject) => {
+        _apiCallQueue.push({ call: apiCall, resolve, reject });
+        processApiQueue();
+    });
+};
+
+/**
+ * Process the API call queue with rate limiting
+ */
+const processApiQueue = async () => {
+    if (_isProcessingQueue || _apiCallQueue.length === 0) {
+        return;
+    }
+    
+    _isProcessingQueue = true;
+    
+    while (_apiCallQueue.length > 0) {
+        const { call, resolve, reject } = _apiCallQueue.shift();
+        
+        try {
+            const result = await call();
+            resolve(result);
+        } catch (error) {
+            reject(error);
+        }
+        
+        // Wait before next API call to avoid rate limits
+        if (_apiCallQueue.length > 0) {
+            await new Promise(resolve => setTimeout(resolve, API_CALL_DELAY));
+        }
+    }
+    
+    _isProcessingQueue = false;
+};
