@@ -416,12 +416,15 @@ const updateMod = (mod, forceState = null) => {
     // Safety check: only try to update button text if the button exists
     const button = getModButton(mod);
     if (button) {
-        button.textContent = getButtonText(mod);
+        const newText = getButtonText(mod);
+        button.textContent = newText;
+        console.debug(`Updated button text for ${mod.name}: "${newText}" (active: ${newState})`);
     } else {
         console.debug(`Button for mod ${mod.name} not found, may be during round transition`);
     }
 
     saveState();
+    console.debug(`Mod ${mod.name} state changed to ${newState ? 'active' : 'inactive'}`);
     return newState;
 };
 

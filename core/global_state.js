@@ -47,6 +47,7 @@ const loadState = () => { // Load state from local storage if it exists, else us
             continue;
         }
         mod.active = !!storedMod.active;
+        console.debug(`Restored mod '${key}' active state:`, mod.active);
         if (typeof storedMod.options !== 'object') {
             storedMod.options = {};
         }

@@ -125,7 +125,9 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
                 modButton.id = getModButtonId(mod);
                 modButton.classList.add('gg-mod-button');
                 modButton.title = mod.tooltip;
-                modButton.textContent = getButtonText(mod);
+                const buttonText = getButtonText(mod);
+                modButton.textContent = buttonText;
+                console.debug(`Created button for ${mod.name} with text: "${buttonText}" (active: ${mod.active})`);
                 
                 buttonContainer.appendChild(modButton);
                 buttonCount++;
@@ -138,81 +140,23 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
         modsContainer.appendChild(buttonContainer);
         bigMapContainer.appendChild(modsContainer);
         
-        // Force apply critical styles directly to ensure visibility
-        modsContainer.style.cssText = `
-            position: absolute !important;
-            width: 200px !important;
-            top: 40px !important;
-            left: 20px !important;
-            z-index: 9999 !important;
-            display: flex !important;
-            flex-direction: column !important;
-            background: rgba(0, 0, 0, 0.8) !important;
-            border-radius: 8px !important;
-            padding: 8px !important;
-            color: white !important;
-            font-family: Arial, sans-serif !important;
-        `;
-        
-        headerContainer.style.cssText = `
-            display: flex !important;
-            align-items: center !important;
-            font-size: 16px !important;
-            justify-content: space-between !important;
-            margin-bottom: 8px !important;
-        `;
-        
-        headerText.style.cssText = `
-            font-weight: bold !important;
-            color: white !important;
-        `;
-        
-        modMenuToggle.style.cssText = `
-            padding: 2px 6px !important;
-            font-size: 14px !important;
-            cursor: pointer !important;
-            background: rgba(255, 255, 255, 0.2) !important;
-            border: none !important;
-            border-radius: 3px !important;
-            color: white !important;
-        `;
-        
-        buttonContainer.style.cssText = `
-            display: flex !important;
-            flex-direction: column !important;
-            gap: 4px !important;
-        `;
+        bindButtons();
         
         console.log(`✅ GeoGuessr MultiMod: Successfully created mod menu with ${buttonCount} buttons`);
         
-        bindButtons();
-
-        // Button menu toggler - Opera-compatible approach with onclick attribute
+        // Button menu toggler - legacy-compatible approach
         let isMenuVisible = true;
         
-        // Set onclick directly on the element for maximum compatibility
-        modMenuToggle.onclick = function(event) {
-            event.preventDefault();
-            event.stopPropagation();
-            
-            const container = document.getElementById('gg-mods-button-container');
-            if (!container) {
-                console.error('Button container not found!');
-                return;
-            }
-            
-            if (isMenuVisible) {
-                // Hide the menu
-                container.style.setProperty('display', 'none', 'important');
-                modMenuToggle.textContent = '▶';
-                isMenuVisible = false;
-            } else {
-                // Show the menu
-                container.style.setProperty('display', 'flex', 'important');
+        modMenuToggle.addEventListener('click', function () {
+            if (buttonContainer.classList.contains('hidden')) {
+                buttonContainer.classList.remove('hidden');
                 modMenuToggle.textContent = '▼';
-                isMenuVisible = true;
+            } else {
+                buttonContainer.classList.add('hidden');
+                modMenuToggle.textContent = '▶';
             }
-        };
+        });
+        
         return true;
     } catch (err) {
         console.error('Error creating mod menu:', err);

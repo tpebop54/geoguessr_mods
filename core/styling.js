@@ -48,6 +48,9 @@ const modContainerStyles = `
         font-size: 16px;
         cursor: pointer;
         text-shadow: ${headerShadow};
+        background: none;
+        border: none;
+        color: inherit;
     }
 
     #gg-mods-button-container {
