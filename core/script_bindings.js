@@ -65,12 +65,16 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
         const modContainer = getModDiv(); // Includes header and buttons.
         
         if (!bigMapContainer) {
+            console.debug('GeoGuessr MultiMod: Game container not found, will retry...');
             return false;
         }
         
         if (modContainer) {
+            console.debug('GeoGuessr MultiMod: Mod container already exists');
             return false;
         }
+
+        console.log('🎯 GeoGuessr MultiMod: Creating mod menu in container:', bigMapContainer);
 
         const modsContainer = document.createElement('div'); // Header and buttons.
         modsContainer.id = 'gg-mods-container';
@@ -106,19 +110,22 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
                 
                 // Apply inline styles to ensure visibility
                 modButton.style.cssText = `
-                    background: var(--ds-color-purple-100) !important;
+                    background: var(--ds-color-purple-100, #8B5CF6) !important;
                     border-radius: 5px !important;
                     font-size: 14px !important;
                     cursor: pointer !important;
                     opacity: 0.9 !important;
                     padding: 4px 10px !important;
                     margin: 2px 0 !important;
+                    color: white !important;
+                    text-align: center !important;
+                    user-select: none !important;
                 `;
                 
                 buttonContainer.appendChild(modButton);
                 buttonCount++;
             } catch (err) {
-                console.error(err);
+                console.error('Error creating mod button for', key, err);
             }
         }
 
@@ -132,34 +139,46 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
             width: 200px !important;
             top: 40px !important;
             left: 20px !important;
-            z-index: 9 !important;
+            z-index: 9999 !important;
             display: flex !important;
             flex-direction: column !important;
+            background: rgba(0, 0, 0, 0.8) !important;
+            border-radius: 8px !important;
+            padding: 8px !important;
+            color: white !important;
+            font-family: Arial, sans-serif !important;
         `;
         
         headerContainer.style.cssText = `
             display: flex !important;
             align-items: center !important;
-            font-size: 18px !important;
+            font-size: 16px !important;
             justify-content: space-between !important;
+            margin-bottom: 8px !important;
         `;
         
         headerText.style.cssText = `
             font-weight: bold !important;
+            color: white !important;
         `;
         
         modMenuToggle.style.cssText = `
-            padding: 0 !important;
-            font-size: 16px !important;
+            padding: 2px 6px !important;
+            font-size: 14px !important;
             cursor: pointer !important;
+            background: rgba(255, 255, 255, 0.2) !important;
+            border: none !important;
+            border-radius: 3px !important;
+            color: white !important;
         `;
         
         buttonContainer.style.cssText = `
-            display: flex;
+            display: flex !important;
             flex-direction: column !important;
-            gap: 6px !important;
-            margin-top: 10px !important;
+            gap: 4px !important;
         `;
+        
+        console.log(`✅ GeoGuessr MultiMod: Successfully created mod menu with ${buttonCount} buttons`);
         
         bindButtons();
 
@@ -191,7 +210,7 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
         };
         return true;
     } catch (err) {
-        console.error(err);
+        console.error('Error creating mod menu:', err);
         return false;
     }
 };
@@ -1287,4 +1306,76 @@ window.forceSatelliteView = () => {
     } else {
         console.warn('Satellite view binding not found');
     }
+};
+
+// Manual recovery functions for troubleshooting
+window.debugModsState = () => {
+    console.log('🔍 GeoGuessr Mods Debug Information');
+    console.log('=== DOM Elements ===');
+    console.log('getBigMapContainer():', getBigMapContainer());
+    console.log('getModDiv():', getModDiv());
+    console.log('Game container selectors test:');
+    const selectors = [
+        `div[class^="game_canvas__"]`,
+        `div[class*="game_canvas"]`,
+        `#panorama-container`,
+        `div[class*="panorama"]`,
+        `div[class*="game-layout_content"]`,
+        `div[class*="game_content"]`,
+    ];
+    selectors.forEach(selector => {
+        const element = document.querySelector(selector);
+        console.log(`  ${selector}:`, element ? 'FOUND' : 'NOT FOUND');
+    });
+    
+    console.log('=== Mods State ===');
+    console.log('MODS defined:', typeof MODS !== 'undefined');
+    if (typeof MODS !== 'undefined') {
+        console.log('Available mods:', Object.keys(MODS));
+        console.log('Mods to show:', Object.values(MODS).filter(mod => mod.show).map(mod => mod.key));
+    }
+    console.log('_MODS_LOADED:', typeof _MODS_LOADED !== 'undefined' ? _MODS_LOADED : 'undefined');
+    
+    console.log('=== Functions Available ===');
+    console.log('addButtons:', typeof addButtons !== 'undefined');
+    console.log('bindButtons:', typeof bindButtons !== 'undefined');
+    console.log('initializeMods:', typeof initializeMods !== 'undefined');
+};
+
+window.forceRecreateModMenu = () => {
+    console.log('🔧 Forcing recreation of mod menu...');
+    
+    // Remove existing mod container
+    const existing = document.getElementById('gg-mods-container');
+    if (existing) {
+        existing.remove();
+        console.log('✅ Removed existing mod container');
+    }
+    
+    // Try to add buttons
+    const result = addButtons();
+    console.log('addButtons result:', result);
+    
+    if (result) {
+        console.log('✅ Successfully recreated mod menu');
+        bindButtons();
+    } else {
+        console.log('❌ Failed to recreate mod menu');
+        debugModsState();
+    }
+    
+    return result;
+};
+
+window.forceModsInit = () => {
+    console.log('🚀 Forcing complete mods reinitialization...');
+    initializeMods();
+    
+    // Try manual recreation after short delay
+    setTimeout(() => {
+        if (!getModDiv()) {
+            console.log('⚠️ Still no mod menu after init, trying manual recreation...');
+            forceRecreateModMenu();
+        }
+    }, 2000);
 };

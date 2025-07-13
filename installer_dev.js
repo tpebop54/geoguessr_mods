@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Tpebop's GeoGuessr Mods (DEV)
+//// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/core/dom_utils.js?v=0.9.7@name         Tpebop'// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/core/script_bindings.js?v=0.9.7 GeoGuessr Mods (DEV)
 // @description  Various mods to make the game interesting in various ways
 // @version      0.9.1
 // @author       tpebop
