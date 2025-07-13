@@ -831,44 +831,35 @@ const findNearestStreetView = async (lat, lng, maxRadius = 1000, maxAttempts = 1
     
     let bestLocation = null;
     let shortestDistance = Infinity;
+    let remainingAttempts = maxAttempts;
     
-    // Search in expanding rings with more systematic coverage
-    for (let radius = 100; radius <= maxRadius; radius += Math.max(100, maxRadius / 10)) {
-        const pointsInRing = Math.max(8, Math.floor(radius / 100) * 8); // More points for larger rings
+    // Search in expanding rings with systematic coverage
+    for (let radius = 100; radius <= maxRadius && remainingAttempts > 0; radius += Math.max(100, maxRadius / 10)) {
+        const pointsInRing = Math.min(Math.max(8, Math.floor(radius / 100) * 4), remainingAttempts);
+        const testPoints = generatePointsInRing(lat, lng, radius, pointsInRing);
         
-        for (let i = 0; i < pointsInRing && maxAttempts > 0; i++) {
-            maxAttempts--;
+        for (const point of testPoints) {
+            if (remainingAttempts <= 0) break;
+            remainingAttempts--;
             
-            const angle = (2 * Math.PI * i) / pointsInRing;
-            
-            // Convert radius to degrees more accurately
-            const latOffset = (radius / 111320) * Math.cos(angle); // 111.32 km per degree latitude
-            const lngOffset = (radius / (111320 * Math.cos(lat * Math.PI / 180))) * Math.sin(angle);
-            
-            const testLat = lat + latOffset;
-            const testLng = lng + lngOffset;
-            
-            // Check bounds
-            if (testLat < -85 || testLat > 85 || testLng < -180 || testLng > 180) {
-                continue;
-            }
-            
-            if (await checkStreetViewAvailability(testLat, testLng)) {
-                const distance = calculateDistance(lat, lng, testLat, testLng);
+            if (await checkStreetViewAvailability(point.lat, point.lng)) {
+                const distance = calculateDistance(lat, lng, point.lat, point.lng);
                 if (distance < shortestDistance) {
                     shortestDistance = distance;
-                    bestLocation = { lat: testLat, lng: testLng };
+                    bestLocation = { lat: point.lat, lng: point.lng };
                 }
                 
                 // If we find something very close, return it immediately
                 if (distance < 50) {
+                    console.log(`Found very close Street View ${distance.toFixed(0)}m from target`);
                     return bestLocation;
                 }
             }
         }
         
-        // If we found something in this ring, consider stopping early
-        if (bestLocation && shortestDistance < radius * 0.7) {
+        // If we found something in this ring, consider stopping early for closer results
+        if (bestLocation && shortestDistance < radius * 0.6) {
+            console.log(`Found close Street View ${shortestDistance.toFixed(0)}m from target, stopping search`);
             return bestLocation;
         }
     }
@@ -1093,75 +1084,56 @@ const findNearestLand = async (lat, lng, maxRadius = 5000, maxAttempts = 20) => 
     
     let bestLocation = null;
     let shortestDistance = Infinity;
+    let remainingAttempts = maxAttempts;
     
-    // Search in expanding rings, but prioritize cardinal directions first (likely to hit coastlines)
-    const cardinalDirections = [0, Math.PI/2, Math.PI, 3*Math.PI/2]; // N, E, S, W
-    
-    for (let radius = 500; radius <= maxRadius; radius += Math.max(500, maxRadius / 10)) {
-        // First try cardinal directions (most likely to find coastlines)
-        for (const angle of cardinalDirections) {
-            if (maxAttempts <= 0) break;
-            maxAttempts--;
+    // First try cardinal directions as they're most likely to hit coastlines quickly
+    const cardinalDistances = [500, 1000, 2000, 3000];
+    for (const distance of cardinalDistances) {
+        if (distance > maxRadius || remainingAttempts <= 0) break;
+        
+        const cardinalPoints = generatePointsInRing(lat, lng, distance, 4); // N, E, S, W
+        
+        for (const point of cardinalPoints) {
+            if (remainingAttempts <= 0) break;
+            remainingAttempts--;
             
-            const latOffset = (radius / 111320) * Math.cos(angle);
-            const lngOffset = (radius / (111320 * Math.cos(lat * Math.PI / 180))) * Math.sin(angle);
-            
-            const testLat = lat + latOffset;
-            const testLng = lng + lngOffset;
-            
-            // Check bounds
-            if (testLat < -85 || testLat > 85 || testLng < -180 || testLng > 180) {
-                continue;
-            }
-            
-            if (await checkIsOnLand(testLat, testLng)) {
-                const distance = calculateDistance(lat, lng, testLat, testLng);
-                if (distance < shortestDistance) {
-                    shortestDistance = distance;
-                    bestLocation = { lat: testLat, lng: testLng };
+            if (await checkIsOnLand(point.lat, point.lng)) {
+                const dist = calculateDistance(lat, lng, point.lat, point.lng);
+                if (dist < shortestDistance) {
+                    shortestDistance = dist;
+                    bestLocation = { lat: point.lat, lng: point.lng };
                 }
                 
-                // If we find something close, return it
-                if (distance < 1000) {
+                // If we find close land, return it immediately
+                if (dist < 1000) {
+                    console.log(`Found close land ${dist.toFixed(0)}m from target via cardinal search`);
                     return bestLocation;
                 }
             }
         }
+    }
+    
+    // If cardinal directions didn't find close land, do a more thorough ring search
+    for (let radius = 1000; radius <= maxRadius && remainingAttempts > 0; radius += Math.max(500, maxRadius / 8)) {
+        const pointsInRing = Math.min(Math.max(8, Math.floor(radius / 500) * 4), remainingAttempts);
+        const testPoints = generatePointsInRing(lat, lng, radius, pointsInRing);
         
-        // Then try more points around the circle
-        const pointsInRing = Math.max(8, Math.floor(radius / 500) * 4);
-        for (let i = 0; i < pointsInRing && maxAttempts > 0; i++) {
-            maxAttempts--;
+        for (const point of testPoints) {
+            if (remainingAttempts <= 0) break;
+            remainingAttempts--;
             
-            const angle = (2 * Math.PI * i) / pointsInRing;
-            
-            // Skip cardinal directions as we already checked them
-            if (cardinalDirections.some(cardAngle => Math.abs(angle - cardAngle) < 0.1)) {
-                continue;
-            }
-            
-            const latOffset = (radius / 111320) * Math.cos(angle);
-            const lngOffset = (radius / (111320 * Math.cos(lat * Math.PI / 180))) * Math.sin(angle);
-            
-            const testLat = lat + latOffset;
-            const testLng = lng + lngOffset;
-            
-            // Check bounds
-            if (testLat < -85 || testLat > 85 || testLng < -180 || testLng > 180) {
-                continue;
-            }
-            
-            if (await checkIsOnLand(testLat, testLng)) {
-                const distance = calculateDistance(lat, lng, testLat, testLng);
+            if (await checkIsOnLand(point.lat, point.lng)) {
+                const distance = calculateDistance(lat, lng, point.lat, point.lng);
                 if (distance < shortestDistance) {
                     shortestDistance = distance;
-                    bestLocation = { lat: testLat, lng: testLng };
+                    bestLocation = { lat: point.lat, lng: point.lng };
                 }
             }
         }
         
         // If we found land in this ring and it's reasonably close, return it
-        if (bestLocation && shortestDistance < radius * 0.8) {
+        if (bestLocation && shortestDistance < radius * 0.7) {
+            console.log(`Found reasonable land ${shortestDistance.toFixed(0)}m from target, stopping search`);
             return bestLocation;
         }
     }
@@ -1189,4 +1161,66 @@ const withTimeout = (promise, timeoutMs, operationName = 'API operation') => {
             setTimeout(() => reject(new Error(`${operationName} timed out after ${timeoutMs}ms`)), timeoutMs)
         )
     ]);
+};
+
+/**
+ * Generate random points in a circle around a center point
+ * @param {number} centerLat - Center latitude
+ * @param {number} centerLng - Center longitude  
+ * @param {number} radiusMeters - Radius in meters
+ * @param {number} numPoints - Number of points to generate
+ * @returns {Array<{lat: number, lng: number}>} Array of coordinate points
+ */
+const generatePointsInCircle = (centerLat, centerLng, radiusMeters, numPoints) => {
+    const points = [];
+    
+    for (let i = 0; i < numPoints; i++) {
+        // Random angle and distance for uniform distribution in circle
+        const angle = Math.random() * 2 * Math.PI;
+        const distance = Math.sqrt(Math.random()) * radiusMeters; // sqrt for uniform area distribution
+        
+        // Convert to lat/lng offsets
+        const latOffset = (distance * Math.cos(angle)) / 111320; // ~111.32 km per degree lat
+        const lngOffset = (distance * Math.sin(angle)) / (111320 * Math.cos(centerLat * Math.PI / 180));
+        
+        const lat = centerLat + latOffset;
+        const lng = centerLng + lngOffset;
+        
+        // Check bounds
+        if (lat >= -85 && lat <= 85 && lng >= -180 && lng <= 180) {
+            points.push({ lat, lng });
+        }
+    }
+    
+    return points;
+};
+
+/**
+ * Generate points in a ring around a center point
+ * @param {number} centerLat - Center latitude
+ * @param {number} centerLng - Center longitude  
+ * @param {number} radiusMeters - Radius in meters
+ * @param {number} numPoints - Number of points to generate
+ * @returns {Array<{lat: number, lng: number}>} Array of coordinate points
+ */
+const generatePointsInRing = (centerLat, centerLng, radiusMeters, numPoints) => {
+    const points = [];
+    
+    for (let i = 0; i < numPoints; i++) {
+        const angle = (2 * Math.PI * i) / numPoints; // Evenly spaced angles
+        
+        // Convert to lat/lng offsets
+        const latOffset = (radiusMeters * Math.cos(angle)) / 111320;
+        const lngOffset = (radiusMeters * Math.sin(angle)) / (111320 * Math.cos(centerLat * Math.PI / 180));
+        
+        const lat = centerLat + latOffset;
+        const lng = centerLng + lngOffset;
+        
+        // Check bounds
+        if (lat >= -85 && lat <= 85 && lng >= -180 && lng <= 180) {
+            points.push({ lat, lng });
+        }
+    }
+    
+    return points;
 };
