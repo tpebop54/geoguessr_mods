@@ -7,26 +7,45 @@
 // ===============================================================================================================================
 
 // Must add each mod to this list to bind the buttons and hotkeys.
-const _BINDINGS = [
-    [MODS.satView, updateSatView],
-    [MODS.rotateMap, updateRotateMap],
-    [MODS.zoomInOnly, updateZoomInOnly],
-    [MODS.showScore, updateShowScore],
-    [MODS.flashlight, updateFlashlight],
-    [MODS.seizure, updateSeizure],
-    [MODS.bopIt, updateBopIt],
-    [MODS.inFrame, updateInFrame],
-    [MODS.lottery, updateLottery],
-    [MODS.puzzle, updatePuzzle],
-    [MODS.tileReveal, updateTileReveal],
-    [MODS.displayOptions, updateDisplayOptions],
-    [MODS.scratch, updateScratch],
-];
+let _BINDINGS = null;
+
+// Lazy initialize bindings to avoid dependency loading issues
+const getBindings = () => {
+    if (_BINDINGS === null) {
+        try {
+            _BINDINGS = [
+                [MODS.satView, updateSatView],
+                [MODS.rotateMap, updateRotateMap],
+                [MODS.zoomInOnly, updateZoomInOnly],
+                [MODS.showScore, updateShowScore],
+                [MODS.flashlight, updateFlashlight],
+                [MODS.seizure, updateSeizure],
+                [MODS.bopIt, updateBopIt],
+                [MODS.inFrame, updateInFrame],
+                [MODS.lottery, updateLottery],
+                [MODS.puzzle, updatePuzzle],
+                [MODS.tileReveal, updateTileReveal],
+                [MODS.displayOptions, updateDisplayOptions],
+                [MODS.scratch, updateScratch],
+            ];
+        } catch (err) {
+            console.error('Error initializing bindings:', err);
+            console.log('Available globals:', {
+                MODS: typeof MODS !== 'undefined',
+                updateSatView: typeof updateSatView !== 'undefined',
+                updateRotateMap: typeof updateRotateMap !== 'undefined',
+                updateZoomInOnly: typeof updateZoomInOnly !== 'undefined'
+            });
+            _BINDINGS = []; // Fallback to empty array
+        }
+    }
+    return _BINDINGS;
+};
 
 const bindButtons = () => {
     let boundCount = 0;
     
-    for (const [mod, callback] of _BINDINGS) {
+    for (const [mod, callback] of getBindings()) {
         if (!mod.show) {
             continue;
         }
@@ -256,7 +275,7 @@ const setupMapEventListeners = () => {
     window.addEventListener('gg_map_tiles_loaded', () => {
         console.debug('GeoGuessr MultiMod: Map tiles loaded, checking for satellite view mod');
         // Specifically reapply satellite view if it's active
-        const satViewMod = _BINDINGS.find(([mod]) => mod.key === 'satView');
+        const satViewMod = getBindings().find(([mod]) => mod.key === 'satView');
         if (satViewMod && satViewMod[0].active) {
             console.debug('GeoGuessr MultiMod: Reapplying satellite view after tiles loaded');
             setTimeout(() => {
@@ -343,7 +362,7 @@ const checkAndActivateModsIfReady = () => {
             }
             
             // Reactivate all active mods
-            for (const [mod, callback] of _BINDINGS) {
+            for (const [mod, callback] of getBindings()) {
                 if (mod.active && mod.show) {
                     console.debug(`Event-triggered reactivation of mod: ${mod.name}`);
                     try {
@@ -362,7 +381,7 @@ const reapplyActiveModsToNewMaps = () => {
     console.log('🔄 GeoGuessr MultiMod: Reapplying active mods to new map instances');
     
     // Get list of currently active mods
-    const activeMods = _BINDINGS.filter(([mod]) => mod.active && mod.show);
+    const activeMods = getBindings().filter(([mod]) => mod.active && mod.show);
     
     if (activeMods.length === 0) {
         console.debug('No active mods to reapply');
@@ -589,7 +608,7 @@ const reactivateActiveMods = () => {
     window.dispatchEvent(reactivationEvent);
     
     // Log which mods are active and should be reactivated
-    const activeMods = _BINDINGS.filter(([mod]) => mod.active && mod.show).map(([mod]) => mod.name);
+    const activeMods = getBindings().filter(([mod]) => mod.active && mod.show).map(([mod]) => mod.name);
     console.debug('Active mods to reactivate:', activeMods);
     
     // Enhanced map readiness detection
@@ -652,7 +671,7 @@ const reactivateActiveMods = () => {
                 
                 // Add a small additional delay to ensure everything is stable
                 setTimeout(() => {
-                    for (const [mod, callback] of _BINDINGS) {
+                    for (const [mod, callback] of getBindings()) {
                         if (mod.active && mod.show) {
                             console.debug(`Reactivating mod: ${mod.name}`);
                             try {
@@ -672,7 +691,7 @@ const reactivateActiveMods = () => {
                 console.warn(`Map readiness timeout after ${attempt} attempts, forcing mod reactivation`);
                 
                 // Force reactivation even if maps aren't fully ready
-                for (const [mod, callback] of _BINDINGS) {
+                for (const [mod, callback] of getBindings()) {
                     if (mod.active && mod.show) {
                         console.debug(`Force reactivating mod: ${mod.name}`);
                         try {
@@ -1065,7 +1084,7 @@ function initializeEventFramework() {
             }
             
             // Handle hotkeys for mods
-            for (const [mod, callback] of _BINDINGS) {
+            for (const [mod, callback] of getBindings()) {
                 if (mod.hotkey && evt.code === mod.hotkey) {
                     evt.preventDefault();
                     closeOptionMenu();
@@ -1206,7 +1225,7 @@ const debugModActivation = () => {
     console.log('  - _MODS_LOADED:', _MODS_LOADED);
     
     console.log('🎛️ Active Mods:');
-    const activeMods = _BINDINGS.filter(([mod]) => mod.active && mod.show);
+    const activeMods = getBindings().filter(([mod]) => mod.active && mod.show);
     activeMods.forEach(([mod]) => {
         console.log(`  - ${mod.name}: ${mod.active ? '✅' : '❌'} (Button state: ${mod.active ? 'enabled' : 'disabled'})`);
         
@@ -1300,7 +1319,7 @@ window.debugSatelliteView = () => {
 // Function to manually force satellite view reapplication
 window.forceSatelliteView = () => {
     console.log('🛰️ Manually forcing satellite view reapplication...');
-    const satViewBinding = _BINDINGS.find(([mod]) => mod.key === 'satView');
+    const satViewBinding = getBindings().find(([mod]) => mod.key === 'satView');
     if (satViewBinding) {
         satViewBinding[1](true); // Force reapply
     } else {
