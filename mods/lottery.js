@@ -5,6 +5,11 @@
 
 // MOD: Lottery.
 // ===============================================================================================================================
+// 
+// Lottery mod allows players to place random guesses within a specified radius of the actual location.
+// Uses sinusoidal projection for token distribution to ensure even spread across the Earth's surface,
+// avoiding the clustering near poles that occurs with uniform lat/lng distribution (Mercator issue).
+//
 
 let _LOTTERY_DISPLAY; // Display elements for lottery mod. (counter and button).
 let _LOTTERY_COUNT; // How many remaining guesses you have.
@@ -121,7 +126,7 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
             minLng = normalizedLng - nDegLng;
             maxLng = normalizedLng + nDegLng;
         }
-        const { lat, lng } = getRandomLoc(minLat, maxLat, minLng, maxLng);
+        const { lat, lng } = getRandomLocSinusoidal(minLat, maxLat, minLng, maxLng); // Use sinusoidal projection for even distribution
         _LOTTERY_COUNT -= 1;
         counter.innerText = _LOTTERY_COUNT;
         clickAt(lat, lng);

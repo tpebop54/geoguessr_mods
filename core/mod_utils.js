@@ -542,3 +542,54 @@ const createMapSafeModUpdate = (originalUpdateFunction, options = {}) => {
         }, { require2D, require3D, modName, timeout });
     };
 };
+
+/**
+ * Get random latitude using sinusoidal projection for more even distribution.
+ * This compensates for the fact that lines of longitude converge at the poles,
+ * so uniform random lat/lng would cluster points near the poles.
+ */
+const getRandomLatSinusoidal = (lat1, lat2) => {
+    if (lat1 == null || lat2 == null) {
+        // For full world, use inverse sine to compensate for pole clustering
+        // Generate uniform random in [-1, 1] and apply asin to get lat in radians
+        const u = Math.random() * 2 - 1; // Uniform in [-1, 1]
+        return Math.asin(u) * (180 / Math.PI); // Convert to degrees
+    }
+    if (lat1 === lat2) {
+        return lat1;
+    }
+    
+    // Clamp to valid latitude range
+    lat1 = Math.max(-90, Math.min(90, lat1));
+    lat2 = Math.max(-90, Math.min(90, lat2));
+    if (lat1 > lat2) {
+        [lat1, lat2] = [lat2, lat1];
+    }
+    
+    // Convert to radians for calculation
+    const lat1Rad = lat1 * (Math.PI / 180);
+    const lat2Rad = lat2 * (Math.PI / 180);
+    
+    // Convert to sine space for uniform distribution
+    const sin1 = Math.sin(lat1Rad);
+    const sin2 = Math.sin(lat2Rad);
+    
+    // Generate uniform random in sine space
+    const u = Math.random();
+    const sinLat = sin1 + u * (sin2 - sin1);
+    
+    // Convert back to latitude in degrees
+    const latRad = Math.asin(Math.max(-1, Math.min(1, sinLat)));
+    return latRad * (180 / Math.PI);
+};
+
+/**
+ * Get random location using sinusoidal projection for more even distribution.
+ * This creates a more uniform distribution over the Earth's surface compared to
+ * uniform random lat/lng which clusters points near the poles.
+ */
+const getRandomLocSinusoidal = (minLat = null, maxLat = null, minLng = null, maxLng = null) => {
+    const lat = getRandomLatSinusoidal(minLat, maxLat);
+    const lng = getRandomLng(minLng, maxLng); // Longitude distribution is fine as-is
+    return { lat, lng };
+};
