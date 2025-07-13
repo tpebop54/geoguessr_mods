@@ -21,7 +21,7 @@
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/core/dom_utils.js?v=0.9.1
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/core/mod_config.js?v=0.9.1
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/core/global_state.js?v=0.9.1
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/core/mod_utils.js?v=0.9.2
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/core/mod_utils.js?v=0.9.3
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/core/google_api.js?v=0.9.1
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/core/styling.js?v=0.9.1
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/core/cheat_protection.js?v=0.9.1
@@ -35,7 +35,7 @@
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/mods/bopit.js?v=0.9.1
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/mods/inframe.js?v=0.9.1
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/mods/lottery.js?v=0.9.2
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/mods/puzzle.js?v=0.9.1
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/mods/puzzle.js?v=0.9.3
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/mods/tilereveal.js?v=0.9.1
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/mods/display.js?v=0.9.1
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/mods/scratch.js?v=0.9.1
@@ -56,5 +56,46 @@ if (typeof window.SHOW_QUOTES === 'undefined') {
         questions: true,      // Mostly silly questions, some real ones
     };
 }
+
+/* ===============================================================================================================================
+ * GOOGLE MAPS API KEY CONFIGURATION (OPTIONAL)
+ * ===============================================================================================================================
+ * 
+ * Some features (like the Puzzle mod) may require a Google Maps API key for enhanced functionality.
+ * This is OPTIONAL - the mods will work without it, but some features may be limited or rate-limited.
+ * 
+ * HOW TO GET A GOOGLE MAPS API KEY:
+ * 1. Go to https://console.cloud.google.com/
+ * 2. Create a new project or select an existing one
+ * 3. Enable the following APIs (in "APIs & Services" → "Library"):
+ *    - Maps JavaScript API
+ *    - Street View Static API (for puzzle mod tiles)
+ * 4. Go to "APIs & Services" → "Credentials" → "Create Credentials" → "API key"
+ * 5. Copy your API key and paste it below between the quotes
+ * 6. RECOMMENDED: Click "Restrict Key" and add these restrictions:
+ *    - Application restrictions: HTTP referrers
+ *    - Add referrer: *.geoguessr.com/*
+ *    - API restrictions: Select the APIs you enabled above
+ * 
+ * SECURITY NOTES:
+ * - Keep your API key private! Don't share your userscript file with others if it contains your key.
+ * - Consider setting up billing alerts in Google Cloud Console to monitor usage
+ * - The free tier includes generous limits that should be sufficient for personal use
+ * 
+ * EXAMPLE: GOOGLE_MAPS_API_KEY = "AIzaSyBnX1xX2xX3xX4xX5xX6xX7xX8xX9xX0xX1";
+ * 
+ * To add your API key, replace the empty string below with your key:
+ * 
+ * ALTERNATIVE: You can also configure the API key at runtime by opening the browser console
+ * and typing: configureGoogleApiKey() - though this won't persist between sessions.
+ */
+let GOOGLE_MAPS_API_KEY = ""; // Replace with your Google Maps API key (optional)
+
+// Make API key globally available
+if (typeof window !== 'undefined') {
+    window.GOOGLE_MAPS_API_KEY = GOOGLE_MAPS_API_KEY;
+}
+
+/* =============================================================================================================================== */
 
 console.log(`Tpebop's mods loaded (DEV).`);

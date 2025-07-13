@@ -593,3 +593,168 @@ const getRandomLocSinusoidal = (minLat = null, maxLat = null, minLng = null, max
     const lng = getRandomLng(minLng, maxLng); // Longitude distribution is fine as-is
     return { lat, lng };
 };
+
+/**
+ * Build a Google Maps API URL with the user's API key if available.
+ * Falls back to the original URL if no API key is provided.
+ * 
+ * @param {string} baseUrl - The base URL for the API call
+ * @param {Object} params - Additional parameters to add to the URL
+ * @returns {string} The complete URL with API key if available
+ */
+const buildGoogleApiUrl = (baseUrl, params = {}) => {
+    const url = new URL(baseUrl);
+    
+    // Add API key if available
+    if (window.GOOGLE_MAPS_API_KEY && window.GOOGLE_MAPS_API_KEY.trim() !== '') {
+        url.searchParams.set('key', window.GOOGLE_MAPS_API_KEY);
+    }
+    
+    // Add additional parameters
+    Object.entries(params).forEach(([key, value]) => {
+        url.searchParams.set(key, value);
+    });
+    
+    return url.toString();
+};
+
+/**
+ * Check if Google Maps API key is available and valid
+ * @returns {boolean} True if API key is configured
+ */
+const hasGoogleApiKey = () => {
+    return window.GOOGLE_MAPS_API_KEY && 
+           window.GOOGLE_MAPS_API_KEY.trim() !== '' && 
+           window.GOOGLE_MAPS_API_KEY.length > 10; // Basic validation
+};
+
+/**
+ * Log a warning about missing API key for specific features
+ * @param {string} feature - The feature that needs the API key
+ */
+const warnMissingApiKey = (feature) => {
+    console.warn(`${feature}: Google Maps API key not configured. Some features may be limited. See installer comments for setup instructions.`);
+};
+
+/**
+ * Validate Google Maps API key format
+ * @param {string} apiKey - The API key to validate
+ * @returns {boolean} True if the API key appears to be valid format
+ */
+const validateGoogleApiKey = (apiKey) => {
+    if (!apiKey || typeof apiKey !== 'string') return false;
+    
+    // Basic format validation for Google API keys
+    // They are typically 39 characters long and contain alphanumeric characters and hyphens/underscores
+    const apiKeyPattern = /^[A-Za-z0-9_-]{30,50}$/;
+    return apiKeyPattern.test(apiKey.trim());
+};
+
+/**
+ * Initialize and validate the Google Maps API key
+ */
+const initializeGoogleApiKey = () => {
+    if (window.GOOGLE_MAPS_API_KEY && window.GOOGLE_MAPS_API_KEY.trim() !== '') {
+        const apiKey = window.GOOGLE_MAPS_API_KEY.trim();
+        
+        if (validateGoogleApiKey(apiKey)) {
+            console.log('GeoGuessr Mods: Google Maps API key configured and validated');
+            return true;
+        } else {
+            console.warn('GeoGuessr Mods: Google Maps API key appears to be invalid format. Please check your key.');
+            return false;
+        }
+    } else {
+        console.info('GeoGuessr Mods: No Google Maps API key configured. Some features may be limited.');
+        return false;
+    }
+};
+
+// Initialize API key on load
+if (typeof window !== 'undefined') {
+    window.addEventListener('load', () => {
+        setTimeout(initializeGoogleApiKey, 1000);
+    });
+}
+
+/**
+ * Show a configuration dialog for users to enter their Google Maps API key
+ */
+const showApiKeyConfigDialog = () => {
+    const dialog = document.createElement('div');
+    dialog.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        border: 2px solid #333;
+        border-radius: 8px;
+        padding: 20px;
+        z-index: 10000;
+        max-width: 500px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        font-family: Arial, sans-serif;
+    `;
+    
+    dialog.innerHTML = `
+        <h3 style="margin-top: 0;">Configure Google Maps API Key</h3>
+        <p>Some features work better with a Google Maps API key. This is optional.</p>
+        <p><a href="https://console.cloud.google.com/" target="_blank">Get your API key here</a></p>
+        <input type="text" id="gg-api-key-input" placeholder="Enter your API key (optional)" 
+               style="width: 100%; padding: 8px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px;">
+        <div style="text-align: right; margin-top: 15px;">
+            <button id="gg-api-key-cancel" style="margin-right: 10px; padding: 8px 16px; border: 1px solid #ccc; background: #f5f5f5; border-radius: 4px; cursor: pointer;">Skip</button>
+            <button id="gg-api-key-save" style="padding: 8px 16px; border: none; background: #4CAF50; color: white; border-radius: 4px; cursor: pointer;">Save</button>
+        </div>
+    `;
+    
+    document.body.appendChild(dialog);
+    
+    const input = dialog.querySelector('#gg-api-key-input');
+    const saveBtn = dialog.querySelector('#gg-api-key-save');
+    const cancelBtn = dialog.querySelector('#gg-api-key-cancel');
+    
+    // Pre-fill with current key if any
+    if (window.GOOGLE_MAPS_API_KEY) {
+        input.value = window.GOOGLE_MAPS_API_KEY;
+    }
+    
+    const cleanup = () => {
+        document.body.removeChild(dialog);
+    };
+    
+    saveBtn.addEventListener('click', () => {
+        const newKey = input.value.trim();
+        window.GOOGLE_MAPS_API_KEY = newKey;
+        
+        if (newKey) {
+            if (validateGoogleApiKey(newKey)) {
+                console.log('GeoGuessr Mods: API key updated and validated');
+                alert('API key saved! Note: This will only persist for this session. To make it permanent, edit the userscript file.');
+            } else {
+                alert('Warning: The API key format appears invalid. It was saved anyway - please verify it\'s correct.');
+            }
+        } else {
+            console.log('GeoGuessr Mods: API key cleared');
+        }
+        
+        cleanup();
+    });
+    
+    cancelBtn.addEventListener('click', cleanup);
+    
+    // Close on ESC key
+    const handleKeyPress = (e) => {
+        if (e.key === 'Escape') {
+            cleanup();
+            document.removeEventListener('keydown', handleKeyPress);
+        }
+    };
+    document.addEventListener('keydown', handleKeyPress);
+    
+    input.focus();
+};
+
+// Add a way to access the config dialog (could be called from console or a button)
+window.configureGoogleApiKey = showApiKeyConfigDialog;
