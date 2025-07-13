@@ -44,13 +44,16 @@ const injecter = (overrider) => {
 };
 
 const initMods = () => { // Enable mods that were already enabled via localStorage.
+    console.debug('initMods: Starting mod initialization...');
     // Check if getBindings is available (script_bindings.js loaded)
     if (typeof getBindings === 'function') {
         for (const [mod, callback] of getBindings()) {
             if (mod.show && isModActive(mod)) {
-                callback(true);
+                console.debug(`initMods: Restoring mod ${mod.name} (was active in localStorage)`);
+                callback(true); // Pass true to indicate this is state restoration, not user click
             }
         }
+        console.debug('initMods: Completed mod initialization');
     } else {
         console.warn('getBindings not available yet, deferring mod initialization');
         // Retry after a short delay

@@ -393,8 +393,12 @@ const updateMod = (mod, forceState = null) => {
     const previousState = isModActive(mod);
     const newState = forceState != null ? forceState : !previousState;
 
+    console.debug(`updateMod: ${mod.name}, previousState: ${previousState}, newState: ${newState}, forceState: ${forceState}`);
+
     // If there are configurable options for this mod, open a popup.
+    // Only show options menu for user clicks (not during initialization/restoration)
     if (newState && !forceState) {
+        console.debug(`Opening options menu for ${mod.name} (user-initiated activation)`);
         const options = mod.options;
         if (options && typeof options === 'object' && Object.keys(options).length) {
             // Check if mod container exists before creating option menu
@@ -409,6 +413,8 @@ const updateMod = (mod, forceState = null) => {
                 console.warn(`Cannot create option menu for ${mod.name}: no container available`);
             }
         }
+    } else if (newState && forceState) {
+        console.debug(`Skipping options menu for ${mod.name} (state restoration, not user click)`);
     }
 
     mod.active = newState;

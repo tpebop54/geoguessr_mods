@@ -7,6 +7,7 @@
 // ===============================================================================================================================
 
 const updateSatViewLogic = (forceState = null) => {
+    console.debug(`updateSatViewLogic called with forceState: ${forceState}`);
     const mod = MODS.satView;
     const active = updateMod(mod, forceState);
     
