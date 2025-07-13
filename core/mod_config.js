@@ -169,12 +169,12 @@ const MODS = {
             onlyStreetView: {
                 label: 'Only Street View',
                 default: false,
-                tooltip: 'Only generate guesses in locations with official Google Street View coverage. Requires Google Maps API key.',
+                tooltip: 'Only generate guesses in locations with official Google Street View coverage. Requires Google Maps API key to be configured.',
             },
             onlyLand: {
                 label: 'Only Land',
                 default: false,
-                tooltip: 'Only generate guesses on land (not in water). Requires additional API calls.',
+                tooltip: 'Only generate guesses on land (not in water). Requires Google Maps API key to be configured.',
             },
 
         },

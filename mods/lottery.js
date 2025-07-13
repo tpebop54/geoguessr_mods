@@ -137,6 +137,19 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         // Generate location with criteria if any special options are enabled
         let location;
         if (onlyStreetView || onlyLand) {
+            // Check if API key is available for these features
+            const hasApiKey = window.GOOGLE_MAPS_API_KEY && window.GOOGLE_MAPS_API_KEY.trim().length > 0;
+            if (!hasApiKey) {
+                console.warn('Lottery mod: API-dependent features (Only Street View/Only Land) attempted without Google Maps API key');
+                button.textContent = 'API key required';
+                button.disabled = true;
+                setTimeout(() => {
+                    button.textContent = 'TAKE IT';
+                    button.disabled = false;
+                }, 2000);
+                return;
+            }
+            
             // Show loading indicator with more specific message
             const criteria = [];
             if (onlyLand) criteria.push('land');

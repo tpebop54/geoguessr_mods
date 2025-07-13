@@ -259,6 +259,15 @@ const makeOptionMenu = (mod) => {
 
     const inputs = []; // Array of [key, type, input element].
     for (const [key, option] of Object.entries(defaults)) {
+        // Skip Google Maps API-dependent options if no API key is configured
+        const isApiDependentOption = (mod.key === 'lottery' && (key === 'onlyStreetView' || key === 'onlyLand'));
+        const hasApiKey = window.GOOGLE_MAPS_API_KEY && window.GOOGLE_MAPS_API_KEY.trim().length > 0;
+        
+        if (isApiDependentOption && !hasApiKey) {
+            console.debug(`Skipping API-dependent option '${key}' for lottery mod - no API key configured`);
+            continue;
+        }
+
         const value = getOption(mod, key);
 
         const lineDiv = document.createElement('div'); // Label and input.
