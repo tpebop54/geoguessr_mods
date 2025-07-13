@@ -346,7 +346,29 @@ const makeOptionMenu = (mod) => {
 
     const modDiv = getModDiv();
     _OPTION_MENU.appendChild(formDiv);
-    modDiv.appendChild(_OPTION_MENU);
+    
+    // Safety check: ensure modDiv exists before trying to append
+    if (modDiv) {
+        modDiv.appendChild(_OPTION_MENU);
+    } else {
+        console.warn('Mod container not found, trying to append option menu to body as fallback');
+        // Fallback: append to body with absolute positioning
+        _OPTION_MENU.style.cssText = `
+            position: fixed !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            z-index: 10000 !important;
+            background: rgba(0, 0, 0, 0.9) !important;
+            border: 2px solid #333 !important;
+            border-radius: 8px !important;
+            padding: 15px !important;
+            color: white !important;
+            font-family: Arial, sans-serif !important;
+            min-width: 300px !important;
+        `;
+        document.body.appendChild(_OPTION_MENU);
+    }
 };
 
 const updateMod = (mod, forceState = null) => {
@@ -363,7 +385,17 @@ const updateMod = (mod, forceState = null) => {
     if (newState && !forceState) {
         const options = mod.options;
         if (options && typeof options === 'object' && Object.keys(options).length) {
-            makeOptionMenu(mod);
+            // Check if mod container exists before creating option menu
+            const modDiv = getModDiv();
+            if (modDiv || document.body) {
+                try {
+                    makeOptionMenu(mod);
+                } catch (err) {
+                    console.error(`Error creating option menu for ${mod.name}:`, err);
+                }
+            } else {
+                console.warn(`Cannot create option menu for ${mod.name}: no container available`);
+            }
         }
     }
 
