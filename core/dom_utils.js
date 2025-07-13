@@ -232,6 +232,12 @@ const makeOptionMenu = (mod) => {
     let _OPTION_MENU = document.createElement('div');
     _OPTION_MENU.id = 'gg-option-menu';
 
+    // Add title div to match legacy formatting
+    const titleDiv = document.createElement('div');
+    titleDiv.id = 'gg-option-title';
+    titleDiv.textContent = mod.name;
+    _OPTION_MENU.appendChild(titleDiv);
+
     /* eslint-disable no-return-assign */
     _OPTION_MENU_DRAGGING_MOUSEDOWN = _OPTION_MENU.addEventListener('mousedown', (evt) => {
         _OPTION_MENU_DRAGGING = true;
@@ -258,6 +264,7 @@ const makeOptionMenu = (mod) => {
         const lineDiv = document.createElement('div'); // Label and input.
         const label = document.createElement('div');
         label.innerHTML = option.label;
+        label.classList.add('gg-option-label');
         lineDiv.appendChild(label);
         lineDiv.classList.add('gg-option-line');
         if (option.tooltip) {

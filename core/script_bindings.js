@@ -127,20 +127,6 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
                 modButton.title = mod.tooltip;
                 modButton.textContent = getButtonText(mod);
                 
-                // Apply inline styles to ensure visibility
-                modButton.style.cssText = `
-                    background: var(--ds-color-purple-100, #8B5CF6) !important;
-                    border-radius: 5px !important;
-                    font-size: 14px !important;
-                    cursor: pointer !important;
-                    opacity: 0.9 !important;
-                    padding: 4px 10px !important;
-                    margin: 2px 0 !important;
-                    color: white !important;
-                    text-align: center !important;
-                    user-select: none !important;
-                `;
-                
                 buttonContainer.appendChild(modButton);
                 buttonCount++;
             } catch (err) {
