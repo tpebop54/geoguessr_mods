@@ -519,6 +519,42 @@ const closeOptionMenu = () => {
     }
 };
 
+/**
+ * Disable scoring mods when lottery is enabled, and disable lottery when scoring mods are enabled
+ * This prevents conflicts between lottery and scoring functionality
+ */
+const disableConflictingMods = (activatingMod) => {
+    console.debug('Checking for conflicting mods with:', activatingMod?.name || 'none');
+    
+    const isLottery = activatingMod?.key === 'lottery';
+    const isScoring = isScoringMod(activatingMod);
+    
+    if (isLottery) {
+        // Lottery is being enabled - disable all scoring mods
+        console.debug('Lottery enabled: disabling all scoring mods');
+        for (const other of Object.values(MODS)) {
+            if (other === activatingMod) continue;
+            if (isScoringMod(other)) {
+                console.debug('Disabling scoring mod due to lottery:', other.name);
+                disableMods(other);
+            }
+        }
+    } else if (isScoring) {
+        // Scoring mod is being enabled - disable lottery and other scoring mods
+        console.debug('Scoring mod enabled: disabling lottery and other scoring mods');
+        for (const other of Object.values(MODS)) {
+            if (other === activatingMod) continue;
+            if (isScoringMod(other) || other.key === 'lottery') {
+                console.debug('Disabling conflicting mod:', other.name);
+                disableMods(other);
+            }
+        }
+        
+        // Clear the score function for proper reinitialization
+        SCORE_FUNC = undefined;
+    }
+};
+
 // Additional utility functions
 // ===============================================================================================================================
 

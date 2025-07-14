@@ -339,6 +339,11 @@ const updateLottery = (forceState = null) => {
     const mod = MODS.lottery;
     const active = updateMod(mod, forceState);
 
+    // Handle conflicts with scoring mods
+    if (active) {
+        disableConflictingMods(mod);
+    }
+
     // Only remove the display if we're deactivating
     if (!active) {
         removeLotteryDisplay();

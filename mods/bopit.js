@@ -99,11 +99,11 @@ const updateBopIt = (forceState = null) => {
     };
 
     if (active) {
-        disableOtherScoreMods(mod);
+        disableConflictingMods(mod);
         SCORE_FUNC = getBopIt;
         mapClickListener(bopItListener, true);
     } else {
-        disableOtherScoreMods();
+        disableConflictingMods();
         mapClickListener(bopItListener, false);
     }
 };

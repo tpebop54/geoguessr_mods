@@ -46,11 +46,11 @@ const updateShowScore = (forceState = null) => {
     const active = updateMod(mod, forceState);
 
     if (active) {
-        disableOtherScoreMods(mod);
+        disableConflictingMods(mod);
         SCORE_FUNC = getScore;
         mapClickListener(showScoreListener, true);
     } else {
-        disableOtherScoreMods();
+        disableConflictingMods();
         mapClickListener(showScoreListener, false);
     }
 };
