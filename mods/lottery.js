@@ -227,7 +227,6 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         const mod = MODS.lottery;
         _LOTTERY_COUNT = getOption(mod, 'nGuesses'); // Reset to original amount
         counter.innerText = _LOTTERY_COUNT;
-        console.log('Lottery: Token count reset to', _LOTTERY_COUNT);
     };
     resetButton.addEventListener('click', onReset);
 };
@@ -409,7 +408,6 @@ const resetLotteryCount = () => {
         return; // Only reset if the mod is active
     }
     
-    console.log('Lottery: Resetting count due to page/location change');
     
     // Reset the counter
     _LOTTERY_COUNT = getOption(mod, 'nGuesses');
@@ -432,7 +430,6 @@ const startLotteryLocationTracking = () => {
     
     // Add beforeunload listener for page refresh detection
     window.addEventListener('beforeunload', () => {
-        console.log('Lottery: Page unload detected, will reset on next load');
     });
     
     // Add visibility change listener for tab focus/reload detection
@@ -531,7 +528,6 @@ const onLotteryRoundStart = () => {
             // Ensure lottery map mode is properly set
             setLotteryMapMode(true);
             
-            console.log('GeoGuessr MultiMod: Lottery reset for new round, tokens:', _LOTTERY_COUNT);
         }, {
             require2D: true,
             require3D: false,
@@ -545,7 +541,6 @@ const onLotteryRoundStart = () => {
 const onLotteryRoundEnd = () => {
     const mod = MODS.lottery;
     if (isModActive(mod)) {
-        console.log('GeoGuessr MultiMod: Lottery round ended');
     }
 };
 

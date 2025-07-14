@@ -93,3 +93,5 @@ let GOOGLE_MAPS_API_KEY = ''; // Replace with your Google Maps API key (optional
 if (typeof window !== 'undefined') {
     window.GOOGLE_MAPS_API_KEY = GOOGLE_MAPS_API_KEY; // Make API key globally available
 }
+
+console.log(`Tpebop's mods loaded. (DEV)`);

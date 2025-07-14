@@ -683,7 +683,6 @@ const initializeGoogleApiKey = () => {
         const apiKey = window.GOOGLE_MAPS_API_KEY.trim();
         
         if (validateGoogleApiKey(apiKey)) {
-            console.log('GeoGuessr Mods: Google Maps API key configured and validated');
             return true;
         } else {
             console.warn('GeoGuessr Mods: Google Maps API key appears to be invalid format. Please check your key.');
@@ -755,13 +754,11 @@ const showApiKeyConfigDialog = () => {
         
         if (newKey) {
             if (validateGoogleApiKey(newKey)) {
-                console.log('GeoGuessr Mods: API key updated and validated');
                 alert('API key saved! Note: This will only persist for this session. To make it permanent, edit the userscript file.');
             } else {
                 alert('Warning: The API key format appears invalid. It was saved anyway - please verify it\'s correct.');
             }
         } else {
-            console.log('GeoGuessr Mods: API key cleared');
         }
         
         cleanup();
@@ -876,7 +873,6 @@ const findNearestStreetView = async (lat, lng, maxRadius = 1000, maxAttempts = 1
                 
                 // If we find something very close, return it immediately
                 if (distance < 50) {
-                    console.log(`Found very close Street View ${distance.toFixed(0)}m from target`);
                     return bestLocation;
                 }
             }
@@ -884,13 +880,11 @@ const findNearestStreetView = async (lat, lng, maxRadius = 1000, maxAttempts = 1
         
         // If we found something in this ring, consider stopping early for closer results
         if (bestLocation && shortestDistance < radius * 0.6) {
-            console.log(`Found close Street View ${shortestDistance.toFixed(0)}m from target, stopping search`);
             return bestLocation;
         }
     }
     
     if (bestLocation) {
-        console.log(`Found Street View ${shortestDistance.toFixed(0)}m from target`);
         return bestLocation;
     }
     
@@ -988,7 +982,6 @@ const getRandomLocationWithCriteria = async (minLat, maxLat, minLng, maxLng, req
         // Generate random location using sinusoidal projection
         let location = getRandomLocSinusoidal(minLat, maxLat, minLng, maxLng);
         
-        console.log(`Attempt ${attempt + 1}: Testing location ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`);
         
         // Check land requirement first (generally faster than Street View check)
         if (requireLand) {
@@ -997,11 +990,9 @@ const getRandomLocationWithCriteria = async (minLat, maxLat, minLng, maxLng, req
                 // Try to find nearest land instead of giving up
                 const nearestLand = await findNearestLand(location.lat, location.lng, 2000, 5);
                 if (!nearestLand) {
-                    console.log(`No land found near ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}, trying new location`);
                     continue; // Try a completely new location
                 }
                 location = nearestLand;
-                console.log(`Moved to nearest land: ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`);
             }
         }
         
@@ -1012,33 +1003,27 @@ const getRandomLocationWithCriteria = async (minLat, maxLat, minLng, maxLng, req
                 // Try to find nearest Street View location
                 const streetViewLocation = await findNearestStreetView(location.lat, location.lng, 1500, 10);
                 if (!streetViewLocation) {
-                    console.log(`No Street View found near ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}, trying new location`);
                     continue; // Try a completely new location
                 }
                 location = streetViewLocation;
-                console.log(`Moved to nearest Street View: ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`);
             }
         }
         
         // Double-check that the final location still meets all criteria
         if (requireLand && !(await checkIsOnLand(location.lat, location.lng))) {
-            console.log(`Final location check failed: not on land`);
             continue;
         }
         
         if (requireStreetView && !(await checkStreetViewAvailability(location.lat, location.lng))) {
-            console.log(`Final location check failed: no Street View`);
             continue;
         }
         
-        console.log(`✓ Found valid location: ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`);
         return location;
     }
     
     console.warn(`Failed to find location meeting criteria after ${maxAttempts} attempts`);
     // Return a basic random location as fallback
     const fallback = getRandomLocSinusoidal(minLat, maxLat, minLng, maxLng);
-    console.log(`Using fallback location: ${fallback.lat.toFixed(4)}, ${fallback.lng.toFixed(4)}`);
     return fallback;
 };
 
@@ -1131,7 +1116,6 @@ const findNearestLand = async (lat, lng, maxRadius = 5000, maxAttempts = 20) => 
                 
                 // If we find close land, return it immediately
                 if (dist < 1000) {
-                    console.log(`Found close land ${dist.toFixed(0)}m from target via cardinal search`);
                     return bestLocation;
                 }
             }
@@ -1158,13 +1142,11 @@ const findNearestLand = async (lat, lng, maxRadius = 5000, maxAttempts = 20) => 
         
         // If we found land in this ring and it's reasonably close, return it
         if (bestLocation && shortestDistance < radius * 0.7) {
-            console.log(`Found reasonable land ${shortestDistance.toFixed(0)}m from target, stopping search`);
             return bestLocation;
         }
     }
     
     if (bestLocation) {
-        console.log(`Found land ${shortestDistance.toFixed(0)}m from target`);
         return bestLocation;
     }
     

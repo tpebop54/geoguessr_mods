@@ -142,7 +142,6 @@ const resetTileReveal = () => {
         return; // Only reset if the mod is active
     }
     
-    console.log('Resetting tile reveal mod due to page/location change');
     
     // Reset the counter
     resetTileCount();
@@ -165,18 +164,15 @@ const startTileRevealLocationTracking = () => {
     // Add round start listener if not already added
     if (!_ROUND_START_LISTENER_ADDED && typeof GEF !== 'undefined' && GEF.events) {
         GEF.events.addEventListener('round_start', () => {
-            console.log('Tile reveal: Round start detected, resetting tiles');
             setTimeout(() => {
                 resetTileReveal();
             }, 500); // Small delay to ensure everything is loaded
         });
         _ROUND_START_LISTENER_ADDED = true;
-        console.log('Tile reveal: Round start listener added');
     }
     
     // Also listen for our custom round start event
     window.addEventListener('gg_round_start', (evt) => {
-        console.log('Tile reveal: Custom round start event detected, resetting tiles');
         setTimeout(() => {
             resetTileReveal();
         }, 500);
@@ -185,7 +181,6 @@ const startTileRevealLocationTracking = () => {
     // Listen for mod reactivation events
     window.addEventListener('gg_mods_reactivate', (evt) => {
         if (isModActive(MODS.tileReveal)) {
-            console.log('Tile reveal: Mod reactivation event detected, resetting tiles');
             setTimeout(() => {
                 resetTileReveal();
             }, 500);
@@ -194,7 +189,6 @@ const startTileRevealLocationTracking = () => {
     
     // Add beforeunload listener for page refresh detection
     window.addEventListener('beforeunload', () => {
-        console.log('Tile reveal: Page unload detected, will reset on next load');
     });
     
     // Add visibility change listener for tab focus/reload detection
