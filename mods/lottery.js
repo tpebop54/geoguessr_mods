@@ -238,7 +238,15 @@ const removeAllLotteryClickBlockers = () => {
     containers.forEach(container => {
         // Remove lottery overlays
         const overlays = container.querySelectorAll('.gg-lottery-overlay');
-        overlays.forEach(overlay => overlay.remove());
+        overlays.forEach(overlay => {
+            // Clean up overlay-specific event listeners before removing
+            if (overlay._overlayEventListeners) {
+                overlay._overlayEventListeners.forEach(({ event, handler, options }) => {
+                    overlay.removeEventListener(event, handler, options);
+                });
+            }
+            overlay.remove();
+        });
         
         // Remove stored click handlers
         if (container._lotteryClickHandler) {
@@ -280,38 +288,86 @@ const setLotteryMapMode = (enabled = true) => {
             left: 0;
             right: 0;
             bottom: 0;
-            pointer-events: auto;
+            pointer-events: none;
             background: transparent;
             z-index: 1000;
         `;
         
-        // Block click events on the overlay
+        // Only block click events, allow all other interactions (drag, zoom, etc.)
         const overlayClickHandler = (evt) => {
-            evt.preventDefault();
-            evt.stopPropagation();
+            // Only block actual clicks, not mousedown events that start drags
+            if (evt.type === 'click') {
+                evt.preventDefault();
+                evt.stopPropagation();
+            }
         };
+        
+        // Enable pointer events only for click blocking
+        overlay.style.pointerEvents = 'auto';
         overlay.addEventListener('click', overlayClickHandler, true);
         
-        // Define and store the container click handler
+        // Define and store the container click handler that's more selective
         const containerClickHandler = (evt) => {
-            // Block clicks that would place markers
-            evt.preventDefault();
-            evt.stopPropagation();
+            // Only block click events, not mousedown/mousemove for dragging
+            if (evt.type === 'click') {
+                // Additional check: don't block if this click is part of a drag operation
+                if (!evt.target.closest('.gg-lottery-overlay-dragging')) {
+                    evt.preventDefault();
+                    evt.stopPropagation();
+                }
+            }
         };
         
         // Add the click handler to the container
         container.addEventListener('click', containerClickHandler, true);
+        
+        // Track drag state to allow drag operations
+        let isDragging = false;
+        let dragStartTime = 0;
+        
+        const mouseDownHandler = (evt) => {
+            isDragging = false;
+            dragStartTime = Date.now();
+            overlay.classList.add('gg-lottery-overlay-dragging');
+        };
+        
+        const mouseMoveHandler = (evt) => {
+            if (Date.now() - dragStartTime > 100) { // 100ms threshold for drag detection
+                isDragging = true;
+            }
+        };
+        
+        const mouseUpHandler = (evt) => {
+            setTimeout(() => {
+                isDragging = false;
+                overlay.classList.remove('gg-lottery-overlay-dragging');
+            }, 50); // Small delay to ensure click event sees the drag state
+        };
+        
+        // Add drag detection listeners
+        overlay.addEventListener('mousedown', mouseDownHandler, true);
+        overlay.addEventListener('mousemove', mouseMoveHandler, true);
+        overlay.addEventListener('mouseup', mouseUpHandler, true);
+        
+        // Store overlay event listeners for cleanup
+        overlay._overlayEventListeners = [
+            { event: 'click', handler: overlayClickHandler, options: true },
+            { event: 'mousedown', handler: mouseDownHandler, options: true },
+            { event: 'mousemove', handler: mouseMoveHandler, options: true },
+            { event: 'mouseup', handler: mouseUpHandler, options: true }
+        ];
         
         // Store references for cleanup
         container._lotteryClickHandler = containerClickHandler;
         if (!container._lotteryEventListeners) {
             container._lotteryEventListeners = [];
         }
-        container._lotteryEventListeners.push({
-            event: 'click',
-            handler: containerClickHandler,
-            options: true
-        });
+        container._lotteryEventListeners.push(
+            { event: 'click', handler: containerClickHandler, options: true },
+            { event: 'mousedown', handler: mouseDownHandler, options: true },
+            { event: 'mousemove', handler: mouseMoveHandler, options: true },
+            { event: 'mouseup', handler: mouseUpHandler, options: true }
+        );
         
         container.appendChild(overlay);
     } else {
