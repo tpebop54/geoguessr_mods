@@ -283,7 +283,7 @@ const tileRevealStyles = `
         z-index: 9999;
         overflow: hidden;
         cursor: move;
-        opacity; 0.9;
+        opacity: 0.9;
     }
 
     #gg-tile-count-value {

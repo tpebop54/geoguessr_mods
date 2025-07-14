@@ -409,6 +409,18 @@ const updateMod = (mod, forceState = null) => {
             // This is a user-initiated activation (button click)
             console.debug(`Opening options menu for ${mod.name} (user-initiated activation)`);
             const options = mod.options;
+            
+            // Debug options for all mods to help troubleshoot option menu issues
+            console.debug(`OPTIONS DEBUG for ${mod.name}:`, {
+                modKey: mod.key,
+                modName: mod.name,
+                hasOptions: !!options,
+                optionsType: typeof options,
+                optionKeys: options ? Object.keys(options) : 'none',
+                optionCount: options ? Object.keys(options).length : 0,
+                fullOptions: options
+            });
+            
             if (options && typeof options === 'object' && Object.keys(options).length) {
                 // Check if mod container exists before creating option menu
                 const modDiv = getModDiv();
