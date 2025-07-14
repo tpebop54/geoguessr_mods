@@ -224,9 +224,8 @@ let _OPTION_MENU_DRAGGING_OFFSET_X; // Needed for offsetting the drag element fr
 let _OPTION_MENU_DRAGGING_OFFSET_Y;
 
 const makeOptionMenu = (mod) => {
-    if (document.getElementById('gg-option-menu')) {
-        return;
-    }
+    // Close any existing option menu first
+    closeOptionMenu();
 
     let _OPTION_MENU = document.createElement('div');
     _OPTION_MENU.id = 'gg-option-menu';
@@ -403,33 +402,38 @@ const updateMod = (mod, forceState = null) => {
 
     console.debug(`updateMod: ${mod.name}, previousState: ${previousState}, newState: ${newState}, forceState: ${forceState}`);
 
-    // If there are configurable options for this mod, open a popup.
-    // Only show options menu for user clicks that ENABLE a mod (not disable or reactivate)
-    // We need to be very strict: only show when forceState is explicitly undefined (user click)
-    // and the mod is going from disabled to enabled
-    const isUserEnabling = newState && !previousState && forceState === undefined;
-    if (isUserEnabling) {
-        console.debug(`Opening options menu for ${mod.name} (user-initiated activation from disabled to enabled)`);
-        const options = mod.options;
-        if (options && typeof options === 'object' && Object.keys(options).length) {
-            // Check if mod container exists before creating option menu
-            const modDiv = getModDiv();
-            if (modDiv || document.body) {
-                try {
-                    makeOptionMenu(mod);
-                } catch (err) {
-                    console.error(`Error creating option menu for ${mod.name}:`, err);
+    // Handle options menu display logic
+    if (newState && !previousState) {
+        // Mod is being enabled (going from inactive to active)
+        if (forceState === undefined) {
+            // This is a user-initiated activation (button click)
+            console.debug(`Opening options menu for ${mod.name} (user-initiated activation)`);
+            const options = mod.options;
+            if (options && typeof options === 'object' && Object.keys(options).length) {
+                // Check if mod container exists before creating option menu
+                const modDiv = getModDiv();
+                if (modDiv || document.body) {
+                    try {
+                        makeOptionMenu(mod);
+                    } catch (err) {
+                        console.error(`Error creating option menu for ${mod.name}:`, err);
+                    }
+                } else {
+                    console.warn(`Cannot create option menu for ${mod.name}: no container available`);
                 }
-            } else {
-                console.warn(`Cannot create option menu for ${mod.name}: no container available`);
             }
+        } else {
+            // This is a programmatic activation (reactivation, force state, etc.)
+            console.debug(`Skipping options menu for ${mod.name} (programmatic activation)`);
         }
-    } else if (newState && forceState != null) {
-        console.debug(`Skipping options menu for ${mod.name} (forced activation/reactivation)`);
+    } else if (!newState && previousState) {
+        // Mod is being disabled (going from active to inactive)
+        console.debug(`Closing options menu for ${mod.name} (mod disabled)`);
+        closeOptionMenu();
     } else if (newState && previousState) {
-        console.debug(`Skipping options menu for ${mod.name} (mod was already active)`);
-    } else if (!newState) {
-        console.debug(`Skipping options menu for ${mod.name} (mod being disabled)`);
+        console.debug(`Mod ${mod.name} was already active, no options menu change needed`);
+    } else {
+        console.debug(`Mod ${mod.name} was already inactive, no options menu change needed`);
     }
 
     mod.active = newState;
