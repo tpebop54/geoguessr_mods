@@ -92,14 +92,13 @@ let _CHEAT_OVERLAY; // Div to block view.
  * - window.ENABLE_QUOTES: true/false to enable/disable the entire quotes system
  * - window.SHOW_QUOTES: object defining which categories to show (only applies if ENABLE_QUOTES is true)
  * 
- * If ENABLE_QUOTES is false, loading screens will show "Loading..." instead of quotes.
- * If ENABLE_QUOTES is true (default), quotes from selected categories will be shown.
+ * If ENABLE_QUOTES is true, quotes from selected categories will be shown.
  */
 const initQuotesFlat = () => {
     _QUOTES_FLAT = [];
     
     // Check if quotes system is enabled globally
-    const quotesEnabled = (typeof window.ENABLE_QUOTES !== 'undefined') ? window.ENABLE_QUOTES : true;
+    const quotesEnabled = (typeof window.ENABLE_QUOTES !== 'undefined') ? window.ENABLE_QUOTES : false;
     
     if (!quotesEnabled) {
         // Quotes are disabled globally, don't load any quotes
@@ -138,7 +137,7 @@ const MAX_RECENT_QUOTES = 10; // Don't show the same quote until at least this m
 
 const getRandomQuote = () => {
     // Check if quotes system is enabled globally
-    const quotesEnabled = (typeof window.ENABLE_QUOTES !== 'undefined') ? window.ENABLE_QUOTES : true;
+    const quotesEnabled = (typeof window.ENABLE_QUOTES !== 'undefined') ? window.ENABLE_QUOTES : false;
     
     if (!quotesEnabled) {
         return 'Loading...';
@@ -228,6 +227,15 @@ const clearCheatOverlay = () => {
 };
 
 const createQuoteOverlay = () => {
+    // Only show overlay on game pages
+    const currentPath = window.location.pathname;
+    const isGamePage = currentPath.includes('/game/') || currentPath.includes('/live-challenge/');
+    
+    if (!isGamePage) {
+        console.debug('Cheat protection: Not on a game page, skipping overlay. Path:', currentPath);
+        return;
+    }
+    
     // If overlay already exists, don't create another one
     if (_CHEAT_OVERLAY && document.body.contains(_CHEAT_OVERLAY)) {
         return;
@@ -240,7 +248,7 @@ const createQuoteOverlay = () => {
     }
     
     // Check if quotes system is ready (only needed if quotes are enabled)
-    const quotesEnabled = (typeof window.ENABLE_QUOTES !== 'undefined') ? window.ENABLE_QUOTES : true;
+    const quotesEnabled = (typeof window.ENABLE_QUOTES !== 'undefined') ? window.ENABLE_QUOTES : false;
     if (quotesEnabled && !window._QUOTES) {
         // Quotes not loaded yet, try again after a delay
         setTimeout(() => {
@@ -261,7 +269,7 @@ const createQuoteOverlay = () => {
         
         // If still no quotes after initialization, check if quotes are disabled
         if (_QUOTES_FLAT.length === 0) {
-            const quotesEnabled = (typeof window.ENABLE_QUOTES !== 'undefined') ? window.ENABLE_QUOTES : true;
+            const quotesEnabled = (typeof window.ENABLE_QUOTES !== 'undefined') ? window.ENABLE_QUOTES : false;
             if (quotesEnabled) {
                 // Quotes are enabled but not loaded yet, try again later
                 setTimeout(() => {
@@ -317,7 +325,7 @@ const createQuoteOverlayNow = () => {
     const quoteDiv = document.createElement('div');
     
     // Get content based on whether quotes are enabled
-    const quotesEnabled = (typeof window.ENABLE_QUOTES !== 'undefined') ? window.ENABLE_QUOTES : true;
+    const quotesEnabled = (typeof window.ENABLE_QUOTES !== 'undefined') ? window.ENABLE_QUOTES : false;
     let quote;
     if (quotesEnabled) {
         quote = getRandomQuote() || 'Loading...';
@@ -500,6 +508,15 @@ const initCheatProtection = () => {
         return; // Get outta 'ere
     }
     
+    // Only show loading screen on game pages
+    const currentPath = window.location.pathname;
+    const isGamePage = currentPath.includes('/game/') || currentPath.includes('/live-challenge/');
+    
+    if (!isGamePage) {
+        console.debug('Cheat protection: Not on a game page, skipping overlay. Path:', currentPath);
+        return;
+    }
+    
     createQuoteOverlay();
     
     // Add a MutationObserver to watch for the Google Maps canvas insertion
@@ -553,6 +570,15 @@ const enforceCheatProtection = () => {
 (() => {
     // Try to initialize immediately for the fastest possible overlay creation
     console.debug(`Cheat protection: Initializing (document.readyState=${document.readyState})`);
+    
+    // Check if we're on a game page before showing overlay
+    const currentPath = window.location.pathname;
+    const isGamePage = currentPath.includes('/game/') || currentPath.includes('/live-challenge/');
+    
+    if (!isGamePage) {
+        console.debug('Cheat protection: Not on a game page, skipping overlay initialization. Path:', currentPath);
+        return;
+    }
     
     // Create overlay immediately for the fastest path
     if (_CHEAT_DETECTION && !_YOURE_LOOKING_AT_MY_CODE()) {
