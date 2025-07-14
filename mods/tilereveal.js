@@ -142,6 +142,7 @@ const resetTileReveal = () => {
         return; // Only reset if the mod is active
     }
     
+    console.debug('TileReveal: Resetting tiles and counter');
     
     // Reset the counter
     resetTileCount();
@@ -153,17 +154,26 @@ const resetTileReveal = () => {
 };
 
 const startTileRevealLocationTracking = () => {
-    // Register with the global location tracker
+    // Register with the global location tracker with less aggressive checking
     window.GG_LOCATION_TRACKER.subscribe('tilereveal', (newUrl, oldUrl) => {
-        // Check if this is a significant location change (new round/page)
-        if (window.GG_LOCATION_TRACKER.isSignificantLocationChange(oldUrl, newUrl)) {
+        // Only reset on actual round changes, not minor URL updates
+        const newPath = new URL(newUrl).pathname;
+        const oldPath = oldUrl ? new URL(oldUrl).pathname : '';
+        
+        // Check if this is a genuine game/round change
+        const isNewGame = newPath.includes('/game/') && !oldPath.includes('/game/');
+        const isNewChallenge = newPath.includes('/live-challenge/') && !oldPath.includes('/live-challenge/');
+        
+        if (isNewGame || isNewChallenge) {
+            console.debug('TileReveal: Detected new game/challenge, resetting');
             resetTileReveal();
         }
-    }, 2000); // Check every 2 seconds
+    }, 5000); // Reduced frequency: Check every 5 seconds instead of 2
     
     // Add round start listener if not already added
     if (!_ROUND_START_LISTENER_ADDED && typeof GEF !== 'undefined' && GEF.events) {
         GEF.events.addEventListener('round_start', () => {
+            console.debug('TileReveal: Round start event received (GEF)');
             setTimeout(() => {
                 resetTileReveal();
             }, 500); // Small delay to ensure everything is loaded
@@ -171,35 +181,51 @@ const startTileRevealLocationTracking = () => {
         _ROUND_START_LISTENER_ADDED = true;
     }
     
-    // Also listen for our custom round start event
-    window.addEventListener('gg_round_start', (evt) => {
-        setTimeout(() => {
-            resetTileReveal();
-        }, 500);
-    });
-    
-    // Listen for mod reactivation events
-    window.addEventListener('gg_mods_reactivate', (evt) => {
-        if (isModActive(MODS.tileReveal)) {
+    // Also listen for our custom round start event (with duplicate prevention)
+    if (!window._TILE_REVEAL_CUSTOM_LISTENER_ADDED) {
+        window.addEventListener('gg_round_start', (evt) => {
+            console.debug('TileReveal: Custom round start event received');
             setTimeout(() => {
                 resetTileReveal();
             }, 500);
-        }
-    });
+        });
+        window._TILE_REVEAL_CUSTOM_LISTENER_ADDED = true;
+    }
+    
+    // Listen for mod reactivation events (with duplicate prevention)
+    if (!window._TILE_REVEAL_REACTIVATE_LISTENER_ADDED) {
+        window.addEventListener('gg_mods_reactivate', (evt) => {
+            console.debug('TileReveal: Mod reactivation event received');
+            if (isModActive(MODS.tileReveal)) {
+                setTimeout(() => {
+                    resetTileReveal();
+                }, 500);
+            }
+        });
+        window._TILE_REVEAL_REACTIVATE_LISTENER_ADDED = true;
+    }
     
     // Add beforeunload listener for page refresh detection
     window.addEventListener('beforeunload', () => {
     });
     
-    // Add visibility change listener for tab focus/reload detection
-    document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) {
-            // Page became visible again, trigger a reset
-            setTimeout(() => {
-                resetTileReveal();
-            }, 100);
-        }
-    });
+    // Add visibility change listener for page reload detection only (with duplicate prevention)
+    if (!window._TILE_REVEAL_VISIBILITY_LISTENER_ADDED) {
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                // Only reset if we detect this might be a page reload (not just tab switching)
+                // Check if the tile overlay still exists - if not, the page was likely reloaded
+                const existingOverlay = document.getElementById('gg-tile-overlay');
+                if (!existingOverlay && isModActive(MODS.tileReveal)) {
+                    console.debug('TileReveal: Page visibility change detected, tiles missing, resetting');
+                    setTimeout(() => {
+                        resetTileReveal();
+                    }, 100);
+                }
+            }
+        });
+        window._TILE_REVEAL_VISIBILITY_LISTENER_ADDED = true;
+    }
 };
 
 const stopTileRevealLocationTracking = () => {
