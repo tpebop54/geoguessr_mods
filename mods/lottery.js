@@ -22,6 +22,9 @@ let _LOTTERY_DRAGGING = false; // Makes lottery display draggable because it ove
 let _LOTTERY_DRAGGING_OFFSET_X; // X offset from mouse to element edge when dragging starts.
 let _LOTTERY_DRAGGING_OFFSET_Y; // Y offset from mouse to element edge when dragging starts.
 
+// Initialize the flag to control programmatic clicks
+window._LOTTERY_ALLOWING_CLICK = false;
+
 const removeLotteryDisplay = () => {
     if (_LOTTERY_DISPLAY) {
         _LOTTERY_DISPLAY.parentElement.removeChild(_LOTTERY_DISPLAY);
@@ -206,7 +209,15 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         const { lat, lng } = location;
         _LOTTERY_COUNT -= 1;
         counter.innerText = _LOTTERY_COUNT;
+        
+        // Temporarily disable click blocking for this programmatic click
+        window._LOTTERY_ALLOWING_CLICK = true;
         clickAt(lat, lng);
+        // Re-enable click blocking after a short delay
+        setTimeout(() => {
+            window._LOTTERY_ALLOWING_CLICK = false;
+        }, 100);
+        
         setMapCenter(lat, lng);
     };
     button.addEventListener('click', onClick);
@@ -224,6 +235,9 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
 // Remove all lottery click blockers from the map
 const removeAllLotteryClickBlockers = () => {
     console.debug('Lottery: Removing all click blockers');
+    
+    // Clear the programmatic click flag
+    window._LOTTERY_ALLOWING_CLICK = false;
     
     // Remove lottery overlays from all possible containers
     const containers = [
@@ -297,6 +311,11 @@ const setLotteryMapMode = (enabled = true) => {
         const overlayClickHandler = (evt) => {
             // Only block actual clicks, not mousedown events that start drags
             if (evt.type === 'click') {
+                // Allow programmatic clicks from lottery
+                if (window._LOTTERY_ALLOWING_CLICK) {
+                    return; // Allow programmatic clicks
+                }
+                
                 evt.preventDefault();
                 evt.stopPropagation();
             }
@@ -310,6 +329,11 @@ const setLotteryMapMode = (enabled = true) => {
         const containerClickHandler = (evt) => {
             // Only block click events, not mousedown/mousemove for dragging
             if (evt.type === 'click') {
+                // Allow programmatic clicks from lottery
+                if (window._LOTTERY_ALLOWING_CLICK) {
+                    return; // Allow programmatic clicks
+                }
+                
                 // Additional check: don't block if this click is part of a drag operation
                 if (!evt.target.closest('.gg-lottery-overlay-dragging')) {
                     evt.preventDefault();
