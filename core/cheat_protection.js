@@ -268,6 +268,25 @@ const createQuoteOverlayNow = () => {
         return;
     }
     
+    // Add global failsafe timer that will remove any overlay after 5 seconds, regardless of any other logic
+    const globalFailsafeTimer = setTimeout(() => {
+        console.debug('Cheat protection: Global failsafe - force removing overlay after 5 seconds');
+        const overlayToRemove = document.getElementById('on-your-honor');
+        if (overlayToRemove) {
+            try {
+                overlayToRemove.remove();
+                console.debug('Cheat protection: Global failsafe removal successful');
+            } catch (err) {
+                console.error('Cheat protection: Global failsafe removal failed:', err);
+                // Force hide as absolute last resort
+                overlayToRemove.style.display = 'none';
+                overlayToRemove.style.visibility = 'hidden';
+                overlayToRemove.style.opacity = '0';
+            }
+        }
+        _CHEAT_OVERLAY = undefined;
+    }, 5000);
+    
     const cheatOverlay = document.createElement('div'); // Opaque black div that covers everything while the page loads.
     cheatOverlay.id = 'on-your-honor';
     Object.assign(cheatOverlay.style, { // Intentionally not in CSS to make it harder for people to figure out.
@@ -390,12 +409,50 @@ const createQuoteOverlayNow = () => {
         }
     }, 250);
 
-    // Safety timeout - don't let this overlay brick the site
-    const maxOverlayTime = 15000; // 15 seconds max (increased from 10 seconds)
+    // Mandatory timeout - overlay must be removed after 5 seconds regardless of other conditions
+    const maxOverlayTime = 5000; // 5 seconds max - hard limit to prevent permanent overlay
     setTimeout(() => {
         clearInterval(mapCheckInterval);
-        console.debug('Cheat protection: Safety timeout reached, removing overlay');
-        clearCheatOverlay();
+        console.debug('Cheat protection: Mandatory 5-second timeout reached, removing overlay');
+        
+        // Force remove overlay with multiple strategies in case clearCheatOverlay fails
+        try {
+            clearCheatOverlay();
+        } catch (err) {
+            console.error('Cheat protection: Error in clearCheatOverlay, using fallback removal:', err);
+        }
+        
+        // Fallback removal strategies if clearCheatOverlay fails
+        setTimeout(() => {
+            if (_CHEAT_OVERLAY) {
+                try {
+                    if (document.body.contains(_CHEAT_OVERLAY)) {
+                        document.body.removeChild(_CHEAT_OVERLAY);
+                        console.debug('Cheat protection: Overlay removed via fallback method 1');
+                    }
+                    _CHEAT_OVERLAY = undefined;
+                } catch (err) {
+                    console.error('Cheat protection: Fallback method 1 failed:', err);
+                    // Last resort - try to find and remove by ID
+                    try {
+                        const overlayById = document.getElementById('on-your-honor');
+                        if (overlayById) {
+                            overlayById.remove();
+                            console.debug('Cheat protection: Overlay removed via fallback method 2 (by ID)');
+                        }
+                        _CHEAT_OVERLAY = undefined;
+                    } catch (err2) {
+                        console.error('Cheat protection: All fallback methods failed:', err2);
+                        // Set overlay to hidden as absolute last resort
+                        if (_CHEAT_OVERLAY && _CHEAT_OVERLAY.style) {
+                            _CHEAT_OVERLAY.style.display = 'none';
+                            _CHEAT_OVERLAY.style.visibility = 'hidden';
+                            console.debug('Cheat protection: Overlay hidden as last resort');
+                        }
+                    }
+                }
+            }
+        }, 100); // Small delay to let clearCheatOverlay finish
     }, maxOverlayTime);
 };
 
@@ -455,10 +512,10 @@ const initCheatProtection = () => {
         subtree: true
     });
     
-    // Safety - stop observing after a reasonable time
+    // Safety - stop observing after 5 seconds to match overlay timeout
     setTimeout(() => {
         observer.disconnect();
-    }, 15000);
+    }, 5000);
 };
 
 // Cheat protection enforcement
