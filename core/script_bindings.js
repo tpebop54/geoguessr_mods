@@ -164,6 +164,19 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
 };
 
 /**
+ * Remove the mod menu completely from the page
+ */
+const removeModMenu = () => {
+    const modContainer = getModDiv();
+    if (modContainer) {
+        console.debug('GeoGuessr MultiMod: Removing mod menu from page');
+        modContainer.remove();
+        return true;
+    }
+    return false;
+};
+
+/**
  Some mods currently don't work with competitive games.
  Disable those conditionally. This will be fixed in the future.
  */
@@ -1377,19 +1390,6 @@ window.forceModsInit = () => {
             forceRecreateModMenu();
         }
     }, 2000);
-};
-
-/**
- * Remove the mod menu completely from the page
- */
-const removeModMenu = () => {
-    const modContainer = getModDiv();
-    if (modContainer) {
-        console.debug('GeoGuessr MultiMod: Removing mod menu from page');
-        modContainer.remove();
-        return true;
-    }
-    return false;
 };
 
 // ...existing code...
