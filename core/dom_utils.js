@@ -227,7 +227,7 @@ const makeOptionMenu = (mod) => {
     // Close any existing option menu first
     closeOptionMenu();
 
-    let _OPTION_MENU = document.createElement('div');
+    _OPTION_MENU = document.createElement('div');
     _OPTION_MENU.id = 'gg-option-menu';
 
     // Add title div to match legacy formatting
