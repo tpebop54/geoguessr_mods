@@ -172,28 +172,14 @@ const splitQuote = (quote) => {
 
 const clearCheatOverlay = () => {
     if (_CHEAT_OVERLAY && document.body.contains(_CHEAT_OVERLAY)) {
-        // Verify that maps are actually ready before removing
-        const mapsAreReady = (
-            // Check Google Maps objects
-            (typeof getGoogle === 'function' && getGoogle()) ||
-            (typeof GOOGLE_MAP !== 'undefined' && GOOGLE_MAP) ||
-            // Check for DOM elements
-            document.querySelector('.gm-style') ||
-            document.querySelector('.widget-scene-canvas') ||
-            document.querySelector('canvas')
-        );
+        // Quick removal - don't wait for maps to be ready, just remove it
+        console.debug('Cheat protection: Removing overlay immediately');
         
-        if (!mapsAreReady) {
-            console.debug('Cheat protection: Maps not ready yet, delaying overlay removal');
-            setTimeout(clearCheatOverlay, 500);
-            return;
-        }
-        
-        // Fade out the overlay for a smoother transition
-        _CHEAT_OVERLAY.style.transition = 'opacity 0.5s ease-out';
+        // Fade out the overlay for a smoother transition (but faster)
+        _CHEAT_OVERLAY.style.transition = 'opacity 0.3s ease-out';
         _CHEAT_OVERLAY.style.opacity = '0';
         
-        // Remove after transition completes
+        // Remove after shorter transition
         setTimeout(() => {
             if (_CHEAT_OVERLAY && document.body.contains(_CHEAT_OVERLAY)) {
                 try {
@@ -201,12 +187,19 @@ const clearCheatOverlay = () => {
                 } catch (err) {
                     console.error('Cheat protection: Error removing overlay:', err);
                     // Fallback removal if parent element reference fails
-                    document.body.removeChild(_CHEAT_OVERLAY);
+                    try {
+                        document.body.removeChild(_CHEAT_OVERLAY);
+                    } catch (err2) {
+                        console.error('Cheat protection: Fallback removal also failed:', err2);
+                        // Force hide as last resort
+                        _CHEAT_OVERLAY.style.display = 'none';
+                        _CHEAT_OVERLAY.style.visibility = 'hidden';
+                    }
                 }
                 _CHEAT_OVERLAY = undefined;
                 console.debug('Cheat protection: Overlay removed from DOM');
             }
-        }, 500);
+        }, 300); // Reduced from 500ms to 300ms for faster removal
     }
 };
 
