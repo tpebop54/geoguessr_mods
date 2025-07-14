@@ -1,4 +1,3 @@
-// ==UserScript==
 // @author       tpebop
 
 // ==/UserScript==

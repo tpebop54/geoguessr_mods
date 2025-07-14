@@ -1,3 +1,7 @@
+// @author       miraclewhips
+
+// ==/UserScript==
+
 // Taken and modified from https://miraclewhips.dev/geoguessr-event-framework/geoguessr-event-framework.js
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }

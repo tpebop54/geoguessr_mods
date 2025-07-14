@@ -80,14 +80,15 @@ const bindButtons = () => {
 
 const addButtons = () => { // Add mod buttons to the active round, with a little button to toggle them.
     try {
-        // Don't show mods menu on the main homepage
+        // Only show mods menu on game and live-challenge pages
         const currentUrl = window.location.href;
         const currentPath = window.location.pathname;
         
-        // Check if we're on the main homepage (exact match)
-        if (currentUrl === 'https://www.geoguessr.com/' || 
-            currentUrl === 'https://geoguessr.com/' ||
-            currentPath === '/' && window.location.hostname.includes('geoguessr.com')) {
+        // Check if we're on a supported game page
+        const isGameUrl = currentPath.includes('/game/') || currentPath.includes('/live-challenge/');
+        
+        if (!isGameUrl) {
+            console.debug('GeoGuessr MultiMod: Not on a game page, not showing mods menu. Path:', currentPath);
             return false;
         }
         
@@ -180,11 +181,11 @@ const disableModsAsNeeded = () => {
     const pathname = window.location.pathname;
     const currentUrl = window.location.href;
     
-    // Disable all mods on the main homepage
-    if (currentUrl === 'https://www.geoguessr.com/' || 
-        currentUrl === 'https://geoguessr.com/' ||
-        pathname === '/' && window.location.hostname.includes('geoguessr.com')) {
-        console.debug('GeoGuessr MultiMod: On homepage, disabling all mods and hiding menu');
+    // Only enable mods on game and live-challenge pages
+    const isGameUrl = pathname.includes('/game/') || pathname.includes('/live-challenge/');
+    
+    if (!isGameUrl) {
+        console.debug('GeoGuessr MultiMod: Not on a game page, disabling all mods and hiding menu. Path:', pathname);
         
         // Remove any existing mod menu
         removeModMenu();
@@ -195,11 +196,8 @@ const disableModsAsNeeded = () => {
         return;
     }
     
-    // Disable specific mods for live challenges
-    if (pathname.indexOf('live-challenge') !== -1) {
-        disableMods([
-        ], true);
-    }
+    // Additional specific mod restrictions for live challenges can be added here if needed
+    // (Currently no specific restrictions for live challenges)
 };
 
 // Initialize the mod system
@@ -471,7 +469,7 @@ const initializeMods = () => {
         // Setup enhanced map event listeners first
         setupMapEventListeners();
         
-        // Setup homepage monitoring for URL changes
+        // Setup game page monitoring for URL changes
         setupHomepageMonitoring();
         
         // Enforce cheat protection
@@ -1474,29 +1472,31 @@ const removeModMenu = () => {
 };
 
 /**
- * Monitor URL changes and handle homepage logic
+ * Monitor URL changes and handle game page logic
  */
 const setupHomepageMonitoring = () => {
     // Subscribe to location changes
     if (window.GG_LOCATION_TRACKER) {
-        window.GG_LOCATION_TRACKER.subscribe('homepage-monitor', (newUrl, oldUrl) => {
-            const isHomepage = newUrl === 'https://www.geoguessr.com/' || 
-                              newUrl === 'https://geoguessr.com/' ||
-                              (newUrl.includes('geoguessr.com') && new URL(newUrl).pathname === '/');
+        window.GG_LOCATION_TRACKER.subscribe('game-page-monitor', (newUrl, oldUrl) => {
+            const newPath = new URL(newUrl).pathname;
+            const isGamePage = newPath.includes('/game/') || newPath.includes('/live-challenge/');
             
-            if (isHomepage) {
-                console.debug('GeoGuessr MultiMod: Navigated to homepage, removing mod menu');
+            if (!isGamePage) {
+                console.debug('GeoGuessr MultiMod: Navigated away from game page, removing mod menu');
                 removeModMenu();
                 
                 // Disable all mods temporarily
                 const allMods = Object.values(MODS);
                 disableMods(allMods, false);
-            } else if (oldUrl && (oldUrl === 'https://www.geoguessr.com/' || 
-                                 oldUrl === 'https://geoguessr.com/' ||
-                                 (oldUrl.includes('geoguessr.com') && new URL(oldUrl).pathname === '/'))) {
-                // Navigated away from homepage - mods can be active again
-                console.debug('GeoGuessr MultiMod: Navigated away from homepage, mods can be active again');
-                // The normal initialization process will handle re-creating the menu
+            } else if (oldUrl) {
+                const oldPath = new URL(oldUrl).pathname;
+                const wasGamePage = oldPath.includes('/game/') || oldPath.includes('/live-challenge/');
+                
+                if (!wasGamePage) {
+                    // Navigated to game page from non-game page - mods can be active again
+                    console.debug('GeoGuessr MultiMod: Navigated to game page, mods can be active again');
+                    // The normal initialization process will handle re-creating the menu
+                }
             }
         }, 1000); // Check every second
     }
