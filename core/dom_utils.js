@@ -406,7 +406,9 @@ const updateMod = (mod, forceState = null) => {
 
     // If there are configurable options for this mod, open a popup.
     // Only show options menu for user clicks that ENABLE a mod (not disable or reactivate)
-    const isUserEnabling = newState && !previousState && forceState == null;
+    // We need to be very strict: only show when forceState is explicitly undefined (user click)
+    // and the mod is going from disabled to enabled
+    const isUserEnabling = newState && !previousState && forceState === undefined;
     if (isUserEnabling) {
         console.debug(`Opening options menu for ${mod.name} (user-initiated activation from disabled to enabled)`);
         const options = mod.options;

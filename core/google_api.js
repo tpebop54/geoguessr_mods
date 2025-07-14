@@ -232,7 +232,7 @@ const initializeGoogleMapsIntegration = () => {
                 const map3dReady = GOOGLE_STREETVIEW && isMapReady(GOOGLE_STREETVIEW);
                 if (map2dReady && map3dReady) {
                     clearInterval(checkInterval);
-                    callback();
+                    callback(true); // Pass true to indicate this is automatic activation
                     return;
                 }
                 if (Date.now() - startTime > timeout) {

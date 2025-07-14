@@ -458,7 +458,7 @@ const waitForMapsReady = (callback, options = {}) => {
             
             if (allReady) {
                 console.debug(`${modName}: All maps ready, executing callback`);
-                callback();
+                callback(true); // Pass true to indicate this is automatic activation
                 return true;
             }
             
@@ -479,7 +479,7 @@ const waitForMapsReady = (callback, options = {}) => {
             if (elapsed > timeout) {
                 console.warn(`${modName}: Timeout waiting for maps after ${timeout}ms, executing callback anyway`);
                 console.warn(`${modName}: Final state - 2D ready: ${map2dReady}, 3D ready: ${map3dReady}, gameElements: ${gameElementsReady}`);
-                callback();
+                callback(true); // Pass true to indicate this is automatic activation
                 return true;
             }
             
