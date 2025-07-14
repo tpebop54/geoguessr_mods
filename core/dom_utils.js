@@ -722,7 +722,7 @@ const setupGlobalKeyBindings = () => {
         }
 
         // Nuclear option to disable all mods if things get out of control
-        if (evt.altKey && evt.shiftKey && evt.key === '>') {
+        if (evt.ctrlKey && evt.shiftKey && evt.key === '>') {
             console.log('Nuclear option triggered: disabling all mods');
             clearState();
             window.location.reload();

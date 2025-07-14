@@ -105,7 +105,7 @@ let GOOGLE_MAPS_API_KEY = ''; // Replace with your Google Maps API key (optional
 
 /** GLOBAL KEYBINDINGS ADDED BY THIS MOD =============================================================================
  * 
- * - `Alt Shift >` - Reset all mods to default state. If you get in a pickle, either disable the mod via TamperMonkey or use this shortcut.
+ * - `Ctrl Shift .` - Reset all mods to default state. If you get in a pickle, either disable the mod via TamperMonkey or use this shortcut.
  * - `Ctrl [` : Open actual location in Google Maps (standard view). Requires Google Maps API key and lottery mod with "Only Land" or "Only Street View" enabled.
  * - `Ctrl ]` : Open aerial view (if "Only Land") or Street View (if "Only Street View" or both enabled). Requires Google Maps API key and lottery mod.
  */
