@@ -547,21 +547,29 @@ const createMapSafeModUpdate = (originalUpdateFunction, options = {}) => {
  * Get random latitude using sinusoidal projection for more even distribution.
  * This compensates for the fact that lines of longitude converge at the poles,
  * so uniform random lat/lng would cluster points near the poles.
+ * Now uses safe Mercator bounds when no limits are specified.
  */
 const getRandomLatSinusoidal = (lat1, lat2) => {
+    const MERCATOR_MAX_LAT = 85.05112878;
+    const MERCATOR_MIN_LAT = -85.05112878;
+    
     if (lat1 == null || lat2 == null) {
-        // For full world, use inverse sine to compensate for pole clustering
-        // Generate uniform random in [-1, 1] and apply asin to get lat in radians
-        const u = Math.random() * 2 - 1; // Uniform in [-1, 1]
-        return Math.asin(u) * (180 / Math.PI); // Convert to degrees
+        // For full world, use safe Mercator bounds instead of poles
+        // Generate uniform random and apply asin transformation within Mercator limits
+        const maxSin = Math.sin(MERCATOR_MAX_LAT * (Math.PI / 180));
+        const minSin = Math.sin(MERCATOR_MIN_LAT * (Math.PI / 180));
+        
+        const u = Math.random(); // Uniform in [0, 1]
+        const sinLat = minSin + u * (maxSin - minSin);
+        return Math.asin(sinLat) * (180 / Math.PI);
     }
     if (lat1 === lat2) {
         return lat1;
     }
     
-    // Clamp to valid latitude range
-    lat1 = Math.max(-90, Math.min(90, lat1));
-    lat2 = Math.max(-90, Math.min(90, lat2));
+    // Clamp to valid Mercator latitude range
+    lat1 = Math.max(MERCATOR_MIN_LAT, Math.min(MERCATOR_MAX_LAT, lat1));
+    lat2 = Math.max(MERCATOR_MIN_LAT, Math.min(MERCATOR_MAX_LAT, lat2));
     if (lat1 > lat2) {
         [lat1, lat2] = [lat2, lat1];
     }
@@ -587,11 +595,28 @@ const getRandomLatSinusoidal = (lat1, lat2) => {
  * Get random location using sinusoidal projection for more even distribution.
  * This creates a more uniform distribution over the Earth's surface compared to
  * uniform random lat/lng which clusters points near the poles.
+ * Automatically clamps to safe Mercator projection bounds.
  */
 const getRandomLocSinusoidal = (minLat = null, maxLat = null, minLng = null, maxLng = null) => {
+    // Apply Mercator bounds to input parameters to ensure we never generate invalid coordinates
+    const MERCATOR_MAX_LAT = 85.05112878;
+    const MERCATOR_MIN_LAT = -85.05112878;
+    
+    // Clamp input bounds to Mercator limits
+    if (minLat !== null) minLat = Math.max(MERCATOR_MIN_LAT, Math.min(MERCATOR_MAX_LAT, minLat));
+    if (maxLat !== null) maxLat = Math.max(MERCATOR_MIN_LAT, Math.min(MERCATOR_MAX_LAT, maxLat));
+    
+    // If no bounds specified, use safe Mercator bounds instead of full globe
+    if (minLat === null && maxLat === null) {
+        minLat = MERCATOR_MIN_LAT;
+        maxLat = MERCATOR_MAX_LAT;
+    }
+    
     const lat = getRandomLatSinusoidal(minLat, maxLat);
     const lng = getRandomLng(minLng, maxLng); // Longitude distribution is fine as-is
-    return { lat, lng };
+    
+    // Double-check and clamp the result to be absolutely sure
+    return clampToMercatorBounds(lat, lng);
 };
 
 /**
@@ -1223,4 +1248,30 @@ const generatePointsInRing = (centerLat, centerLng, radiusMeters, numPoints) => 
     }
     
     return points;
+};
+
+/**
+ * Clamp coordinates to safe Mercator projection bounds to ensure they never
+ * fall outside the visible map area in standard world view.
+ * 
+ * @param {number} lat - Latitude in degrees
+ * @param {number} lng - Longitude in degrees
+ * @returns {Object} Clamped coordinates {lat, lng}
+ */
+const clampToMercatorBounds = (lat, lng) => {
+    // Standard Web Mercator projection limits to avoid poles and ensure visibility
+    const MAX_MERCATOR_LAT = 85.05112878; // This is the exact limit used by Google Maps
+    const MIN_MERCATOR_LAT = -85.05112878;
+    const MAX_MERCATOR_LNG = 180;
+    const MIN_MERCATOR_LNG = -180;
+    
+    // Clamp latitude to Mercator bounds
+    const clampedLat = Math.max(MIN_MERCATOR_LAT, Math.min(MAX_MERCATOR_LAT, lat));
+    
+    // Clamp longitude to valid range
+    let clampedLng = lng;
+    if (clampedLng > MAX_MERCATOR_LNG) clampedLng = MAX_MERCATOR_LNG;
+    if (clampedLng < MIN_MERCATOR_LNG) clampedLng = MIN_MERCATOR_LNG;
+    
+    return { lat: clampedLat, lng: clampedLng };
 };

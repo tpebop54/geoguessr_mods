@@ -28,6 +28,7 @@ const modContainerStyles = `
         z-index: 9;
         display: flex;
         flex-direction: column;
+        color: white;
     }
 
     #gg-mods-header-container {

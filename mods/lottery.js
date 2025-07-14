@@ -118,8 +118,16 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         const onlyStreetView = getOption(mod, 'onlyStreetView');
         const onlyLand = getOption(mod, 'onlyLand');
         const actual = getActualLoc();
-        const minLat = actual.lat - nDegLat;
-        const maxLat = actual.lat + nDegLat;
+        
+        // Calculate latitude bounds and clamp to safe Mercator projection limits
+        // This ensures we never try to generate coordinates outside the visible map
+        const MERCATOR_MAX_LAT = 85.05112878;
+        const MERCATOR_MIN_LAT = -85.05112878;
+        
+        const rawMinLat = actual.lat - nDegLat;
+        const rawMaxLat = actual.lat + nDegLat;
+        const minLat = Math.max(MERCATOR_MIN_LAT, rawMinLat);
+        const maxLat = Math.min(MERCATOR_MAX_LAT, rawMaxLat);
 
         // The logic gets confusing across the prime meridian with large lng ranges.
         // Just assume that [-180, 180] means the entire world's longitude. Should be fine.
