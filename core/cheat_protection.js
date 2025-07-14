@@ -222,7 +222,6 @@ const clearCheatOverlay = () => {
                     }
                 }
                 _CHEAT_OVERLAY = undefined;
-                console.debug('Cheat protection: Overlay removed from DOM');
             }
         }, 300); // Reduced from 500ms to 300ms for faster removal
     }
@@ -231,20 +230,18 @@ const clearCheatOverlay = () => {
 const createQuoteOverlay = () => {
     // If overlay already exists, don't create another one
     if (_CHEAT_OVERLAY && document.body.contains(_CHEAT_OVERLAY)) {
-        console.debug('Cheat protection: Overlay already exists, not recreating');
         return;
     }
     
     // If body isn't ready, wait for it
     if (!document.body) {
-        console.debug('Cheat protection: Document body not available for overlay, waiting...');
         setTimeout(createQuoteOverlay, 100);
         return;
     }
     
-    // Check if quotes system is ready
-    if (!window._QUOTES) {
-        console.debug('Cheat protection: Quotes not loaded yet, waiting...');
+    // Check if quotes system is ready (only needed if quotes are enabled)
+    const quotesEnabled = (typeof window.ENABLE_QUOTES !== 'undefined') ? window.ENABLE_QUOTES : true;
+    if (quotesEnabled && !window._QUOTES) {
         // Quotes not loaded yet, try again after a delay
         setTimeout(() => {
             createQuoteOverlay();
@@ -252,26 +249,26 @@ const createQuoteOverlay = () => {
         return;
     }
     
-    // Initialize quotes if needed
-    if (_QUOTES_FLAT.length === 0) {
+    // Initialize quotes if needed (only if quotes are enabled)
+    if (_QUOTES_FLAT.length === 0 && quotesEnabled) {
         try {
             if (typeof initQuotesFlat === 'function') {
                 initQuotesFlat();
-                console.debug('Cheat protection: Quotes initialized, count:', _QUOTES_FLAT.length);
-            } else {
-                console.warn('Cheat protection: initQuotesFlat function not available yet');
             }
-        } catch (error) {
-            console.warn('Cheat protection: Error initializing quotes:', error);
+        } catch (err) {
+            console.warn('Cheat protection: Error initializing quotes:', err);
         }
         
-        // If still no quotes after initialization, try again later
+        // If still no quotes after initialization, check if quotes are disabled
         if (_QUOTES_FLAT.length === 0) {
-            console.debug('Cheat protection: Still no quotes after initialization, waiting...');
-            setTimeout(() => {
-                createQuoteOverlay();
-            }, 200);
-            return;
+            const quotesEnabled = (typeof window.ENABLE_QUOTES !== 'undefined') ? window.ENABLE_QUOTES : true;
+            if (quotesEnabled) {
+                // Quotes are enabled but not loaded yet, try again later
+                setTimeout(() => {
+                    createQuoteOverlay();
+                }, 200);
+                return;
+            }
         }
     }
     
@@ -282,18 +279,15 @@ const createQuoteOverlay = () => {
 const createQuoteOverlayNow = () => {
     // If there's already an overlay, don't create another one
     if (_CHEAT_OVERLAY && document.body.contains(_CHEAT_OVERLAY)) {
-        console.debug('Cheat protection: Overlay already exists, not creating another');
         return;
     }
     
     // Add global failsafe timer that will remove any overlay after 5 seconds, regardless of any other logic
     const globalFailsafeTimer = setTimeout(() => {
-        console.debug('Cheat protection: Global failsafe - force removing overlay after 5 seconds');
         const overlayToRemove = document.getElementById('on-your-honor');
         if (overlayToRemove) {
             try {
                 overlayToRemove.remove();
-                console.debug('Cheat protection: Global failsafe removal successful');
             } catch (err) {
                 console.error('Cheat protection: Global failsafe removal failed:', err);
                 // Force hide as absolute last resort
@@ -321,7 +315,15 @@ const createQuoteOverlayNow = () => {
     });
     
     const quoteDiv = document.createElement('div');
-    const quote = getRandomQuote();
+    
+    // Get content based on whether quotes are enabled
+    const quotesEnabled = (typeof window.ENABLE_QUOTES !== 'undefined') ? window.ENABLE_QUOTES : true;
+    let quote;
+    if (quotesEnabled) {
+        quote = getRandomQuote() || 'Loading...';
+    } else {
+        quote = 'Loading...';
+    }
     let parts;
     try {
         parts = splitQuote(quote);
@@ -371,7 +373,6 @@ const createQuoteOverlayNow = () => {
     // First check if body is available
     if (document.body) {
         _CHEAT_OVERLAY = document.body.insertBefore(cheatOverlay, document.body.firstChild);
-        console.debug('Cheat protection: Overlay added to document body');
     } else {
         // If body is not available yet, wait for it
         console.debug('Cheat protection: Document body not available, waiting...');
@@ -379,7 +380,6 @@ const createQuoteOverlayNow = () => {
             if (document.body) {
                 clearInterval(bodyCheckInterval);
                 _CHEAT_OVERLAY = document.body.insertBefore(cheatOverlay, document.body.firstChild);
-                console.debug('Cheat protection: Overlay added to document body after waiting');
             }
         }, 50);
     }
@@ -399,8 +399,6 @@ const createQuoteOverlayNow = () => {
             const strategy2 = domElementsReady;
             
             if (strategy1 || strategy2) {
-                console.debug('Cheat protection: Maps are loaded, will remove overlay soon');
-                // Wait a bit after map elements are detected before removing overlay
                 setTimeout(() => {
                     console.debug('Cheat protection: Removing overlay after map detection');
                     clearCheatOverlay();
@@ -432,8 +430,6 @@ const createQuoteOverlayNow = () => {
     setTimeout(() => {
         clearInterval(mapCheckInterval);
         console.debug('Cheat protection: Mandatory 5-second timeout reached, removing overlay');
-        
-        // Force remove overlay with multiple strategies in case clearCheatOverlay fails
         try {
             clearCheatOverlay();
         } catch (err) {
