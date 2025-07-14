@@ -6,6 +6,15 @@
 // Mod utility functions.
 // ===============================================================================================================================
 
+/**
+ * Check if mods should be available on the current page
+ * @returns {boolean} True if on a game or live challenge page
+ */
+const areModsAvailable = () => {
+    const currentPath = window.location.pathname;
+    return currentPath.includes('/game/') || currentPath.includes('/live-challenge/');
+};
+
 const getActualLoc = () => {
     const actual = GG_ROUND || GG_LOC; // These are extracted in different ways. May need to clean it up at some point.
     if (!GG_ROUND && !GG_CLICK) {

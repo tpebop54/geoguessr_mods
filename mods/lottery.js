@@ -33,6 +33,12 @@ const removeLotteryDisplay = () => {
 };
 
 const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
+    // Only show lottery display on game pages
+    if (!areModsAvailable()) {
+        console.debug('Lottery: Not on a game page, skipping lottery display creation. Path:', window.location.pathname);
+        return;
+    }
+    
     removeLotteryDisplay();
 
     const container = document.createElement('div'); // Contains the full lottery display.
@@ -282,6 +288,12 @@ const removeAllLotteryClickBlockers = () => {
 
 // Set lottery-specific map interaction mode (allow zoom/pan, block clicks)
 const setLotteryMapMode = (enabled = true) => {
+    // Only create lottery overlays on game pages
+    if (enabled && !areModsAvailable()) {
+        console.debug('Lottery: Not on a game page, skipping lottery map mode. Path:', window.location.pathname);
+        return;
+    }
+    
     const container = getSmallMapContainer();
     if (!container) return;
     
@@ -408,6 +420,13 @@ const resetLotteryCount = () => {
         return; // Only reset if the mod is active
     }
     
+    // Only reset on game pages
+    if (!areModsAvailable()) {
+        console.debug('Lottery: Not on a game page, skipping reset. Path:', window.location.pathname);
+        return;
+    }
+    
+    console.debug('Lottery: Resetting counter');
     
     // Reset the counter
     _LOTTERY_COUNT = getOption(mod, 'nGuesses');
@@ -452,6 +471,7 @@ const stopLotteryLocationTracking = () => {
 const updateLottery = (forceState = undefined) => {
     const mod = MODS.lottery;
     const active = updateMod(mod, forceState);
+    const isGamePage = areModsAvailable();
 
     // Handle conflicts with scoring mods
     if (active) {
@@ -466,7 +486,7 @@ const updateLottery = (forceState = undefined) => {
     }
 
     const smallMap = getSmallMap();
-    if (active) {
+    if (active && isGamePage) {
         // Use waitForMapsReady to ensure the 2D map is ready before proceeding
         waitForMapsReady(() => {
             // If display doesn't exist, create it
@@ -495,6 +515,13 @@ const updateLottery = (forceState = undefined) => {
             modName: 'Lottery',
             timeout: 8000
         });
+    } else if (active && !isGamePage) {
+        // Mod is active but not on a game page - clean up any existing overlays
+        console.debug('Lottery: Mod active but not on game page, cleaning up overlays');
+        removeLotteryDisplay();
+        removeAllLotteryClickBlockers();
+        setLotteryMapMode(false);
+        stopLotteryLocationTracking();
     } else {
         const container = document.querySelector(`#gg-lottery`);
         if (container) {
