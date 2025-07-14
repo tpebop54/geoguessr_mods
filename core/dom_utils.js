@@ -405,9 +405,10 @@ const updateMod = (mod, forceState = null) => {
     console.debug(`updateMod: ${mod.name}, previousState: ${previousState}, newState: ${newState}, forceState: ${forceState}`);
 
     // If there are configurable options for this mod, open a popup.
-    // Only show options menu for user clicks (not during initialization/restoration)
-    if (newState && !forceState) {
-        console.debug(`Opening options menu for ${mod.name} (user-initiated activation)`);
+    // Only show options menu for user clicks that ENABLE a mod (not disable or reactivate)
+    const isUserEnabling = newState && !previousState && forceState == null;
+    if (isUserEnabling) {
+        console.debug(`Opening options menu for ${mod.name} (user-initiated activation from disabled to enabled)`);
         const options = mod.options;
         if (options && typeof options === 'object' && Object.keys(options).length) {
             // Check if mod container exists before creating option menu
@@ -422,8 +423,12 @@ const updateMod = (mod, forceState = null) => {
                 console.warn(`Cannot create option menu for ${mod.name}: no container available`);
             }
         }
-    } else if (newState && forceState) {
-        console.debug(`Skipping options menu for ${mod.name} (state restoration, not user click)`);
+    } else if (newState && forceState != null) {
+        console.debug(`Skipping options menu for ${mod.name} (forced activation/reactivation)`);
+    } else if (newState && previousState) {
+        console.debug(`Skipping options menu for ${mod.name} (mod was already active)`);
+    } else if (!newState) {
+        console.debug(`Skipping options menu for ${mod.name} (mod being disabled)`);
     }
 
     mod.active = newState;
