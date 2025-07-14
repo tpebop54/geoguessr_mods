@@ -57,19 +57,17 @@ if (typeof window.SHOW_QUOTES === 'undefined') {
     };
 }
 
-/* ===============================================================================================================================
- * GOOGLE MAPS API KEY CONFIGURATION (OPTIONAL)
- * ===============================================================================================================================
+/* GOOGLE MAPS API KEY CONFIGURATION (OPTIONAL) ==================================================================
  * 
- * Some features (like the Puzzle mod and Lottery mod advanced options) may require a Google Maps API key for enhanced functionality.
- * This is OPTIONAL - the mods will work without it, but some features may be limited or rate-limited.
- * 
+ * This is OPTIONAL. Some mods use it but most do not. Any that use it will be automatically disabled if you don't have a key.
+ * Using this mod pack is very unlikely to hit your limits for free usage, but you should still monitor your usage (instructions below).
+ *
  * HOW TO GET A GOOGLE MAPS API KEY:
  * 1. Go to https://console.cloud.google.com/
  * 2. Create a new project or select an existing one
  * 3. Enable the following APIs (in "APIs & Services" → "Library"):
  *    - Maps JavaScript API
- *    - Street View Static API (for puzzle mod tiles)
+ *    - Street View Static API
  * 4. Go to "APIs & Services" → "Credentials" → "Create Credentials" → "API key"
  * 5. Copy your API key and paste it below between the quotes
  * 6. RECOMMENDED: Click "Restrict Key" and add these restrictions:
@@ -79,27 +77,19 @@ if (typeof window.SHOW_QUOTES === 'undefined') {
  * 
  * SECURITY NOTES:
  * - Keep your API key private! Don't share your userscript file with others if it contains your key.
- * - Consider setting up billing alerts in Google Cloud Console to monitor usage
- * - The free tier includes generous limits that should be sufficient for personal use
- * 
- * KEYBOARD SHORTCUTS (when lottery mod "Only Land" or "Only Street View" options are enabled):
- * - Ctrl+[ : Open actual location in Google Maps (standard view)
- * - Ctrl+] : Open aerial view (if "Only Land") or Street View (if "Only Street View" or both enabled)
- * 
- * EXAMPLE: GOOGLE_MAPS_API_KEY = "AIzaSyBnX1xX2xX3xX4xX5xX6xX7xX8xX9xX0xX1";
- * 
- * To add your API key, replace the empty string below with your key:
- * 
- * ALTERNATIVE: You can also configure the API key at runtime by opening the browser console
- * and typing: configureGoogleApiKey() - though this won't persist between sessions.
+ * - Consider setting up billing alerts in Google Cloud Console to monitor usage.
+ * - The free tier includes generous limits that should be sufficient for personal use. Specifically, 10,000 requests per month for the Maps JavaScript API.
  */
-let GOOGLE_MAPS_API_KEY = ""; // Replace with your Google Maps API key (optional)
 
-// Make API key globally available
+let GOOGLE_MAPS_API_KEY = ''; // Replace with your Google Maps API key (optional)
+
+/** GLOBAL KEYBINDINGS ADDED BY THIS MOD =============================================================================
+ * 
+ * - `Ctrl Shift .` - Reset all mods to default state. If you get in a pickle, either disable the mod via TamperMonkey or use this shortcut.
+ * - `Ctrl [` : Open actual location in Google Maps (standard view).
+ * - `Ctrl ]` Open aerial view (if "Only Land") or Street View (if "Only Street View" or both enabled).
+ */
+
 if (typeof window !== 'undefined') {
-    window.GOOGLE_MAPS_API_KEY = GOOGLE_MAPS_API_KEY;
+    window.GOOGLE_MAPS_API_KEY = GOOGLE_MAPS_API_KEY; // Make API key globally available
 }
-
-/* =============================================================================================================================== */
-
-console.log(`Tpebop's mods loaded (DEV).`);
