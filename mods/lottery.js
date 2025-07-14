@@ -221,22 +221,57 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     resetButton.addEventListener('click', onReset);
 };
 
+// Remove all lottery click blockers from the map
+const removeAllLotteryClickBlockers = () => {
+    console.debug('Lottery: Removing all click blockers');
+    
+    // Remove lottery overlays from all possible containers
+    const containers = [
+        getSmallMapContainer(),
+        getSmallMap(),
+        document.querySelector('[data-qa="guess-map"]'),
+        document.querySelector('.guess-map'),
+        document.querySelector('#__next [role="region"]'),
+        document.body
+    ].filter(Boolean);
+    
+    containers.forEach(container => {
+        // Remove lottery overlays
+        const overlays = container.querySelectorAll('.gg-lottery-overlay');
+        overlays.forEach(overlay => overlay.remove());
+        
+        // Remove stored click handlers
+        if (container._lotteryClickHandler) {
+            container.removeEventListener('click', container._lotteryClickHandler, true);
+            delete container._lotteryClickHandler;
+        }
+        
+        // Remove any additional event listeners that might be blocking clicks
+        if (container._lotteryEventListeners) {
+            container._lotteryEventListeners.forEach(({ event, handler, options }) => {
+                container.removeEventListener(event, handler, options);
+            });
+            delete container._lotteryEventListeners;
+        }
+    });
+    
+    // Remove any globally added click blockers
+    document.querySelectorAll('.gg-lottery-overlay, [class*="lottery-click-block"]').forEach(el => el.remove());
+};
+
 // Set lottery-specific map interaction mode (allow zoom/pan, block clicks)
 const setLotteryMapMode = (enabled = true) => {
     const container = getSmallMapContainer();
     if (!container) return;
     
     if (enabled) {
+        // First remove any existing blockers to avoid duplicates
+        removeAllLotteryClickBlockers();
+        
         // Lottery mode: allow zoom/pan but block clicks
         container.style.pointerEvents = 'auto';
         
-        // Remove any existing lottery overlay
-        const existingOverlay = container.querySelector('.gg-lottery-overlay');
-        if (existingOverlay) {
-            existingOverlay.remove();
-        }
-        
-        // Add lottery-specific overlay that only intercepts click events
+        // Add lottery-specific overlay that intercepts click events
         const overlay = document.createElement('div');
         overlay.className = 'gg-lottery-overlay';
         overlay.style.cssText = `
@@ -245,44 +280,46 @@ const setLotteryMapMode = (enabled = true) => {
             left: 0;
             right: 0;
             bottom: 0;
-            pointer-events: none;
+            pointer-events: auto;
             background: transparent;
             z-index: 1000;
         `;
         
-        // Only enable pointer events for specific interactions we want to block
-        overlay.addEventListener('click', (evt) => {
+        // Block click events on the overlay
+        const overlayClickHandler = (evt) => {
             evt.preventDefault();
             evt.stopPropagation();
-        }, true);
+        };
+        overlay.addEventListener('click', overlayClickHandler, true);
         
-        // Override the click behavior at the container level instead of using overlay
-        container.addEventListener('click', (evt) => {
+        // Define and store the container click handler
+        const containerClickHandler = (evt) => {
             // Block clicks that would place markers
-            evt.preventDefault();
-            evt.stopPropagation();
-        }, true);
-        
-        // Store reference to the click handler so we can remove it later
-        container._lotteryClickHandler = (evt) => {
             evt.preventDefault();
             evt.stopPropagation();
         };
         
+        // Add the click handler to the container
+        container.addEventListener('click', containerClickHandler, true);
+        
+        // Store references for cleanup
+        container._lotteryClickHandler = containerClickHandler;
+        if (!container._lotteryEventListeners) {
+            container._lotteryEventListeners = [];
+        }
+        container._lotteryEventListeners.push({
+            event: 'click',
+            handler: containerClickHandler,
+            options: true
+        });
+        
         container.appendChild(overlay);
     } else {
-        // Normal mode: remove lottery overlay and click handler
-        container.style.pointerEvents = 'auto';
-        const overlay = container.querySelector('.gg-lottery-overlay');
-        if (overlay) {
-            overlay.remove();
-        }
+        // Normal mode: remove all lottery click blockers
+        removeAllLotteryClickBlockers();
         
-        // Remove the click handler
-        if (container._lotteryClickHandler) {
-            container.removeEventListener('click', container._lotteryClickHandler, true);
-            delete container._lotteryClickHandler;
-        }
+        // Restore normal pointer events
+        container.style.pointerEvents = 'auto';
     }
 };
 
@@ -347,6 +384,8 @@ const updateLottery = (forceState = null) => {
     // Only remove the display if we're deactivating
     if (!active) {
         removeLotteryDisplay();
+        // Ensure all click blockers are removed when lottery is disabled
+        removeAllLotteryClickBlockers();
     }
 
     const smallMap = getSmallMap();
