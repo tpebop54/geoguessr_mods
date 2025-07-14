@@ -85,8 +85,26 @@ const _YOURE_LOOKING_AT_MY_CODE = (v) => {
 let _QUOTES_FLAT = [];
 let _CHEAT_OVERLAY; // Div to block view.
 
+/**
+ * Initialize the quotes system for loading screens.
+ * 
+ * The system can be configured in installer.js and installer_dev.js:
+ * - window.ENABLE_QUOTES: true/false to enable/disable the entire quotes system
+ * - window.SHOW_QUOTES: object defining which categories to show (only applies if ENABLE_QUOTES is true)
+ * 
+ * If ENABLE_QUOTES is false, loading screens will show "Loading..." instead of quotes.
+ * If ENABLE_QUOTES is true (default), quotes from selected categories will be shown.
+ */
 const initQuotesFlat = () => {
     _QUOTES_FLAT = [];
+    
+    // Check if quotes system is enabled globally
+    const quotesEnabled = (typeof window.ENABLE_QUOTES !== 'undefined') ? window.ENABLE_QUOTES : true;
+    
+    if (!quotesEnabled) {
+        // Quotes are disabled globally, don't load any quotes
+        return;
+    }
     
     // Default configuration if SHOW_QUOTES is not defined
     const defaultShowQuotes = {
@@ -119,6 +137,13 @@ const _RECENT_QUOTES = [];
 const MAX_RECENT_QUOTES = 10; // Don't show the same quote until at least this many others have been shown
 
 const getRandomQuote = () => {
+    // Check if quotes system is enabled globally
+    const quotesEnabled = (typeof window.ENABLE_QUOTES !== 'undefined') ? window.ENABLE_QUOTES : true;
+    
+    if (!quotesEnabled) {
+        return 'Loading...';
+    }
+    
     if (!_QUOTES_FLAT.length) {
         // Try to initialize quotes if not already done, but only if function is available
         if (typeof initQuotesFlat === 'function') {

@@ -44,7 +44,27 @@
 
 // ==/UserScript==
 
-// Configure which quote categories to show during loading screens
+/* LOADING SCREEN CONFIGURATION ===================================================================================
+ * 
+ * ENABLE_QUOTES: Set to true to show random quotes/facts during loading screens, or false for simple "Loading..." text
+ * SHOW_QUOTES: Configure which categories of quotes to show (only applies if ENABLE_QUOTES is true)
+ * 
+ * Categories available:
+ * - inspirational: Motivational and life quotes
+ * - heavy: Thought-provoking philosophical quotes
+ * - media: Fun quotes from movies, TV, and celebrities
+ * - jokes: Dad jokes and puns
+ * - funFacts: Interesting facts about the world
+ * - tongueTwisters: Try to say these fast!
+ * - questions: Conversation starters and silly questions
+ */
+
+// Configure loading screen quotes system
+if (typeof window.ENABLE_QUOTES === 'undefined') {
+    window.ENABLE_QUOTES = false; // Set to false to disable quotes and show simple "Loading..." message
+}
+
+// Configure which quote categories to show during loading screens (only applies if ENABLE_QUOTES is true)
 if (typeof window.SHOW_QUOTES === 'undefined') {
     window.SHOW_QUOTES = {
         inspirational: true,  // Motivational and inspirational quotes
