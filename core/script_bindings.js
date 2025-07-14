@@ -1270,34 +1270,19 @@ window.debugSatelliteView = () => {
     console.group('🛰️ Satellite View Debug Information');
     
     const satViewMod = MODS.satView;
-        active: satViewMod?.active,
-        show: satViewMod?.show,
-        key: satViewMod?.key
-    });
     
     if (GOOGLE_MAP) {
         try {
-                mapTypeId: GOOGLE_MAP.getMapTypeId(),
-                hasGetBounds: typeof GOOGLE_MAP.getBounds === 'function',
-                hasBounds: !!GOOGLE_MAP.getBounds(),
-                hasGetCenter: typeof GOOGLE_MAP.getCenter === 'function',
-                hasCenter: !!GOOGLE_MAP.getCenter(),
-                hasMapDiv: !!GOOGLE_MAP.getDiv(),
-                hasTiles: !!GOOGLE_MAP.getDiv()?.querySelector('.gm-style img')
-            });
-            
             // Try to manually set satellite view
             GOOGLE_MAP.setMapTypeId('satellite');
             
             setTimeout(() => {
-                    mapTypeId: GOOGLE_MAP.getMapTypeId()
-                });
+                // Check if satellite view was applied
             }, 1000);
             
         } catch (err) {
             console.error('Error in satellite view debug:', err);
         }
-    } else {
     }
     
     console.groupEnd();
