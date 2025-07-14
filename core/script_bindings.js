@@ -449,6 +449,37 @@ const handleGoogleMapsShortcut = (key) => {
     }
 };
 
+/**
+ * Monitor URL changes and handle game page logic
+ */
+const setupHomepageMonitoring = () => {
+    // Subscribe to location changes
+    if (window.GG_LOCATION_TRACKER) {
+        window.GG_LOCATION_TRACKER.subscribe('game-page-monitor', (newUrl, oldUrl) => {
+            const newPath = new URL(newUrl).pathname;
+            const isGamePage = newPath.includes('/game/') || newPath.includes('/live-challenge/');
+            
+            if (!isGamePage) {
+                console.debug('GeoGuessr MultiMod: Navigated away from game page, removing mod menu');
+                removeModMenu();
+                
+                // Disable all mods temporarily
+                const allMods = Object.values(MODS);
+                disableMods(allMods, false);
+            } else if (oldUrl) {
+                const oldPath = new URL(oldUrl).pathname;
+                const wasGamePage = oldPath.includes('/game/') || oldPath.includes('/live-challenge/');
+                
+                if (!wasGamePage) {
+                    // Navigated to game page from non-game page - mods can be active again
+                    console.debug('GeoGuessr MultiMod: Navigated to game page, mods can be active again');
+                    // The normal initialization process will handle re-creating the menu
+                }
+            }
+        }, 1000); // Check every second
+    }
+};
+
 // Initialize when DOM is ready
 const initializeMods = () => {
     try {
@@ -1359,37 +1390,6 @@ const removeModMenu = () => {
         return true;
     }
     return false;
-};
-
-/**
- * Monitor URL changes and handle game page logic
- */
-const setupHomepageMonitoring = () => {
-    // Subscribe to location changes
-    if (window.GG_LOCATION_TRACKER) {
-        window.GG_LOCATION_TRACKER.subscribe('game-page-monitor', (newUrl, oldUrl) => {
-            const newPath = new URL(newUrl).pathname;
-            const isGamePage = newPath.includes('/game/') || newPath.includes('/live-challenge/');
-            
-            if (!isGamePage) {
-                console.debug('GeoGuessr MultiMod: Navigated away from game page, removing mod menu');
-                removeModMenu();
-                
-                // Disable all mods temporarily
-                const allMods = Object.values(MODS);
-                disableMods(allMods, false);
-            } else if (oldUrl) {
-                const oldPath = new URL(oldUrl).pathname;
-                const wasGamePage = oldPath.includes('/game/') || oldPath.includes('/live-challenge/');
-                
-                if (!wasGamePage) {
-                    // Navigated to game page from non-game page - mods can be active again
-                    console.debug('GeoGuessr MultiMod: Navigated to game page, mods can be active again');
-                    // The normal initialization process will handle re-creating the menu
-                }
-            }
-        }, 1000); // Check every second
-    }
 };
 
 // ...existing code...
