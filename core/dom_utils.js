@@ -536,6 +536,91 @@ const closeOptionMenu = () => {
 };
 
 /**
+ * Removes overlays for specific mods that have draggable displays/overlays
+ */
+const removeModOverlays = (mod) => {
+    console.debug('Attempting to remove overlays for mod:', mod.name);
+    
+    try {
+        // Handle lottery mod overlays
+        if (mod.key === 'lottery') {
+            // Remove lottery display
+            if (typeof removeLotteryDisplay === 'function') {
+                removeLotteryDisplay();
+                console.debug('Removed lottery display overlay');
+            }
+            // Remove lottery map overlays
+            if (typeof removeAllLotteryClickBlockers === 'function') {
+                removeAllLotteryClickBlockers();
+                console.debug('Removed lottery map overlays');
+            }
+        }
+        
+        // Handle tilereveal mod overlays
+        if (mod.key === 'tilereveal') {
+            // Remove tile counter
+            if (typeof removeTileCounter === 'function') {
+                removeTileCounter();
+                console.debug('Removed tile counter overlay');
+            }
+            // Remove tiles
+            if (typeof removeTiles === 'function') {
+                removeTiles();
+                console.debug('Removed tile overlays');
+            }
+        }
+        
+        // Handle flashlight mod overlays - call the update function with false to disable
+        if (mod.key === 'flashlight') {
+            if (typeof updateFlashlight === 'function') {
+                updateFlashlight(false);
+                console.debug('Removed flashlight overlay');
+            }
+        }
+        
+        // Handle display mod overlays
+        if (mod.key === 'display-preferences') {
+            if (typeof removeColorOverlay === 'function') {
+                removeColorOverlay();
+                console.debug('Removed color overlay');
+            }
+        }
+        
+        // Handle puzzle mod overlays - call the update function with false to disable
+        if (mod.key === 'puzzle') {
+            if (typeof updatePuzzle === 'function') {
+                updatePuzzle(false);
+                console.debug('Removed puzzle overlay');
+            }
+        }
+        
+        // Generic DOM-based cleanup for any remaining overlays
+        const modSpecificSelectors = {
+            lottery: ['.gg-lottery-display', '.gg-lottery-overlay', '[class*="lottery-click-block"]'],
+            tilereveal: ['#gg-tile-counter', '#gg-tile-overlay', '.gg-tile'],
+            flashlight: ['#gg-flashlight-div', '#gg-flashlight'],
+            'display-preferences': ['.gg-color-overlay'],
+            puzzle: ['#gg-canvas-2d', '.gg-puzzle-tile', '.gg-puzzle-dragging'],
+            // Add more as needed
+        };
+        
+        const selectors = modSpecificSelectors[mod.key];
+        if (selectors) {
+            selectors.forEach(selector => {
+                const elements = document.querySelectorAll(selector);
+                elements.forEach(element => {
+                    element.remove();
+                    console.debug(`Removed element with selector: ${selector}`);
+                });
+            });
+        }
+        
+    } catch (err) {
+        console.error('Error removing overlays for mod:', mod.name, err);
+    }
+};
+
+/**
  * Disable scoring mods when lottery is enabled, and disable lottery when scoring mods are enabled
  * This prevents conflicts between lottery and scoring functionality
  */
@@ -553,16 +638,28 @@ const disableConflictingMods = (activatingMod) => {
             if (isScoringMod(other)) {
                 console.debug('Disabling scoring mod due to lottery:', other.name);
                 disableMods(other);
+                removeModOverlays(other);
             }
         }
     } else if (isScoring) {
-        // Scoring mod is being enabled - disable lottery and other scoring mods
-        console.debug('Scoring mod enabled: disabling lottery and other scoring mods');
+        // Scoring mod is being enabled - disable lottery and other scoring mods, remove all incompatible overlays
+        console.debug('Scoring mod enabled: disabling lottery and other scoring mods, removing overlays');
         for (const other of Object.values(MODS)) {
             if (other === activatingMod) continue;
             if (isScoringMod(other) || other.key === 'lottery') {
                 console.debug('Disabling conflicting mod:', other.name);
                 disableMods(other);
+                removeModOverlays(other);
+            }
+        }
+        
+        // Remove overlays from other mods that might interfere with scoring
+        const modsWithOverlays = ['tilereveal', 'flashlight', 'display-preferences', 'puzzle'];
+        for (const other of Object.values(MODS)) {
+            if (other === activatingMod) continue;
+            if (modsWithOverlays.includes(other.key)) {
+                console.debug('Removing overlays from mod:', other.name);
+                removeModOverlays(other);
             }
         }
         
