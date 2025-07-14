@@ -443,12 +443,32 @@ const updateMod = (mod, forceState = null) => {
     return newState;
 };
 
+// Track registered map click listeners to avoid conflicts
+const _MAP_CLICK_LISTENERS = new Set();
+
 const mapClickListener = (func, enable = true) => {
     if (enable) {
+        // Remove if already exists to prevent duplicates
+        if (_MAP_CLICK_LISTENERS.has(func)) {
+            document.removeEventListener('map_click', func, false);
+        }
         document.addEventListener('map_click', func);
+        _MAP_CLICK_LISTENERS.add(func);
+        console.debug('Added map click listener:', func.name || 'anonymous');
     } else {
         document.removeEventListener('map_click', func, false);
+        _MAP_CLICK_LISTENERS.delete(func);
+        console.debug('Removed map click listener:', func.name || 'anonymous');
     }
+};
+
+// Clear all registered map click listeners (useful for cleanup)
+const clearAllMapClickListeners = () => {
+    for (const func of _MAP_CLICK_LISTENERS) {
+        document.removeEventListener('map_click', func, false);
+        console.debug('Cleared map click listener:', func.name || 'anonymous');
+    }
+    _MAP_CLICK_LISTENERS.clear();
 };
 
 const disableMods = (mods, forceHide = false) => {
@@ -468,16 +488,19 @@ const disableMods = (mods, forceHide = false) => {
 };
 
 const isScoringMod = (mod) => {
-    return !!mod.isScoring;
+    return !!(mod.isScoring || mod.scoreMode);
 };
 
 const disableOtherScoreMods = (mod) => { // This function needs to be called prior to defining SCORE_FUNC when a scoring mod is enabled.
     SCORE_FUNC = undefined;
+    console.debug('Disabling other scoring mods, keeping active:', mod?.name || 'none');
+    
     for (const other of Object.values(MODS)) {
         if (mod === other) {
             continue;
         }
         if (isScoringMod(other)) {
+            console.debug('Disabling scoring mod:', other.name);
             disableMods(other);
         }
     }

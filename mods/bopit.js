@@ -6,6 +6,40 @@
 // MOD: Bop It.
 // ===============================================================================================================================
 
+const bopItListener = async (evt) => {
+    let scoreString;
+    if (SCORE_FUNC) {
+        const result = SCORE_FUNC(evt);
+        // Handle both sync and async score functions
+        if (result && typeof result.then === 'function') {
+            scoreString = String(await result);
+        } else {
+            scoreString = String(result);
+        }
+    } else {
+        scoreString = String(getScore());
+    }
+
+    let fadeTarget = document.getElementById('gg-score-div');
+    if (!fadeTarget) {
+        fadeTarget = document.createElement('div');
+        fadeTarget.id = 'gg-score-div';
+        document.body.appendChild(fadeTarget);
+    }
+
+    fadeTarget.innerHTML = scoreString;
+    fadeTarget.style.opacity = 1
+
+    let fadeEffect;
+    fadeEffect = setInterval(() => {
+        if (fadeTarget.style.opacity > 0) {
+            fadeTarget.style.opacity = parseFloat(fadeTarget.style.opacity) - 0.05;
+        } else {
+            clearInterval(fadeEffect);
+        }
+    }, 50);
+};
+
 const updateBopIt = (forceState = null) => {
     const mod = MODS.bopIt;
     const active = updateMod(mod, forceState);
@@ -67,9 +101,9 @@ const updateBopIt = (forceState = null) => {
     if (active) {
         disableOtherScoreMods(mod);
         SCORE_FUNC = getBopIt;
-        mapClickListener(scoreListener, true);
+        mapClickListener(bopItListener, true);
     } else {
         disableOtherScoreMods();
-        mapClickListener(scoreListener, false);
+        mapClickListener(bopItListener, false);
     }
 };
