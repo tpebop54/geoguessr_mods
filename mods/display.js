@@ -212,7 +212,7 @@ const setupDisplayLocationTracking = () => {
     console.debug('Display mod: Location tracking enabled for options persistence');
 };
 
-const updateDisplayOptions = (forceState = null) => {
+const updateDisplayOptions = (forceState = undefined) => {
     const mod = MODS.displayOptions;
     const active = updateMod(mod, forceState);
 

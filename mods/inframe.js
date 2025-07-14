@@ -9,7 +9,7 @@
 let IN_FRAME_INTERVAL;
 let IN_FRAME_ROUND_START_LISTENER_ADDED = false;
 
-const updateInFrameLogic = (forceState = null) => {
+const updateInFrameLogic = (forceState = undefined) => {
     const mod = MODS.inFrame;
     const active = updateMod(mod, forceState);
 
@@ -67,7 +67,7 @@ const updateInFrameLogic = (forceState = null) => {
     }
 };
 
-const updateInFrame = (forceState = null) => {
+const updateInFrame = (forceState = undefined) => {
     // Add round start listener if not already added and mod is being activated
     if (!IN_FRAME_ROUND_START_LISTENER_ADDED && typeof GEF !== 'undefined' && GEF.events) {
         GEF.events.addEventListener('round_start', () => {

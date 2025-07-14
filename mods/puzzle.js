@@ -454,7 +454,7 @@ const updatePuzzleLogic = async (forceState = null) => {
     console.debug('Puzzle: Successfully activated');
 };
 
-const updatePuzzle = (forceState = null) => {
+const updatePuzzle = (forceState = undefined) => {
     // Convert to sync wrapper since we need async inside but the mod system expects sync
     waitForMapsReady(() => {
         updatePuzzleLogic(forceState);

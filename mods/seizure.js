@@ -8,7 +8,7 @@
 
 let SEIZURE_INTERVAL;
 
-const updateSeizure = (forceState = null) => {
+const updateSeizure = (forceState = undefined) => {
     const mod = MODS.seizure;
     const active = updateMod(mod, forceState);
 

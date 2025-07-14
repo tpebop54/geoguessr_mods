@@ -40,7 +40,7 @@ const bopItListener = async (evt) => {
     }, 50);
 };
 
-const updateBopIt = (forceState = null) => {
+const updateBopIt = (forceState = undefined) => {
     const mod = MODS.bopIt;
     const active = updateMod(mod, forceState);
 

@@ -41,7 +41,7 @@ const showScoreListener = async (evt) => {
     }, 50);
 };
 
-const updateShowScore = (forceState = null) => {
+const updateShowScore = (forceState = undefined) => {
     const mod = MODS.showScore;
     const active = updateMod(mod, forceState);
 

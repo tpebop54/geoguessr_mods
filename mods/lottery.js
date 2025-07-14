@@ -428,7 +428,7 @@ const stopLotteryLocationTracking = () => {
     window.GG_LOCATION_TRACKER.unsubscribe('lottery');
 };
 
-const updateLottery = (forceState = null) => {
+const updateLottery = (forceState = undefined) => {
     const mod = MODS.lottery;
     const active = updateMod(mod, forceState);
 

@@ -36,7 +36,7 @@ const doRotation = (nDegrees) => {
 
 let ROTATION_INTERVAL;
 
-const updateRotateMapLogic = (forceState = null) => {
+const updateRotateMapLogic = (forceState = undefined) => {
     const mod = MODS.rotateMap;
     const active = updateMod(mod, forceState);
 

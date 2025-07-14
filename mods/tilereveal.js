@@ -213,7 +213,7 @@ const stopTileRevealLocationTracking = () => {
     window.GG_LOCATION_TRACKER.unsubscribe('tilereveal');
 };
 
-const updateTileReveal = (forceState = null) => {
+const updateTileReveal = (forceState = undefined) => {
     const mod = MODS.tileReveal;
     const active = updateMod(mod, forceState);
 

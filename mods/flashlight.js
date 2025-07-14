@@ -9,7 +9,7 @@
 let FLASHLIGHT_MOUSEMOVE;
 
 // ref: https://stackoverflow.com/questions/77333080/flashlight-effect-with-custom-cursor-img
-const updateFlashlight = (forceState = null) => {
+const updateFlashlight = (forceState = undefined) => {
     const mod = MODS.flashlight;
     const active = updateMod(mod, forceState);
 
