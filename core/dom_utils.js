@@ -699,3 +699,114 @@ const addDebugger = () => {
     }
 };
 
+/**
+ * Sets up global keyboard shortcuts that are available throughout the application
+ */
+const setupGlobalKeyBindings = () => {
+    document.addEventListener('keydown', (evt) => {
+        // Check if user is interacting with form elements or options menu
+        const activeElement = document.activeElement;
+        const isInOptionsMenu = activeElement && activeElement.closest('#gg-option-menu');
+        const isFormElement = activeElement && (
+            activeElement.tagName === 'INPUT' ||
+            activeElement.tagName === 'SELECT' ||
+            activeElement.tagName === 'TEXTAREA' ||
+            activeElement.tagName === 'BUTTON' ||
+            activeElement.contentEditable === 'true' ||
+            activeElement.classList.contains('gg-option-input')
+        );
+        
+        // Don't process hotkeys if user is in a form element or options menu
+        if (isFormElement || isInOptionsMenu) {
+            return;
+        }
+
+        // Nuclear option to disable all mods if things get out of control
+        if (evt.altKey && evt.shiftKey && evt.key === '>') {
+            console.log('Nuclear option triggered: disabling all mods');
+            clearState();
+            window.location.reload();
+        }
+
+        // Google Maps integration - only enabled if API key is configured
+        const hasApiKey = !!window.GOOGLE_MAPS_API_KEY;
+        if (hasApiKey && evt.ctrlKey && (evt.key === '[' || evt.key === ']')) {
+            evt.preventDefault(); // Prevent browser shortcuts
+            handleGoogleMapsShortcut(evt.key);
+        }
+    });
+};
+
+/**
+ * Handles Google Maps shortcuts for opening actual location
+ */
+const handleGoogleMapsShortcut = (key) => {
+    const lotteryMod = MODS.lottery;
+    if (!lotteryMod || !isModActive(lotteryMod)) {
+        console.debug('Google Maps shortcuts require lottery mod to be active');
+        return;
+    }
+
+    const onlyLand = getOption(lotteryMod, 'onlyLand');
+    const onlyStreetView = getOption(lotteryMod, 'onlyStreetView');
+    
+    // Check if either special option is enabled
+    if (!onlyLand && !onlyStreetView) {
+        console.debug('Google Maps shortcuts require "Only Land" or "Only Street View" options to be enabled');
+        return;
+    }
+
+    // Get the actual location
+    const actualLoc = getActualLoc();
+    if (!actualLoc) {
+        console.warn('Cannot open Google Maps: actual location not available');
+        return;
+    }
+
+    const lat = actualLoc.lat;
+    const lng = actualLoc.lng;
+    
+    if (key === '[') {
+        // Ctrl+[ - Open actual location in Google Maps (standard view)
+        const mapsUrl = `https://www.google.com/maps/@${lat},${lng},15z`;
+        GM_openInTab(mapsUrl, false);
+        console.debug(`Opened actual location in Google Maps: ${lat}, ${lng}`);
+    } else if (key === ']') {
+        // Ctrl+] - Open aerial view of nearest land location OR street view if both are enabled
+        let mapsUrl;
+        
+        if (onlyStreetView && onlyLand) {
+            // Both enabled - open Street View location (as per user requirement)
+            mapsUrl = `https://www.google.com/maps/@${lat},${lng},3a,75y,90t/data=!3m1!1e1`;
+            console.debug(`Opened Street View location (both options enabled): ${lat}, ${lng}`);
+        } else if (onlyStreetView) {
+            // Only Street View enabled - open Street View
+            mapsUrl = `https://www.google.com/maps/@${lat},${lng},3a,75y,90t/data=!3m1!1e1`;
+            console.debug(`Opened Street View location: ${lat}, ${lng}`);
+        } else if (onlyLand) {
+            // Only Land enabled - open aerial view of nearest land location
+            mapsUrl = `https://www.google.com/maps/@${lat},${lng},15z/data=!3m1!1e3`;
+            console.debug(`Opened aerial view of nearest land location: ${lat}, ${lng}`);
+        }
+        
+        if (mapsUrl) {
+            GM_openInTab(mapsUrl, false);
+        }
+    }
+};
+
+/**
+ * Initialize global keybindings when DOM is ready
+ */
+const initializeGlobalKeybindings = () => {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupGlobalKeyBindings);
+    } else {
+        // DOM is already ready
+        setupGlobalKeyBindings();
+    }
+};
+
+// Initialize global keybindings immediately
+initializeGlobalKeybindings();
+
