@@ -523,6 +523,8 @@ const simulateRoundStart = () => {
 
 // Enhanced map data fetching with retry logic
 fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) => {
+    console.debug(`GeoGuessr MultiMod: fetchMapDataWithRetry called with mapId: ${mapId}`);
+    
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             console.debug(`GeoGuessr MultiMod: Fetching map data attempt ${attempt}/${maxRetries}`);
@@ -539,10 +541,12 @@ fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) => {
             }
             
             const data = await response.json();
+            console.debug(`GeoGuessr MultiMod: Received map data:`, data);
+            console.debug(`GeoGuessr MultiMod: maxErrorDistance value:`, data?.maxErrorDistance);
             
             // Validate that we got the expected data structure
             if (!data || typeof data.maxErrorDistance === 'undefined') {
-                throw new Error('Invalid map data structure received');
+                throw new Error(`Invalid map data structure received. Data: ${JSON.stringify(data)}`);
             }
             
             GG_MAP = data;
@@ -738,18 +742,34 @@ handleRoundStart = (evt) => {
     try {
         let round, mapID;
         
+        console.debug('GeoGuessr MultiMod: Round start event detail:', evt.detail);
+        
         // Extract round and map data from event
         if (evt.detail && evt.detail.rounds) {
             round = evt.detail.rounds[evt.detail.rounds.length - 1];
             mapID = evt.detail.map?.id;
+            console.debug('GeoGuessr MultiMod: Method 1 - rounds structure, mapID:', mapID);
         } else if (evt.detail && evt.detail.game) {
             // Alternative structure
             round = evt.detail.game.round || evt.detail.game;
             mapID = evt.detail.game.map?.id || evt.detail.game.mapId;
+            console.debug('GeoGuessr MultiMod: Method 2 - game structure, mapID:', mapID);
         } else if (evt.detail) {
             // Direct structure
             round = evt.detail;
             mapID = evt.detail.map?.id || evt.detail.mapId;
+            console.debug('GeoGuessr MultiMod: Method 3 - direct structure, mapID:', mapID);
+        }
+        
+        // Additional debugging for map ID extraction
+        if (evt.detail) {
+            console.debug('GeoGuessr MultiMod: Event detail keys:', Object.keys(evt.detail));
+            if (evt.detail.map) {
+                console.debug('GeoGuessr MultiMod: Map object:', evt.detail.map);
+            }
+            if (evt.detail.game && evt.detail.game.map) {
+                console.debug('GeoGuessr MultiMod: Game.map object:', evt.detail.game.map);
+            }
         }
         
         if (!round) {
@@ -759,7 +779,21 @@ handleRoundStart = (evt) => {
         
         if (!mapID) {
             console.warn('GeoGuessr MultiMod: Could not extract map ID from event');
-            return;
+            console.warn('GeoGuessr MultiMod: Available event structure:', evt.detail);
+            
+            // Fallback: try legacy approach
+            try {
+                if (evt.detail && evt.detail.map && evt.detail.map.id) {
+                    mapID = evt.detail.map.id;
+                    console.debug('GeoGuessr MultiMod: Using legacy fallback mapID:', mapID);
+                }
+            } catch (fallbackErr) {
+                console.debug('GeoGuessr MultiMod: Legacy fallback also failed:', fallbackErr);
+            }
+            
+            if (!mapID) {
+                return;
+            }
         }
         
         GG_ROUND = round;
@@ -768,6 +802,22 @@ handleRoundStart = (evt) => {
         
         fetchMapDataWithRetry(mapID).catch(err => {
             console.error('GeoGuessr MultiMod: Final map data fetch failed:', err);
+            
+            // Legacy fallback approach - simple fetch without retries
+            console.debug('GeoGuessr MultiMod: Trying legacy fallback fetch approach');
+            fetch(`https://www.geoguessr.com/api/maps/${mapID}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && typeof data.maxErrorDistance !== 'undefined') {
+                        GG_MAP = data;
+                        console.debug('GeoGuessr MultiMod: Legacy fallback successful, GG_MAP loaded:', GG_MAP);
+                    } else {
+                        console.warn('GeoGuessr MultiMod: Legacy fallback returned invalid data');
+                    }
+                })
+                .catch(legacyErr => {
+                    console.error('GeoGuessr MultiMod: Legacy fallback also failed:', legacyErr);
+                });
         });
         
     } catch (err) {
