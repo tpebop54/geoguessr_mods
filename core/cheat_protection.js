@@ -90,9 +90,9 @@ let _CHEAT_OVERLAY; // Div to block view.
  * 
  * The system can be configured in installer.js and installer_dev.js:
  * - window.ENABLE_QUOTES: true/false to enable/disable the entire quotes system
- * - window.SHOW_QUOTES: object defining which categories to show (only applies if ENABLE_QUOTES is true)
  * 
- * If ENABLE_QUOTES is true, quotes from selected categories will be shown.
+ * If ENABLE_QUOTES is true, all quote categories will be shown.
+ * If ENABLE_QUOTES is false (default), simple "Loading..." text is displayed.
  */
 const initQuotesFlat = () => {
     _QUOTES_FLAT = [];
@@ -105,29 +105,16 @@ const initQuotesFlat = () => {
         return;
     }
     
-    // Default configuration if SHOW_QUOTES is not defined
-    const defaultShowQuotes = {
-        inspirational: true,
-        heavy: true,
-        media: true,
-        jokes: true,
-        funFacts: true,
-        tongueTwisters: true,
-        questions: true,
-    };
+    // If quotes are enabled, load all categories
+    const allCategories = ['inspirational', 'heavy', 'media', 'jokes', 'funFacts', 'tongueTwisters', 'questions'];
     
-    // Use window.SHOW_QUOTES if available, otherwise use defaults
-    const quotesConfig = (typeof window.SHOW_QUOTES !== 'undefined') ? window.SHOW_QUOTES : defaultShowQuotes;
-    
-    for (const [key, value] of Object.entries(quotesConfig)) {
-        if (value) {
-            const quotesThisCategory = window._QUOTES && window._QUOTES[key];
-            if (!quotesThisCategory) {
-                console.warn(`Quotes category ${key} not found`);
-                continue;
-            }
-            _QUOTES_FLAT.push(...quotesThisCategory);
+    for (const category of allCategories) {
+        const quotesThisCategory = window._QUOTES && window._QUOTES[category];
+        if (!quotesThisCategory) {
+            console.warn(`Quotes category ${category} not found`);
+            continue;
         }
+        _QUOTES_FLAT.push(...quotesThisCategory);
     }
 };
 
