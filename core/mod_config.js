@@ -101,26 +101,6 @@ const MODS = {
         }
     },
 
-    jitter: { // This one is disabled by default because it's a little insensitive and not safe for streaming. But try it if you want!
-        show: false,
-        key: 'jitter',
-        name: 'Jitter',
-        tooltip: `Makes the large map jitter around. Not YouTube safe, and not safe for people with sensitivity to flashing lights.`,
-        disableInOpera: true, // Disable in Opera due to performance and rendering issues
-        options: {
-            frequency: {
-                label: 'Frequency (Hz)',
-                default: 20,
-                tooltip: 'How many times per second to make the image move around.',
-            },
-            distance: {
-                label: 'Max Distance',
-                default: 30,
-                tooltip: 'Maximum distance to jitter each movement (from original location, in pixels).',
-            }
-        }
-    },
-
     bopIt: {
         show: true,
         key: 'bop-it',
