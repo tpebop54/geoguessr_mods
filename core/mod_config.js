@@ -101,11 +101,11 @@ const MODS = {
         }
     },
 
-    seizure: { // This one is disabled by default because it's a little insensitive and not safe for streaming. But try it if you want!
+    jitter: { // This one is disabled by default because it's a little insensitive and not safe for streaming. But try it if you want!
         show: false,
-        key: 'seizure',
-        name: 'Seizure',
-        tooltip: 'Makes large map jitter around. Seizure warning!!',
+        key: 'jitter',
+        name: 'Jitter',
+        tooltip: `Makes the large map jitter around. Not YouTube safe, and not safe for people with sensitivity to flashing lights.`,
         disableInOpera: true, // Disable in Opera due to performance and rendering issues
         options: {
             frequency: {

@@ -19,7 +19,7 @@ const getBindings = () => {
                 [MODS.zoomInOnly, updateZoomInOnly],
                 [MODS.showScore, updateShowScore],
                 [MODS.flashlight, updateFlashlight],
-                [MODS.seizure, updateSeizure],
+                [MODS.jitter, updateJitter],
                 [MODS.bopIt, updateBopIt],
                 [MODS.inFrame, updateInFrame],
                 [MODS.lottery, updateLottery],

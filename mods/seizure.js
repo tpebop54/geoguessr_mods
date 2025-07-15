@@ -3,20 +3,20 @@
 
 // ==/UserScript==
 
-// MOD: Seizure.
+// MOD: Jitter.
 // ===============================================================================================================================
 
-let SEIZURE_INTERVAL;
+let JITTER_INTERVAL;
 
-const updateSeizure = (forceState = undefined) => {
-    const mod = MODS.seizure;
+const updateJitter = (forceState = undefined) => {
+    const mod = MODS.jitter;
     const active = updateMod(mod, forceState);
 
     const bigMap = getBigMapContainer();
 
     if (!active) {
-        if (SEIZURE_INTERVAL) {
-            clearInterval(SEIZURE_INTERVAL);
+        if (JITTER_INTERVAL) {
+            clearInterval(JITTER_INTERVAL);
         }
         bigMap.style.setProperty('left', '0px');
         bigMap.style.setProperty('top', '0px');
@@ -27,7 +27,7 @@ const updateSeizure = (forceState = undefined) => {
     const nMilliseconds = 1000 / frequency;
     const nPixels = getOption(mod, 'distance');
 
-    SEIZURE_INTERVAL = setInterval(() => {
+    JITTER_INTERVAL = setInterval(() => {
         const offsetX = Math.ceil((Math.random() * nPixels));
         const offsetY = Math.ceil((Math.random() * nPixels));
         const hDir = Math.random();
