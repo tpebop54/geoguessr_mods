@@ -473,6 +473,13 @@ const createQuoteOverlayNow = () => {
   This function is sloppy, but it doesn't really matter as long as we screw up the replay.
 */
 const clickGarbage = (nMilliseconds = 900) => {
+    // Check if clickGarbage is disabled via ON_MY_HONOR setting
+    const onMyHonor = (typeof window.ON_MY_HONOR !== 'undefined') ? window.ON_MY_HONOR : '';
+    if (onMyHonor === 'on my honor') {
+        console.debug('clickGarbage disabled via ON_MY_HONOR setting');
+        return; // Skip clickGarbage but keep rest of cheat protection active
+    }
+    
     const nClicks = 20; // Approximately...
     const start = Date.now(); // Unix epoch ms.
     const end = start + nMilliseconds; // Stop clicking after this time (epoch ms).
