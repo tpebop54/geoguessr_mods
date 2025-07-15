@@ -371,7 +371,18 @@ const makeOptionMenu = (mod) => {
     _OPTION_MENU.appendChild(formDiv);
     
     // Always append to body with fixed positioning for better visibility
-    document.body.appendChild(_OPTION_MENU);
+    // Use a React-friendly approach that doesn't interfere with React's DOM management
+    const addMenuSafely = () => {
+        // Make sure we're not duplicating
+        const existingMenu = document.getElementById('gg-option-menu');
+        if (!existingMenu) {
+            document.body.appendChild(_OPTION_MENU);
+            console.debug(`Option menu created and added to DOM for mod: ${mod.name}`);
+        }
+    };
+    
+    // Add menu with a small delay to be safe with React
+    setTimeout(addMenuSafely, 50);
     
     // Add some visual debugging and ensure visibility
     _OPTION_MENU.style.display = 'block';

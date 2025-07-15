@@ -142,7 +142,18 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
 
         modsContainer.appendChild(headerContainer);
         modsContainer.appendChild(buttonContainer);
-        bigMapContainer.appendChild(modsContainer);
+        
+        // Use a more React-friendly approach to add our container
+        const addContainerSafely = () => {
+            // Double-check that our container won't conflict with React
+            if (!document.getElementById('gg-mods-container')) {
+                bigMapContainer.appendChild(modsContainer);
+                console.debug('GeoGuessr MultiMod: Mod container added to DOM');
+            }
+        };
+        
+        // Add container with a small delay to avoid React hydration conflicts
+        setTimeout(addContainerSafely, 100);
         
         bindButtons();
         
@@ -397,9 +408,47 @@ const setupHomepageMonitoring = () => {
     }
 };
 
-// Initialize when DOM is ready
-const initializeMods = () => {
+// Wait for React hydration to complete before initializing
+const waitForReactHydration = () => {
+    return new Promise((resolve) => {
+        // Check if React has finished hydrating
+        const checkHydration = () => {
+            // Look for signs that React has finished hydrating
+            const reactRoot = document.querySelector('#__next');
+            if (!reactRoot) {
+                // React root not found yet, wait longer
+                setTimeout(checkHydration, 100);
+                return;
+            }
+            
+            // Check if React has added its event listeners (sign of hydration completion)
+            const hasReactListeners = reactRoot._reactInternalFiber || 
+                                     reactRoot._reactInternalInstance || 
+                                     reactRoot._reactInternals ||
+                                     reactRoot.__reactInternalInstance;
+            
+            if (hasReactListeners) {
+                console.debug('GeoGuessr MultiMod: React hydration detected, safe to initialize');
+                resolve();
+            } else {
+                // Wait a bit longer for React to finish
+                setTimeout(checkHydration, 100);
+            }
+        };
+        
+        // Start checking after a minimal delay to let React start
+        setTimeout(checkHydration, 500);
+    });
+};
+
+// Initialize when DOM is ready and React has hydrated
+const initializeMods = async () => {
     try {
+        // Wait for React hydration to complete first
+        await waitForReactHydration();
+        
+        console.debug('GeoGuessr MultiMod: Starting initialization after React hydration');
+        
         // Setup enhanced map event listeners first
         setupMapEventListeners();
         
@@ -482,12 +531,18 @@ const initializeMods = () => {
     }
 };
 
-// Start initialization when DOM is ready
+// Start initialization when DOM is ready, but wait for React hydration
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeMods);
+    document.addEventListener('DOMContentLoaded', () => {
+        initializeMods().catch(err => {
+            console.error('GeoGuessr MultiMod: Initialization failed:', err);
+        });
+    });
 } else {
     // DOM is already ready
-    initializeMods();
+    initializeMods().catch(err => {
+        console.error('GeoGuessr MultiMod: Initialization failed:', err);
+    });
 }
 
 // Global variables and functions for round detection
