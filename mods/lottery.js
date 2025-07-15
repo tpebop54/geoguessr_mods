@@ -667,6 +667,8 @@ const checkLotteryRequirements = () => {
     }
 };
 
-// Check requirements initially and on mod update
+// Check requirements initially
 checkLotteryRequirements();
-updateLottery();
+
+// Note: updateLottery() is called during mod initialization via script_bindings.js
+// Do not call it here as it would override the saved state from localStorage

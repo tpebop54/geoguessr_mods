@@ -12,8 +12,28 @@ let PREV_GOOGLE_STREETVIEW_POV, PREV_GOOGLE_STREETVIEW_POSITION; // Stored state
 const STATE_KEY = 'gg_state'; // Key in window.localStorage.
 
 const saveState = () => {
-    window.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
-    console.debug('Saved state to localStorage with mods:', Object.keys(MODS));
+    try {
+        const stateToSave = JSON.stringify(MODS);
+        window.localStorage.setItem(STATE_KEY, stateToSave);
+        console.debug('Saved state to localStorage with mods:', Object.keys(MODS));
+        
+        // Add detailed logging for active states
+        const activeStates = {};
+        for (const [key, mod] of Object.entries(MODS)) {
+            activeStates[key] = mod.active;
+        }
+        console.debug('Active mod states saved:', activeStates);
+        
+        // Verify the save worked by reading it back
+        const verification = window.localStorage.getItem(STATE_KEY);
+        if (verification === stateToSave) {
+            console.debug('State save verification: SUCCESS');
+        } else {
+            console.error('State save verification: FAILED - data mismatch');
+        }
+    } catch (error) {
+        console.error('Error saving state to localStorage:', error);
+    }
 };
 
 const clearState = () => {
@@ -23,10 +43,11 @@ const clearState = () => {
 
 const loadState = () => { // Load state from local storage if it exists, else use default.
     const stateStr = window.localStorage.getItem(STATE_KEY);
+    
     let storedState;
     try {
         storedState = JSON.parse(stateStr);
-        console.debug('Loaded state from localStorage:', Object.keys(storedState));
+        console.debug('Loaded state from localStorage:', Object.keys(storedState || {}));
     } catch (err) {
         console.error('Error parsing stored state:', err);
     }
@@ -44,10 +65,14 @@ const loadState = () => { // Load state from local storage if it exists, else us
         }
         const storedMod = storedState[key];
         if (!storedMod) {
+            console.debug(`No stored state found for mod '${key}', keeping default (active: ${mod.active})`);
             continue;
         }
+        
+        const wasActive = mod.active;
         mod.active = !!storedMod.active;
-        console.debug(`Restored mod '${key}' active state:`, mod.active);
+        console.debug(`Restored mod '${key}' active state: ${wasActive} -> ${mod.active}`);
+        
         if (typeof storedMod.options !== 'object') {
             storedMod.options = {};
         }
@@ -61,6 +86,11 @@ const loadState = () => { // Load state from local storage if it exists, else us
                 console.debug(`Skipped invalid option '${optKey}' for mod '${key}'`);
             }
         }
+    }
+
+    console.debug('loadState() completed. Final active states:');
+    for (const [key, mod] of Object.entries(MODS)) {
+        console.debug(`  ${key}: ${mod.active}`);
     }
 
     return MODS;
