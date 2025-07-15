@@ -56,7 +56,6 @@ const updateShowScore = (forceState = undefined) => {
         mapClickListener(showScoreListener, true);
     } else {
         console.debug('Disabling show score mod');
-        disableConflictingMods();
         mapClickListener(showScoreListener, false);
         
         // Clean up the score display div when disabling
@@ -66,8 +65,10 @@ const updateShowScore = (forceState = undefined) => {
             console.debug('Removed score display div');
         }
         
-        // Clear the global score function
-        SCORE_FUNC = undefined;
+        // Clear the global score function if this mod was using it
+        if (SCORE_FUNC === getScore) {
+            SCORE_FUNC = undefined;
+        }
         console.debug('Cleared SCORE_FUNC');
     }
 };

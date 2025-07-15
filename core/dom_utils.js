@@ -510,6 +510,9 @@ const disableMods = (mods, forceHide = false) => {
 };
 
 const isScoringMod = (mod) => {
+    if (!mod) {
+        return false;
+    }
     return !!(mod.isScoring || mod.scoreMode);
 };
 

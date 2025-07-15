@@ -103,7 +103,11 @@ const updateBopIt = (forceState = undefined) => {
         SCORE_FUNC = getBopIt;
         mapClickListener(bopItListener, true);
     } else {
-        disableConflictingMods();
+        // When disabling, just clean up this mod's listeners
         mapClickListener(bopItListener, false);
+        // Clear the score function if this mod was using it
+        if (SCORE_FUNC === getBopIt) {
+            SCORE_FUNC = undefined;
+        }
     }
 };
