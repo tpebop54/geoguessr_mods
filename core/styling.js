@@ -78,9 +78,11 @@ const modContainerStyles = `
 // Option menu styles (legacy formatting preserved)
 const optionMenuStyles = `
     #gg-option-menu {
-        position: absolute;
-        left: 110%;
+        position: fixed;
+        top: 50px;
+        left: 250px;
         min-width: 300px;
+        max-width: 400px;
         padding: 15px;
         background: var(--ds-color-purple-100);
         border-radius: 10px;
@@ -89,9 +91,10 @@ const optionMenuStyles = `
         font-size: 15px;
         font-weight: bold;
         text-shadow: ${bodyShadow};
-        z-index: 9999;
+        z-index: 10000;
         overflow: hidden;
         cursor: move;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     }
 
     #gg-option-title {
@@ -407,7 +410,6 @@ const applyModStyles = () => {
         (IS_OPERA ? operaOptimizationStyles : '') +
         tileRevealStyles +
         lotteryStyles +
-        utilityStyles;
         utilityStyles;
         
     GM_addStyle(combinedStyles);

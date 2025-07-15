@@ -224,11 +224,15 @@ let _OPTION_MENU_DRAGGING_OFFSET_X; // Needed for offsetting the drag element fr
 let _OPTION_MENU_DRAGGING_OFFSET_Y;
 
 const makeOptionMenu = (mod) => {
+    console.debug(`makeOptionMenu called for mod: ${mod.name}`);
+    
     // Close any existing option menu first
     closeOptionMenu();
 
     _OPTION_MENU = document.createElement('div');
     _OPTION_MENU.id = 'gg-option-menu';
+    
+    console.debug(`Created option menu element with ID: ${_OPTION_MENU.id}`);
 
     // Add title div to match legacy formatting
     const titleDiv = document.createElement('div');
@@ -366,28 +370,31 @@ const makeOptionMenu = (mod) => {
     const modDiv = getModDiv();
     _OPTION_MENU.appendChild(formDiv);
     
-    // Safety check: ensure modDiv exists before trying to append
-    if (modDiv) {
-        modDiv.appendChild(_OPTION_MENU);
-    } else {
-        console.warn('Mod container not found, trying to append option menu to body as fallback');
-        // Fallback: append to body with absolute positioning
-        _OPTION_MENU.style.cssText = `
-            position: fixed !important;
-            top: 50% !important;
-            left: 50% !important;
-            transform: translate(-50%, -50%) !important;
-            z-index: 10000 !important;
-            background: rgba(0, 0, 0, 0.9) !important;
-            border: 2px solid #333 !important;
-            border-radius: 8px !important;
-            padding: 15px !important;
-            color: white !important;
-            font-family: Arial, sans-serif !important;
-            min-width: 300px !important;
-        `;
-        document.body.appendChild(_OPTION_MENU);
-    }
+    // Always append to body with fixed positioning for better visibility
+    document.body.appendChild(_OPTION_MENU);
+    
+    // Add some visual debugging and ensure visibility
+    _OPTION_MENU.style.display = 'block';
+    _OPTION_MENU.style.visibility = 'visible';
+    
+    console.debug(`Option menu created and added to DOM for mod: ${mod.name}`);
+    console.debug('Option menu element:', _OPTION_MENU);
+    console.debug('Option menu position:', {
+        top: _OPTION_MENU.style.top || 'default',
+        left: _OPTION_MENU.style.left || 'default',
+        display: _OPTION_MENU.style.display,
+        visibility: _OPTION_MENU.style.visibility
+    });
+    
+    // Verify it's in the DOM after a short delay
+    setTimeout(() => {
+        const menuInDOM = document.getElementById('gg-option-menu');
+        if (menuInDOM) {
+            console.debug('✓ Option menu confirmed in DOM');
+        } else {
+            console.error('✗ Option menu NOT found in DOM after creation');
+        }
+    }, 100);
 };
 
 const updateMod = (mod, forceState = null) => {
@@ -534,8 +541,14 @@ const disableOtherScoreMods = (mod) => { // This function needs to be called pri
 const closeOptionMenu = () => {
     const menu = document.querySelector('#gg-option-menu');
     if (menu) {
+        console.debug('Closing option menu');
         menu.parentElement.removeChild(menu);
+    } else {
+        console.debug('No option menu found to close');
     }
+    
+    // Clear the global reference
+    _OPTION_MENU = null;
 };
 
 /**
