@@ -408,7 +408,7 @@ const makeOptionMenu = (mod) => {
     }, 100);
 };
 
-const updateMod = (mod, forceState = null) => {
+const updateMod = (mod, forceState = undefined) => {
     // If mods aren't loaded, log a warning but continue with the update
     // This allows mods to be activated during round transitions
     if (!_MODS_LOADED) {
@@ -416,9 +416,7 @@ const updateMod = (mod, forceState = null) => {
     }
 
     const previousState = isModActive(mod);
-    const newState = forceState != null ? forceState : !previousState;
-
-    console.debug(`updateMod: ${mod.name}, previousState: ${previousState}, newState: ${newState}, forceState: ${forceState}`);
+    const newState = forceState !== undefined ? forceState : !previousState;
 
     // Handle options menu display logic
     if (newState && !previousState) {

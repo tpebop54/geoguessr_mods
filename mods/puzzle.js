@@ -406,7 +406,7 @@ const onPuzzleClick = () => {
     }
 };
 
-const updatePuzzleLogic = async (forceState = null) => {
+const updatePuzzleLogic = async (forceState = undefined) => {
     const mod = MODS.puzzle;
     const active = updateMod(mod, forceState);
 

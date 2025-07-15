@@ -523,7 +523,7 @@ const createMapSafeModUpdate = (originalUpdateFunction, options = {}) => {
         timeout = 5000
     } = options;
 
-    return (forceState = null) => {
+    return (forceState = undefined) => {
         // If mod is being disabled, execute immediately without waiting
         if (forceState === false) {
             console.debug(`${modName}: Deactivating, no need to wait for maps`);
