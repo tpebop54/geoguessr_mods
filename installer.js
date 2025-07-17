@@ -45,7 +45,7 @@
 
 // Configuration - see README.md for detailed setup instructions
 if (typeof window.ENABLE_QUOTES === 'undefined') {
-    window.ENABLE_QUOTES = false; // Set to true to show random quotes during loading, false for "Loading..." (default)
+    window.ENABLE_QUOTES = false; // Set to true to show random quotes during loading, false for "Loading..."
 }
 
 let GOOGLE_MAPS_API_KEY = ''; // Optional: Add your Google Maps API key here for enhanced features

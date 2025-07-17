@@ -667,7 +667,7 @@ const hasGoogleApiKey = () => {
  * @param {string} feature - The feature that needs the API key
  */
 const warnMissingApiKey = (feature) => {
-    console.warn(`${feature}: Google Maps API key not configured. Some features may be limited. See installer comments for setup instructions.`);
+    console.warn(`${feature}: Google Maps API key not configured. See installer comments for notes.`);
 };
 
 /**
@@ -694,11 +694,11 @@ const initializeGoogleApiKey = () => {
         if (validateGoogleApiKey(apiKey)) {
             return true;
         } else {
-            console.warn('GeoGuessr Mods: Google Maps API key appears to be invalid format. Please check your key.');
+            console.error('Invalid Google API key');
             return false;
         }
     } else {
-        console.info('GeoGuessr Mods: No Google Maps API key configured. Some features may be limited.');
+        console.info('No Google Maps API key configured. See README for notes.');
         return false;
     }
 };
