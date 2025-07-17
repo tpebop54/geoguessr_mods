@@ -130,25 +130,31 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         
         // Calculate latitude bounds and clamp to safe Mercator projection limits
         // This ensures we never try to generate coordinates outside the visible map
-        const MERCATOR_MAX_LAT = 85.05112878;
-        const MERCATOR_MIN_LAT = -85.05112878;
+        const mercator_lat_min = -85.05112878;
+        const mercator_lat_max = 85.05112878;
         
         const rawMinLat = actual.lat - nDegLat;
         const rawMaxLat = actual.lat + nDegLat;
-        const minLat = Math.max(MERCATOR_MIN_LAT, rawMinLat);
-        const maxLat = Math.min(MERCATOR_MAX_LAT, rawMaxLat);
+        let minLat = Math.max(mercator_lat_min, rawMinLat);
+        let maxLat = Math.min(mercator_lat_max, rawMaxLat);
+
+        // Ensure we have valid latitude bounds
+        if (minLat >= maxLat) {
+            console.debug('Lottery: Invalid latitude bounds, using fallback');
+            minLat = Math.max(mercator_lat_min, actual.lat - 10);
+            maxLat = Math.min(mercator_lat_max, actual.lat + 10);
+        }
 
         // The logic gets confusing across the prime meridian with large lng ranges.
         // Just assume that [-180, 180] means the entire world's longitude. Should be fine.
-        // There may be some flaws in the logic here, but it's okay for now.
         let minLng, maxLng;
         if (nDegLng === 180) {
-            minLng = -180;
-            maxLng = 180;
+            minLng = -179.9999;
+            maxLng = 179.9999;
         } else {
             const normalizedLng = ((actual.lng + 180) % 360 + 360) % 360 - 180;
-            minLng = normalizedLng - nDegLng;
-            maxLng = normalizedLng + nDegLng;
+            minLng = Math.max(minLng, normalizedLng - nDegLng);
+            maxLng = Math.min(maxLng, normalizedLng + nDegLng);
         }
         
         // Generate location with criteria if any special options are enabled
@@ -213,18 +219,25 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         }
         
         const { lat, lng } = location;
+
+        const safeLat = Math.max(mercator_lat_max, Math.min(mercator_lat_max, lat));
+        const safeLng = Math.max(-180, Math.min(180, lng));
+        
+        const finalLat = Math.max(mercator_lat_min, Math.min(mercator_lat_max, safeLat));
+        const finalLng = Math.max(-179.9999, Math.min(179.9999, safeLng));
+        
         _LOTTERY_COUNT -= 1;
         counter.innerText = _LOTTERY_COUNT;
         
         // Temporarily disable click blocking for this programmatic click
         window._LOTTERY_ALLOWING_CLICK = true;
-        clickAt(lat, lng);
+        clickAt(finalLat, finalLng);
         // Re-enable click blocking after a short delay
         setTimeout(() => {
             window._LOTTERY_ALLOWING_CLICK = false;
         }, 100);
         
-        setMapCenter(lat, lng);
+        setMapCenter(finalLat, finalLng);
     };
     button.addEventListener('click', onClick);
 

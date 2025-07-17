@@ -291,9 +291,20 @@ const clickAt = (lat, lng) => { // Trigger actual click on guessMap at { lat, ln
         console.error('Map not loaded yet for click event.');
         return;
     }
+    
+    // Validate coordinates to ensure they're within safe map bounds
+    if (isNaN(lat) || isNaN(lng)) {
+        console.error('Invalid coordinates provided to clickAt:', lat, lng);
+        return;
+    }
+    
+    // Clamp coordinates to safe Mercator bounds to prevent off-map clicks
+    const safeLat = Math.max(-85.05112878, Math.min(85.05112878, lat));
+    const safeLng = Math.max(-180, Math.min(180, lng));
+        
     const google = getGoogle();
     const click = {
-        latLng: new google.maps.LatLng(lat, lng),
+        latLng: new google.maps.LatLng(safeLat, safeLng),
     };
     google.maps.event.trigger(GOOGLE_MAP, 'click', click);
 };
