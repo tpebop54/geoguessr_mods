@@ -58,6 +58,7 @@ const modContainerStyles = `
         gap: 6px;
         margin-top: 10px;
         z-index: 9999;
+        pointer-events: auto;
     }
 
     .gg-mod-button {
@@ -68,6 +69,8 @@ const modContainerStyles = `
         opacity: 0.9;
         transition: opacity 0.2s;
         padding: 4px 10px;
+        pointer-events: auto;
+        user-select: none;
     }
 
     .gg-mod-button:hover {
