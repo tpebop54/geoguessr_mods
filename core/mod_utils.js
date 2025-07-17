@@ -73,6 +73,7 @@ const getHeading = (p1, p2) => {
     return heading;
 };
 
+// Ref: https://www.plonkit.net/beginners-guide
 const getScore = () => {
     const actual = getActualLoc();
     if (!actual) {
@@ -126,6 +127,7 @@ const getScoreAsync = async () => {
 };
 
 /**
+ * TODO: maxErrorDistance is not showing up because GG_MAP is not showing up, so this formula is off.
  * Calculate the probability of getting exactly 5000 points on a random click.
  * This analyzes the scoring formula: score = 5000 * e^(-10 * distance / maxErrorDistance)
  * For 5000 points, distance must be essentially 0 (within rounding tolerance).
