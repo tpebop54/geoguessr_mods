@@ -48,11 +48,10 @@ if (typeof window.ENABLE_QUOTES === 'undefined') {
     window.ENABLE_QUOTES = false; // Set to true to show random quotes during loading, false for "Loading..."
 }
 
-let GOOGLE_MAPS_API_KEY = ''; // Optional: Add your Google Maps API key here for enhanced features
+let GOOGLE_MAPS_API_KEY = ''; // Optional: Add your Google Maps API key here for enhanced features. See README.md for details.
+let ON_MY_HONOR = ''; // Type 'on my honor' here to disable cheat protection. The mod still works but could get you banned from competitive duels if you cheat.
 
-
-
-if (typeof window !== 'undefined') {let ON_MY_HONOR = ''; // Type 'on my honor' here to disable cheat protection
+if (typeof window !== 'undefined') {
     window.GOOGLE_MAPS_API_KEY = GOOGLE_MAPS_API_KEY;
     window.ON_MY_HONOR = ON_MY_HONOR;
 }

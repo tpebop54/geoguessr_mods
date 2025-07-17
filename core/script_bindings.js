@@ -73,9 +73,14 @@ const bindButtons = () => {
 
 const addButtons = () => { // Add mod buttons to the active round, with a little button to toggle them.
     try {
+        console.debug('GeoGuessr MultiMod: addButtons() called');
+        
         // Only show mods menu on game and live-challenge pages
         const currentUrl = window.location.href;
         const currentPath = window.location.pathname;
+        
+        console.debug('GeoGuessr MultiMod: Current URL:', currentUrl);
+        console.debug('GeoGuessr MultiMod: Current path:', currentPath);
         
         // Check if we're on a supported game page
         const isGameUrl = currentPath.includes('/game/') || currentPath.includes('/live-challenge/');
@@ -85,8 +90,13 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
             return false;
         }
         
+        console.debug('GeoGuessr MultiMod: On game page, attempting to find containers...');
+        
         const bigMapContainer = getBigMapContainer();
         const modContainer = getModDiv(); // Includes header and buttons.
+        
+        console.debug('GeoGuessr MultiMod: bigMapContainer found:', !!bigMapContainer);
+        console.debug('GeoGuessr MultiMod: existing modContainer found:', !!modContainer);
         
         if (!bigMapContainer) {
             console.debug('GeoGuessr MultiMod: Game container not found, will retry...');
@@ -98,8 +108,14 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
             return false;
         }
 
+        console.debug('GeoGuessr MultiMod: Creating new mod container...');
+
+        console.debug('GeoGuessr MultiMod: Creating new mod container...');
+
         const modsContainer = document.createElement('div'); // Header and buttons.
         modsContainer.id = 'gg-mods-container';
+
+        console.debug('GeoGuessr MultiMod: Created modsContainer element');
 
         const headerContainer = document.createElement('div'); // Header and button toggle.
         headerContainer.id = 'gg-mods-header-container';
@@ -117,9 +133,18 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
         const buttonContainer = document.createElement('div'); // Mod buttons.
         buttonContainer.id = 'gg-mods-button-container';
 
+        console.debug('GeoGuessr MultiMod: Created header and button containers');
+
         let buttonCount = 0;
+        
+        console.debug('GeoGuessr MultiMod: MODS object available:', typeof MODS !== 'undefined');
+        if (typeof MODS !== 'undefined') {
+            console.debug('GeoGuessr MultiMod: MODS keys:', Object.keys(MODS));
+        }
+        
         for (const [key, mod] of Object.entries(MODS)) {
             if (!mod.show) {
+                console.debug(`GeoGuessr MultiMod: Skipping mod ${key} (show: false)`);
                 continue;
             }
             
@@ -139,19 +164,40 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
             }
         }
 
+        console.debug(`GeoGuessr MultiMod: Created ${buttonCount} mod buttons`);
+
         modsContainer.appendChild(headerContainer);
         modsContainer.appendChild(buttonContainer);
+        
+        console.debug('GeoGuessr MultiMod: Assembled complete mod container');
         
         // Use a more React-friendly approach to add our container
         const addContainerSafely = () => {
             // Double-check that our container won't conflict with React
             if (!document.getElementById('gg-mods-container')) {
+                console.debug('GeoGuessr MultiMod: Attempting to append mod container to bigMapContainer...');
+                console.debug('GeoGuessr MultiMod: bigMapContainer tagName:', bigMapContainer.tagName);
+                console.debug('GeoGuessr MultiMod: bigMapContainer className:', bigMapContainer.className);
+                console.debug('GeoGuessr MultiMod: bigMapContainer id:', bigMapContainer.id);
+                
                 bigMapContainer.appendChild(modsContainer);
                 console.debug('GeoGuessr MultiMod: Mod container added to DOM');
+                
+                // Verify it was actually added
+                const verifyContainer = document.getElementById('gg-mods-container');
+                console.debug('GeoGuessr MultiMod: Container verification after append:', !!verifyContainer);
+                if (verifyContainer) {
+                    console.debug('GeoGuessr MultiMod: Container successfully attached and visible');
+                } else {
+                    console.error('GeoGuessr MultiMod: Container was not found after append - something went wrong');
+                }
+            } else {
+                console.debug('GeoGuessr MultiMod: Container already exists, skipping append');
             }
         };
         
         // Add container with a small delay to avoid React hydration conflicts
+        console.debug('GeoGuessr MultiMod: Scheduling container addition with 100ms delay...');
         setTimeout(addContainerSafely, 100);
         
         bindButtons();
@@ -443,7 +489,17 @@ const waitForReactHydration = () => {
 // Initialize when DOM is ready and React has hydrated
 const initializeMods = async () => {
     try {
-        // Wait for React hydration to complete first
+        // Try immediate initialization first, then wait for React hydration as backup
+        console.debug('GeoGuessr MultiMod: Starting immediate initialization attempt');
+        
+        // Try to add buttons immediately
+        const immediateResult = addButtons();
+        if (immediateResult) {
+            console.debug('GeoGuessr MultiMod: Immediate button creation successful');
+            return;
+        }
+        
+        // If immediate attempt failed, wait for React hydration
         await waitForReactHydration();
         
         console.debug('GeoGuessr MultiMod: Starting initialization after React hydration');
@@ -1389,14 +1445,71 @@ window.forceRecreateModMenu = () => {
 };
 
 window.forceModsInit = () => {
+    console.log('=== FORCE MODS INIT DEBUG ===');
+    
     initializeMods();
     
     // Try manual recreation after short delay
     setTimeout(() => {
         if (!getModDiv()) {
+            console.log('Container still not found, trying forceRecreateModMenu...');
             forceRecreateModMenu();
+        } else {
+            console.log('Container found after initializeMods!');
         }
     }, 2000);
+};
+
+// Add a comprehensive debugging function
+window.debugModsDetailed = () => {
+    console.log('=== DETAILED MODS DEBUG ===');
+    
+    // Check current page
+    console.log('Current URL:', window.location.href);
+    console.log('Current path:', window.location.pathname);
+    
+    // Check if on game page
+    const currentPath = window.location.pathname;
+    const isGameUrl = currentPath.includes('/game/') || currentPath.includes('/live-challenge/');
+    console.log('Is game URL:', isGameUrl);
+    
+    // Check MODS object
+    console.log('MODS object exists:', typeof MODS !== 'undefined');
+    if (typeof MODS !== 'undefined') {
+        console.log('MODS keys:', Object.keys(MODS));
+        console.log('MODS count:', Object.keys(MODS).length);
+        
+        // Check which mods are set to show
+        const showingMods = Object.entries(MODS).filter(([key, mod]) => mod.show);
+        console.log('Mods set to show:', showingMods.map(([key, mod]) => `${key}: ${mod.name}`));
+    }
+    
+    // Check containers
+    const bigMapContainer = getBigMapContainer();
+    console.log('bigMapContainer found:', !!bigMapContainer);
+    if (bigMapContainer) {
+        console.log('bigMapContainer tagName:', bigMapContainer.tagName);
+        console.log('bigMapContainer className:', bigMapContainer.className);
+        console.log('bigMapContainer id:', bigMapContainer.id);
+    }
+    
+    const modContainer = getModDiv();
+    console.log('modContainer found:', !!modContainer);
+    
+    // Check React root
+    const reactRoot = document.querySelector('#__next');
+    console.log('React root found:', !!reactRoot);
+    
+    // Try to call addButtons manually
+    console.log('Attempting manual addButtons call...');
+    try {
+        const result = addButtons();
+        console.log('addButtons result:', result);
+    } catch (err) {
+        console.error('addButtons error:', err);
+    }
+    
+    console.log('=== DEBUG COMPLETE ===');
 };
 
 // ...existing code...

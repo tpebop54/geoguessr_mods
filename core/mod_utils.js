@@ -6,10 +6,7 @@
 // Mod utility functions.
 // ===============================================================================================================================
 
-/**
- * Check if mods should be available on the current page
- * @returns {boolean} True if on a game or live challenge page
- */
+// True if solo game or live challenge. 
 const areModsAvailable = () => {
     const currentPath = window.location.pathname;
     return currentPath.includes('/game/') || currentPath.includes('/live-challenge/');
@@ -710,93 +707,8 @@ if (typeof window !== 'undefined') {
     });
 }
 
-/**
- * Show a configuration dialog for users to enter their Google Maps API key
- */
-const showApiKeyConfigDialog = () => {
-    const dialog = document.createElement('div');
-    dialog.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: white;
-        border: 2px solid #333;
-        border-radius: 8px;
-        padding: 20px;
-        z-index: 10000;
-        max-width: 500px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-        font-family: Arial, sans-serif;
-    `;
-    
-    dialog.innerHTML = `
-        <h3 style="margin-top: 0;">Configure Google Maps API Key</h3>
-        <p>Some features work better with a Google Maps API key. This is optional.</p>
-        <p><a href="https://console.cloud.google.com/" target="_blank">Get your API key here</a></p>
-        <input type="text" id="gg-api-key-input" placeholder="Enter your API key (optional)" 
-               style="width: 100%; padding: 8px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px;">
-        <div style="text-align: right; margin-top: 15px;">
-            <button id="gg-api-key-cancel" style="margin-right: 10px; padding: 8px 16px; border: 1px solid #ccc; background: #f5f5f5; border-radius: 4px; cursor: pointer;">Skip</button>
-            <button id="gg-api-key-save" style="padding: 8px 16px; border: none; background: #4CAF50; color: white; border-radius: 4px; cursor: pointer;">Save</button>
-        </div>
-    `;
-    
-    document.body.appendChild(dialog);
-    
-    const input = dialog.querySelector('#gg-api-key-input');
-    const saveBtn = dialog.querySelector('#gg-api-key-save');
-    const cancelBtn = dialog.querySelector('#gg-api-key-cancel');
-    
-    // Pre-fill with current key if any
-    if (window.GOOGLE_MAPS_API_KEY) {
-        input.value = window.GOOGLE_MAPS_API_KEY;
-    }
-    
-    const cleanup = () => {
-        document.body.removeChild(dialog);
-    };
-    
-    saveBtn.addEventListener('click', () => {
-        const newKey = input.value.trim();
-        window.GOOGLE_MAPS_API_KEY = newKey;
-        
-        if (newKey) {
-            if (validateGoogleApiKey(newKey)) {
-                alert('API key saved! Note: This will only persist for this session. To make it permanent, edit the userscript file.');
-            } else {
-                alert('Warning: The API key format appears invalid. It was saved anyway - please verify it\'s correct.');
-            }
-        } else {
-        }
-        
-        cleanup();
-    });
-    
-    cancelBtn.addEventListener('click', cleanup);
-    
-    // Close on ESC key
-    const handleKeyPress = (e) => {
-        if (e.key === 'Escape') {
-            cleanup();
-            document.removeEventListener('keydown', handleKeyPress);
-        }
-    };
-    document.addEventListener('keydown', handleKeyPress);
-    
-    input.focus();
-};
 
-// Add a way to access the config dialog (could be called from console or a button)
-window.configureGoogleApiKey = showApiKeyConfigDialog;
-
-/**
- * Check if Street View is available at a given location using Google Street View API
- * @param {number} lat - Latitude
- * @param {number} lng - Longitude
- * @param {number} radius - Search radius in meters (default 50m)
- * @returns {Promise<boolean>} True if Street View is available
- */
+// Check if Street View is available at a given location using Google Street View API.
 const checkStreetViewAvailability = async (lat, lng, radius = 50) => {
     if (!hasGoogleApiKey()) {
         console.warn('Street View check requires Google Maps API key');
