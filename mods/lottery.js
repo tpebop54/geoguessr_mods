@@ -128,6 +128,26 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         const onlyLand = getOption(mod, 'onlyLand');
         const actual = getActualLoc();
         
+        // Validate that we have a valid actual location
+        if (!actual || isNaN(actual.lat) || isNaN(actual.lng)) {
+            console.error('Lottery: Invalid actual location:', actual);
+            button.textContent = 'Location error';
+            setTimeout(() => {
+                button.textContent = 'Insert token';
+            }, 2000);
+            return;
+        }
+        
+        // Validate options are valid numbers
+        if (isNaN(nDegLat) || isNaN(nDegLng) || nDegLat <= 0 || nDegLng <= 0) {
+            console.error('Lottery: Invalid degree options:', { nDegLat, nDegLng });
+            button.textContent = 'Config error';
+            setTimeout(() => {
+                button.textContent = 'Insert token';
+            }, 2000);
+            return;
+        }
+        
         // Calculate latitude bounds and clamp to safe Mercator projection limits
         // This ensures we never try to generate coordinates outside the visible map
         const mercator_lat_min = -85.05112878;
@@ -219,12 +239,28 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         }
         
         const { lat, lng } = location;
-
-        const safeLat = Math.max(mercator_lat_max, Math.min(mercator_lat_max, lat));
+        
+        // Final safety check: ensure coordinates are within valid map bounds
+        // Use the constants defined at the beginning of the function
+        const safeLat = Math.max(mercator_lat_min, Math.min(mercator_lat_max, lat));
         const safeLng = Math.max(-180, Math.min(180, lng));
         
-        const finalLat = Math.max(mercator_lat_min, Math.min(mercator_lat_max, safeLat));
-        const finalLng = Math.max(-179.9999, Math.min(179.9999, safeLng));
+        // Additional check: ensure the coordinates are not exactly at the poles or extreme edges
+        // which could cause issues with map projection
+        const finalLat = Math.max(-85, Math.min(85, safeLat));
+        const finalLng = Math.max(-179.99, Math.min(179.99, safeLng));
+        
+        // Validate that coordinates are valid numbers before proceeding
+        if (isNaN(finalLat) || isNaN(finalLng)) {
+            console.error('Lottery: Generated invalid coordinates:', { finalLat, finalLng, originalLocation: location });
+            button.textContent = 'Coordinate error';
+            setTimeout(() => {
+                button.textContent = 'Insert token';
+            }, 2000);
+            return;
+        }
+        
+        console.debug('Lottery: Using coordinates:', { finalLat, finalLng });
         
         _LOTTERY_COUNT -= 1;
         counter.innerText = _LOTTERY_COUNT;
