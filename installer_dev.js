@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Tpebop's GeoGuessr Mods (DEV)
+// @name         Tpebop's GeoGuessr Mods (DEV 1.0.15)
 // @description  Various mods to make the game interesting in various ways
 // @version      1.0.15
 // @author       tpebop
