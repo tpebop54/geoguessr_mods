@@ -149,6 +149,38 @@ const optionMenuStyles = `
         shadow: ${bodyShadow};
         padding: 0;
         cursor: pointer;
+        transition: transform 0.1s ease, box-shadow 0.1s ease;
+        border: none;
+        outline: none;
+    }
+
+    .gg-option-form-button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .gg-option-form-button:active {
+        transform: translateY(1px);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    }
+
+    .gg-option-form-button.click-animation {
+        animation: buttonClickPulse 0.3s ease;
+    }
+
+    @keyframes buttonClickPulse {
+        0% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+        }
+        50% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+        }
+        100% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+        }
     }
 
     #gg-option-close {

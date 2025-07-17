@@ -363,7 +363,22 @@ const makeOptionMenu = (mod) => {
         button.classList.add('gg-option-label');
         button.classList.add('gg-option-form-button');
         button.innerHTML = label;
-        button.addEventListener('click', callback);
+        
+        // Wrap the callback to add click animation
+        const animatedCallback = (evt) => {
+            // Add animation class
+            button.classList.add('click-animation');
+            
+            // Remove animation class after animation completes
+            setTimeout(() => {
+                button.classList.remove('click-animation');
+            }, 300); // Match animation duration
+            
+            // Call the original callback
+            callback(evt);
+        };
+        
+        button.addEventListener('click', animatedCallback);
         formDiv.appendChild(button);
     };
 
