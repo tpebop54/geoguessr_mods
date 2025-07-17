@@ -50,7 +50,7 @@ if (typeof window.ENABLE_QUOTES === 'undefined') {
 
 let GOOGLE_MAPS_API_KEY = ''; // Optional: Add your Google Maps API key here for enhanced features
 
-let ON_MY_HONOR = ''; // Type "on my honor" here to disable clickGarbage function (cheat protection stays active)
+let ON_MY_HONOR = ''; // Type 'on my honor' here to disable cheat protection
 
 if (typeof window !== 'undefined') {
     window.GOOGLE_MAPS_API_KEY = GOOGLE_MAPS_API_KEY;
