@@ -171,36 +171,25 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
         
         console.debug('GeoGuessr MultiMod: Assembled complete mod container');
         
-        // Use a more React-friendly approach to add our container
+
         const addContainerSafely = () => {
             // Double-check that our container won't conflict with React
             if (!document.getElementById('gg-mods-container')) {
-                console.debug('GeoGuessr MultiMod: Attempting to append mod container to bigMapContainer...');
-                console.debug('GeoGuessr MultiMod: bigMapContainer tagName:', bigMapContainer.tagName);
-                console.debug('GeoGuessr MultiMod: bigMapContainer className:', bigMapContainer.className);
-                console.debug('GeoGuessr MultiMod: bigMapContainer id:', bigMapContainer.id);
-                
                 bigMapContainer.appendChild(modsContainer);
-                console.debug('GeoGuessr MultiMod: Mod container added to DOM');
-                
-                // Verify it was actually added
                 const verifyContainer = document.getElementById('gg-mods-container');
-                console.debug('GeoGuessr MultiMod: Container verification after append:', !!verifyContainer);
                 if (verifyContainer) {
-                    console.debug('GeoGuessr MultiMod: Container successfully attached and visible');
+                    bindButtons();
                 } else {
                     console.error('GeoGuessr MultiMod: Container was not found after append - something went wrong');
                 }
             } else {
-                console.debug('GeoGuessr MultiMod: Container already exists, skipping append');
+                bindButtons();
             }
         };
         
         // Add container with a small delay to avoid React hydration conflicts
         console.debug('GeoGuessr MultiMod: Scheduling container addition with 100ms delay...');
         setTimeout(addContainerSafely, 100);
-        
-        bindButtons();
         
         modMenuToggle.addEventListener('click', function () {
             if (buttonContainer.classList.contains('hidden')) {

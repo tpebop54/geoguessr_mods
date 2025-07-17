@@ -70,7 +70,8 @@ const modContainerStyles = `
         transition: opacity 0.2s;
         padding: 4px 10px;
         pointer-events: auto;
-        user-select: none;
+        position: relative;
+        z-index: 10000;
     }
 
     .gg-mod-button:hover {
