@@ -85,32 +85,36 @@ const _YOURE_LOOKING_AT_MY_CODE = (v) => {
 let _QUOTES_FLAT = [];
 let _CHEAT_OVERLAY; // Div to block view.
 
+/**
+ * Initialize the quotes system for loading screens.
+ * 
+ * The system can be configured in installer.js and installer_dev.js:
+ * - window.ENABLE_QUOTES: true/false to enable/disable the entire quotes system
+ * 
+ * If ENABLE_QUOTES is true, all quote categories will be shown.
+ * If ENABLE_QUOTES is false (default), simple "Loading..." text is displayed.
+ */
 const initQuotesFlat = () => {
     _QUOTES_FLAT = [];
     
-    // Default configuration if SHOW_QUOTES is not defined
-    const defaultShowQuotes = {
-        inspirational: true,
-        heavy: true,
-        media: true,
-        jokes: true,
-        funFacts: true,
-        tongueTwisters: true,
-        questions: true,
-    };
+    // Check if quotes system is enabled globally
+    const quotesEnabled = (typeof window.ENABLE_QUOTES !== 'undefined') ? window.ENABLE_QUOTES : false;
     
-    // Use window.SHOW_QUOTES if available, otherwise use defaults
-    const quotesConfig = (typeof window.SHOW_QUOTES !== 'undefined') ? window.SHOW_QUOTES : defaultShowQuotes;
+    if (!quotesEnabled) {
+        // Quotes are disabled globally, don't load any quotes
+        return;
+    }
     
-    for (const [key, value] of Object.entries(quotesConfig)) {
-        if (value) {
-            const quotesThisCategory = window._QUOTES && window._QUOTES[key];
-            if (!quotesThisCategory) {
-                console.warn(`Quotes category ${key} not found`);
-                continue;
-            }
-            _QUOTES_FLAT.push(...quotesThisCategory);
+    // If quotes are enabled, load all categories
+    const allCategories = ['inspirational', 'heavy', 'media', 'jokes', 'funFacts', 'tongueTwisters', 'questions'];
+    
+    for (const category of allCategories) {
+        const quotesThisCategory = window._QUOTES && window._QUOTES[category];
+        if (!quotesThisCategory) {
+            console.warn(`Quotes category ${category} not found`);
+            continue;
         }
+        _QUOTES_FLAT.push(...quotesThisCategory);
     }
 };
 
@@ -119,6 +123,13 @@ const _RECENT_QUOTES = [];
 const MAX_RECENT_QUOTES = 10; // Don't show the same quote until at least this many others have been shown
 
 const getRandomQuote = () => {
+    // Check if quotes system is enabled globally
+    const quotesEnabled = (typeof window.ENABLE_QUOTES !== 'undefined') ? window.ENABLE_QUOTES : false;
+    
+    if (!quotesEnabled) {
+        return 'Loading...';
+    }
+    
     if (!_QUOTES_FLAT.length) {
         // Try to initialize quotes if not already done, but only if function is available
         if (typeof initQuotesFlat === 'function') {
@@ -172,28 +183,14 @@ const splitQuote = (quote) => {
 
 const clearCheatOverlay = () => {
     if (_CHEAT_OVERLAY && document.body.contains(_CHEAT_OVERLAY)) {
-        // Verify that maps are actually ready before removing
-        const mapsAreReady = (
-            // Check Google Maps objects
-            (typeof getGoogle === 'function' && getGoogle()) ||
-            (typeof GOOGLE_MAP !== 'undefined' && GOOGLE_MAP) ||
-            // Check for DOM elements
-            document.querySelector('.gm-style') ||
-            document.querySelector('.widget-scene-canvas') ||
-            document.querySelector('canvas')
-        );
+        // Quick removal - don't wait for maps to be ready, just remove it
+        console.debug('Cheat protection: Removing overlay immediately');
         
-        if (!mapsAreReady) {
-            console.debug('Cheat protection: Maps not ready yet, delaying overlay removal');
-            setTimeout(clearCheatOverlay, 500);
-            return;
-        }
-        
-        // Fade out the overlay for a smoother transition
-        _CHEAT_OVERLAY.style.transition = 'opacity 0.5s ease-out';
+        // Fade out the overlay for a smoother transition (but faster)
+        _CHEAT_OVERLAY.style.transition = 'opacity 0.3s ease-out';
         _CHEAT_OVERLAY.style.opacity = '0';
         
-        // Remove after transition completes
+        // Remove after shorter transition
         setTimeout(() => {
             if (_CHEAT_OVERLAY && document.body.contains(_CHEAT_OVERLAY)) {
                 try {
@@ -201,32 +198,45 @@ const clearCheatOverlay = () => {
                 } catch (err) {
                     console.error('Cheat protection: Error removing overlay:', err);
                     // Fallback removal if parent element reference fails
-                    document.body.removeChild(_CHEAT_OVERLAY);
+                    try {
+                        document.body.removeChild(_CHEAT_OVERLAY);
+                    } catch (err2) {
+                        console.error('Cheat protection: Fallback removal also failed:', err2);
+                        // Force hide as last resort
+                        _CHEAT_OVERLAY.style.display = 'none';
+                        _CHEAT_OVERLAY.style.visibility = 'hidden';
+                    }
                 }
                 _CHEAT_OVERLAY = undefined;
-                console.debug('Cheat protection: Overlay removed from DOM');
             }
-        }, 500);
+        }, 300); // Reduced from 500ms to 300ms for faster removal
     }
 };
 
 const createQuoteOverlay = () => {
+    // Only show overlay on game pages
+    const currentPath = window.location.pathname;
+    const isGamePage = currentPath.includes('/game/') || currentPath.includes('/live-challenge/');
+    
+    if (!isGamePage) {
+        console.debug('Cheat protection: Not on a game page, skipping overlay. Path:', currentPath);
+        return;
+    }
+    
     // If overlay already exists, don't create another one
     if (_CHEAT_OVERLAY && document.body.contains(_CHEAT_OVERLAY)) {
-        console.debug('Cheat protection: Overlay already exists, not recreating');
         return;
     }
     
     // If body isn't ready, wait for it
     if (!document.body) {
-        console.debug('Cheat protection: Document body not available for overlay, waiting...');
         setTimeout(createQuoteOverlay, 100);
         return;
     }
     
-    // Check if quotes system is ready
-    if (!window._QUOTES) {
-        console.debug('Cheat protection: Quotes not loaded yet, waiting...');
+    // Check if quotes system is ready (only needed if quotes are enabled)
+    const quotesEnabled = (typeof window.ENABLE_QUOTES !== 'undefined') ? window.ENABLE_QUOTES : false;
+    if (quotesEnabled && !window._QUOTES) {
         // Quotes not loaded yet, try again after a delay
         setTimeout(() => {
             createQuoteOverlay();
@@ -234,26 +244,26 @@ const createQuoteOverlay = () => {
         return;
     }
     
-    // Initialize quotes if needed
-    if (_QUOTES_FLAT.length === 0) {
+    // Initialize quotes if needed (only if quotes are enabled)
+    if (_QUOTES_FLAT.length === 0 && quotesEnabled) {
         try {
             if (typeof initQuotesFlat === 'function') {
                 initQuotesFlat();
-                console.debug('Cheat protection: Quotes initialized, count:', _QUOTES_FLAT.length);
-            } else {
-                console.warn('Cheat protection: initQuotesFlat function not available yet');
             }
-        } catch (error) {
-            console.warn('Cheat protection: Error initializing quotes:', error);
+        } catch (err) {
+            console.warn('Cheat protection: Error initializing quotes:', err);
         }
         
-        // If still no quotes after initialization, try again later
+        // If still no quotes after initialization, check if quotes are disabled
         if (_QUOTES_FLAT.length === 0) {
-            console.debug('Cheat protection: Still no quotes after initialization, waiting...');
-            setTimeout(() => {
-                createQuoteOverlay();
-            }, 200);
-            return;
+            const quotesEnabled = (typeof window.ENABLE_QUOTES !== 'undefined') ? window.ENABLE_QUOTES : false;
+            if (quotesEnabled) {
+                // Quotes are enabled but not loaded yet, try again later
+                setTimeout(() => {
+                    createQuoteOverlay();
+                }, 200);
+                return;
+            }
         }
     }
     
@@ -264,9 +274,25 @@ const createQuoteOverlay = () => {
 const createQuoteOverlayNow = () => {
     // If there's already an overlay, don't create another one
     if (_CHEAT_OVERLAY && document.body.contains(_CHEAT_OVERLAY)) {
-        console.debug('Cheat protection: Overlay already exists, not creating another');
         return;
     }
+    
+    // Add global failsafe timer that will remove any overlay after 5 seconds, regardless of any other logic
+    const globalFailsafeTimer = setTimeout(() => {
+        const overlayToRemove = document.getElementById('on-your-honor');
+        if (overlayToRemove) {
+            try {
+                overlayToRemove.remove();
+            } catch (err) {
+                console.error('Cheat protection: Global failsafe removal failed:', err);
+                // Force hide as absolute last resort
+                overlayToRemove.style.display = 'none';
+                overlayToRemove.style.visibility = 'hidden';
+                overlayToRemove.style.opacity = '0';
+            }
+        }
+        _CHEAT_OVERLAY = undefined;
+    }, 5000);
     
     const cheatOverlay = document.createElement('div'); // Opaque black div that covers everything while the page loads.
     cheatOverlay.id = 'on-your-honor';
@@ -284,7 +310,15 @@ const createQuoteOverlayNow = () => {
     });
     
     const quoteDiv = document.createElement('div');
-    const quote = getRandomQuote();
+    
+    // Get content based on whether quotes are enabled
+    const quotesEnabled = (typeof window.ENABLE_QUOTES !== 'undefined') ? window.ENABLE_QUOTES : false;
+    let quote;
+    if (quotesEnabled) {
+        quote = getRandomQuote() || 'Loading...';
+    } else {
+        quote = 'Loading...';
+    }
     let parts;
     try {
         parts = splitQuote(quote);
@@ -334,7 +368,6 @@ const createQuoteOverlayNow = () => {
     // First check if body is available
     if (document.body) {
         _CHEAT_OVERLAY = document.body.insertBefore(cheatOverlay, document.body.firstChild);
-        console.debug('Cheat protection: Overlay added to document body');
     } else {
         // If body is not available yet, wait for it
         console.debug('Cheat protection: Document body not available, waiting...');
@@ -342,7 +375,6 @@ const createQuoteOverlayNow = () => {
             if (document.body) {
                 clearInterval(bodyCheckInterval);
                 _CHEAT_OVERLAY = document.body.insertBefore(cheatOverlay, document.body.firstChild);
-                console.debug('Cheat protection: Overlay added to document body after waiting');
             }
         }, 50);
     }
@@ -362,8 +394,6 @@ const createQuoteOverlayNow = () => {
             const strategy2 = domElementsReady;
             
             if (strategy1 || strategy2) {
-                console.debug('Cheat protection: Maps are loaded, will remove overlay soon');
-                // Wait a bit after map elements are detected before removing overlay
                 setTimeout(() => {
                     console.debug('Cheat protection: Removing overlay after map detection');
                     clearCheatOverlay();
@@ -390,12 +420,48 @@ const createQuoteOverlayNow = () => {
         }
     }, 250);
 
-    // Safety timeout - don't let this overlay brick the site
-    const maxOverlayTime = 15000; // 15 seconds max (increased from 10 seconds)
+    // Mandatory timeout - overlay must be removed after 5 seconds regardless of other conditions
+    const maxOverlayTime = 5000; // 5 seconds max - hard limit to prevent permanent overlay
     setTimeout(() => {
         clearInterval(mapCheckInterval);
-        console.debug('Cheat protection: Safety timeout reached, removing overlay');
-        clearCheatOverlay();
+        console.debug('Cheat protection: Mandatory 5-second timeout reached, removing overlay');
+        try {
+            clearCheatOverlay();
+        } catch (err) {
+            console.error('Cheat protection: Error in clearCheatOverlay, using fallback removal:', err);
+        }
+        
+        // Fallback removal strategies if clearCheatOverlay fails
+        setTimeout(() => {
+            if (_CHEAT_OVERLAY) {
+                try {
+                    if (document.body.contains(_CHEAT_OVERLAY)) {
+                        document.body.removeChild(_CHEAT_OVERLAY);
+                        console.debug('Cheat protection: Overlay removed via fallback method 1');
+                    }
+                    _CHEAT_OVERLAY = undefined;
+                } catch (err) {
+                    console.error('Cheat protection: Fallback method 1 failed:', err);
+                    // Last resort - try to find and remove by ID
+                    try {
+                        const overlayById = document.getElementById('on-your-honor');
+                        if (overlayById) {
+                            overlayById.remove();
+                            console.debug('Cheat protection: Overlay removed via fallback method 2 (by ID)');
+                        }
+                        _CHEAT_OVERLAY = undefined;
+                    } catch (err2) {
+                        console.error('Cheat protection: All fallback methods failed:', err2);
+                        // Set overlay to hidden as absolute last resort
+                        if (_CHEAT_OVERLAY && _CHEAT_OVERLAY.style) {
+                            _CHEAT_OVERLAY.style.display = 'none';
+                            _CHEAT_OVERLAY.style.visibility = 'hidden';
+                            console.debug('Cheat protection: Overlay hidden as last resort');
+                        }
+                    }
+                }
+            }
+        }, 100); // Small delay to let clearCheatOverlay finish
     }, maxOverlayTime);
 };
 
@@ -407,6 +473,13 @@ const createQuoteOverlayNow = () => {
   This function is sloppy, but it doesn't really matter as long as we screw up the replay.
 */
 const clickGarbage = (nMilliseconds = 900) => {
+    // Check if clickGarbage is disabled via ON_MY_HONOR setting
+    const onMyHonor = (typeof window.ON_MY_HONOR !== 'undefined') ? window.ON_MY_HONOR : '';
+    if (onMyHonor === 'on my honor') {
+        console.debug('clickGarbage disabled via ON_MY_HONOR setting');
+        return; // Skip clickGarbage but keep rest of cheat protection active
+    }
+    
     const nClicks = 20; // Approximately...
     const start = Date.now(); // Unix epoch ms.
     const end = start + nMilliseconds; // Stop clicking after this time (epoch ms).
@@ -427,6 +500,15 @@ const initCheatProtection = () => {
     }
     if (_YOURE_LOOKING_AT_MY_CODE()) {
         return; // Get outta 'ere
+    }
+    
+    // Only show loading screen on game pages
+    const currentPath = window.location.pathname;
+    const isGamePage = currentPath.includes('/game/') || currentPath.includes('/live-challenge/');
+    
+    if (!isGamePage) {
+        console.debug('Cheat protection: Not on a game page, skipping overlay. Path:', currentPath);
+        return;
     }
     
     createQuoteOverlay();
@@ -455,10 +537,10 @@ const initCheatProtection = () => {
         subtree: true
     });
     
-    // Safety - stop observing after a reasonable time
+    // Safety - stop observing after 5 seconds to match overlay timeout
     setTimeout(() => {
         observer.disconnect();
-    }, 15000);
+    }, 5000);
 };
 
 // Cheat protection enforcement
@@ -482,6 +564,15 @@ const enforceCheatProtection = () => {
 (() => {
     // Try to initialize immediately for the fastest possible overlay creation
     console.debug(`Cheat protection: Initializing (document.readyState=${document.readyState})`);
+    
+    // Check if we're on a game page before showing overlay
+    const currentPath = window.location.pathname;
+    const isGamePage = currentPath.includes('/game/') || currentPath.includes('/live-challenge/');
+    
+    if (!isGamePage) {
+        console.debug('Cheat protection: Not on a game page, skipping overlay initialization. Path:', currentPath);
+        return;
+    }
     
     // Create overlay immediately for the fastest path
     if (_CHEAT_DETECTION && !_YOURE_LOOKING_AT_MY_CODE()) {

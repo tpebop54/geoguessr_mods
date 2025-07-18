@@ -20,7 +20,6 @@ class LocationTracker {
      */
     subscribe(trackerId, callback, pollInterval = 1000) {
         if (this.subscribers.has(trackerId)) {
-            console.warn(`Location tracker '${trackerId}' already exists, replacing...`);
             this.unsubscribe(trackerId);
         }
 

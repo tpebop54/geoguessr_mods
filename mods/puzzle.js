@@ -128,7 +128,31 @@ async function drawCanvas2d() {
 
                 // Zoom Level 0: 360 degrees of the panorama. 1: 180 deg. 2: 90 deg. 3: 45 deg.
                 const fovZoom = 3;
-                const tileUrl = `https://streetviewpixels-pa.googleapis.com/v1/tile?cb_client=apiv3&panoid=${panoID}&output=tile&x=${x}&y=${y}&zoom=${fovZoom}&nbt=1&fover=2`;
+                
+                // Build URL with API key if available for better reliability
+                let tileUrl;
+                if (hasGoogleApiKey()) {
+                    // Use the tiles API with user's API key for better rate limits
+                    tileUrl = buildGoogleApiUrl('https://streetviewpixels-pa.googleapis.com/v1/tile', {
+                        cb_client: 'apiv3',
+                        panoid: panoID,
+                        output: 'tile',
+                        x: x,
+                        y: y,
+                        zoom: fovZoom,
+                        nbt: 1,
+                        fover: 2
+                    });
+                } else {
+                    // Fallback to internal API (may have rate limits)
+                    tileUrl = `https://streetviewpixels-pa.googleapis.com/v1/tile?cb_client=apiv3&panoid=${panoID}&output=tile&x=${x}&y=${y}&zoom=${fovZoom}&nbt=1&fover=2`;
+                    
+                    // Only warn once per session
+                    if (!window._puzzleApiKeyWarned) {
+                        warnMissingApiKey('Puzzle mod');
+                        window._puzzleApiKeyWarned = true;
+                    }
+                }
                 img.src = tileUrl;
             });
         };
@@ -382,7 +406,7 @@ const onPuzzleClick = () => {
     }
 };
 
-const updatePuzzleLogic = async (forceState = null) => {
+const updatePuzzleLogic = async (forceState = undefined) => {
     const mod = MODS.puzzle;
     const active = updateMod(mod, forceState);
 
@@ -430,7 +454,7 @@ const updatePuzzleLogic = async (forceState = null) => {
     console.debug('Puzzle: Successfully activated');
 };
 
-const updatePuzzle = (forceState = null) => {
+const updatePuzzle = (forceState = undefined) => {
     // Convert to sync wrapper since we need async inside but the mod system expects sync
     waitForMapsReady(() => {
         updatePuzzleLogic(forceState);

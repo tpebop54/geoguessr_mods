@@ -27,7 +27,7 @@ const setRestriction = (latLngBounds, zoom) => {
     }
 };
 
-const updateZoomInOnlyLogic = (forceState = null) => {
+const updateZoomInOnlyLogic = (forceState = undefined) => {
     const mod = MODS.zoomInOnly;
     const active = updateMod(mod, forceState);
     

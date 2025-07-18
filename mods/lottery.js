@@ -5,12 +5,25 @@
 
 // MOD: Lottery.
 // ===============================================================================================================================
+// 
+// Lottery mod allows players to place random guesses within a specified radius of the actual location.
+// Uses sinusoidal projection for token distribution to ensure even spread across the Earth's surface,
+// avoiding the clustering near poles that occurs with uniform lat/lng distribution (Mercator issue).
+// 
+// NEW FEATURES:
+// - "Only Street View": Ensures generated locations have official Google Street View coverage (requires API key)
+// - "Only Land": Ensures generated locations are on land, not in water (requires API key)
+// Both features use Google Maps APIs for location validation and will fall back gracefully without API key.
+//
 
 let _LOTTERY_DISPLAY; // Display elements for lottery mod. (counter and button).
 let _LOTTERY_COUNT; // How many remaining guesses you have.
 let _LOTTERY_DRAGGING = false; // Makes lottery display draggable because it overlaps the menu.
 let _LOTTERY_DRAGGING_OFFSET_X; // X offset from mouse to element edge when dragging starts.
 let _LOTTERY_DRAGGING_OFFSET_Y; // Y offset from mouse to element edge when dragging starts.
+
+// Initialize the flag to control programmatic clicks
+window._LOTTERY_ALLOWING_CLICK = false;
 
 const removeLotteryDisplay = () => {
     if (_LOTTERY_DISPLAY) {
@@ -20,6 +33,12 @@ const removeLotteryDisplay = () => {
 };
 
 const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
+    // Only show lottery display on game pages
+    if (!areModsAvailable()) {
+        console.debug('Lottery: Not on a game page, skipping lottery display creation. Path:', window.location.pathname);
+        return;
+    }
+    
     removeLotteryDisplay();
 
     const container = document.createElement('div'); // Contains the full lottery display.
@@ -97,7 +116,7 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     _LOTTERY_DISPLAY = container;
 
     // Bind stuff.
-    const onClick = () => {
+    const onClick = async () => {
         if (_LOTTERY_COUNT === 0) {
             return;
         }
@@ -105,27 +124,195 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         const mod = MODS.lottery;
         const nDegLat = getOption(mod, 'nDegLat');
         const nDegLng = getOption(mod, 'nDegLng');
+        const onlyStreetView = getOption(mod, 'onlyStreetView');
+        const onlyLand = getOption(mod, 'onlyLand');
+        
+        // Debug the location detection
+        console.debug('Lottery: Location detection debug:', {
+            GG_ROUND: typeof GG_ROUND !== 'undefined' ? GG_ROUND : 'undefined',
+            GG_LOC: typeof GG_LOC !== 'undefined' ? GG_LOC : 'undefined', 
+            GG_CLICK: typeof GG_CLICK !== 'undefined' ? GG_CLICK : 'undefined',
+            hasGoogleApiKey: window.GOOGLE_MAPS_API_KEY ? 'yes' : 'no'
+        });
+        
         const actual = getActualLoc();
-        const minLat = actual.lat - nDegLat;
-        const maxLat = actual.lat + nDegLat;
+        
+        // Validate that we have a valid actual location
+        if (!actual || isNaN(actual.lat) || isNaN(actual.lng)) {
+            console.error('Lottery: Invalid actual location:', actual);
+            console.error('Lottery: Location variables state:', {
+                GG_ROUND_exists: typeof GG_ROUND !== 'undefined',
+                GG_LOC_exists: typeof GG_LOC !== 'undefined',
+                GG_CLICK_exists: typeof GG_CLICK !== 'undefined'
+            });
+            
+            // Try to wait a bit and retry
+            button.textContent = 'Waiting for location...';
+            button.disabled = true;
+            
+            setTimeout(async () => {
+                const retryActual = getActualLoc();
+                if (!retryActual || isNaN(retryActual.lat) || isNaN(retryActual.lng)) {
+                    console.error('Lottery: Location still not available after retry');
+                    button.textContent = 'Location error';
+                    setTimeout(() => {
+                        button.textContent = 'Insert token';
+                        button.disabled = false;
+                    }, 2000);
+                    return;
+                } else {
+                    // Continue with the retry actual location
+                    console.debug('Lottery: Location now available, continuing...');
+                    continueWithLocation(retryActual);
+                }
+            }, 1000);
+            return;
+        }
+        
+        // Continue with the main logic
+        continueWithLocation(actual);
+        
+        async function continueWithLocation(actual) {
+        
+        // Validate options are valid numbers
+        if (isNaN(nDegLat) || isNaN(nDegLng) || nDegLat <= 0 || nDegLng <= 0) {
+            console.error('Lottery: Invalid degree options:', { nDegLat, nDegLng });
+            button.textContent = 'Config error';
+            setTimeout(() => {
+                button.textContent = 'Insert token';
+            }, 2000);
+            return;
+        }
+        
+        // Calculate latitude bounds and clamp to safe Mercator projection limits
+        const rawMinLat = actual.lat - nDegLat;
+        const rawMaxLat = actual.lat + nDegLat;
+        let minLat = Math.max(_MERCATOR_LAT_MIN, rawMinLat);
+        let maxLat = Math.min(_MERCATOR_LAT_MAX, rawMaxLat);
+
+        // Ensure we have valid latitude bounds
+        if (minLat >= maxLat) {
+            console.debug('Lottery: Invalid latitude bounds, using fallback');
+            minLat = Math.max(_MERCATOR_LAT_MIN, actual.lat - 10);
+            maxLat = Math.min(_MERCATOR_LAT_MAX, actual.lat + 10);
+        }
 
         // The logic gets confusing across the prime meridian with large lng ranges.
         // Just assume that [-180, 180] means the entire world's longitude. Should be fine.
-        // There may be some flaws in the logic here, but it's okay for now.
         let minLng, maxLng;
         if (nDegLng === 180) {
-            minLng = -180;
-            maxLng = 180;
+            minLng = -179.9999;
+            maxLng = 179.9999;
         } else {
             const normalizedLng = ((actual.lng + 180) % 360 + 360) % 360 - 180;
             minLng = normalizedLng - nDegLng;
             maxLng = normalizedLng + nDegLng;
         }
-        const { lat, lng } = getRandomLoc(minLat, maxLat, minLng, maxLng);
+        
+        // Validate longitude bounds
+        if (minLng == null || maxLng == null || isNaN(minLng) || isNaN(maxLng)) {
+            console.warn('Lottery: Invalid longitude bounds detected, using fallback');
+            minLng = -179.9999;
+            maxLng = 179.9999;
+        }
+        
+        // Generate location with criteria if any special options are enabled
+        let location;
+        if (onlyStreetView || onlyLand) {
+            // Check if API key is available for these features
+            if (!hasGoogleApiKey()) {
+                console.warn('Lottery mod: API-dependent features (Only Street View/Only Land) attempted without Google Maps API key');
+                console.debug('Lottery: API key state:', {
+                    exists: !!window.GOOGLE_MAPS_API_KEY,
+                    length: window.GOOGLE_MAPS_API_KEY ? window.GOOGLE_MAPS_API_KEY.length : 0,
+                    firstChars: window.GOOGLE_MAPS_API_KEY ? window.GOOGLE_MAPS_API_KEY.substring(0, 10) + '...' : 'none'
+                });
+                button.textContent = 'API key required';
+                button.disabled = true;
+                setTimeout(() => {
+                    button.textContent = 'Insert token';
+                    button.disabled = false;
+                }, 2000);
+                return;
+            }
+            
+            // Show loading indicator with more specific message
+            const criteria = [];
+            if (onlyLand) criteria.push('land');
+            if (onlyStreetView) criteria.push('Street View');
+            
+            button.textContent = `Finding ${criteria.join(' + ')}...`;
+            button.disabled = true;
+            
+            try {
+                // Add timeout protection (30 seconds max)
+                location = await Promise.race([
+                    getRandomLocationWithCriteria(
+                        minLat, maxLat, minLng, maxLng,
+                        onlyStreetView, onlyLand
+                    ),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Location search timed out')), 30000)
+                    )
+                ]);
+                
+                if (!location) {
+                    console.warn('Lottery: Could not find location meeting criteria, using fallback');
+                    location = getRandomLocSinusoidal(minLat, maxLat, minLng, maxLng);
+                }
+            } catch (error) {
+                console.error('Lottery: Error generating location with criteria:', error);
+                location = getRandomLocSinusoidal(minLat, maxLat, minLng, maxLng);
+                
+                // Show brief error message to user
+                button.textContent = 'Error - using fallback';
+                setTimeout(() => {
+                    button.textContent = 'Insert token';
+                }, 1500);
+            } finally {
+                // Restore button (unless we're showing error message)
+                if (!button.textContent.includes('Error')) {
+                    button.textContent = 'Insert token';
+                }
+                button.disabled = false;
+            }
+        } else {
+            // Use simple random location generation
+            console.debug('Lottery: Using simple location generation with bounds:', { minLat, maxLat, minLng, maxLng });
+            location = getRandomLocSinusoidal(minLat, maxLat, minLng, maxLng);
+        }
+        
+        console.debug('Lottery: Generated location:', location);
+        const { lat, lng } = location;
+        
+        // Must be within Mercator bounds.
+        const finalLat = Math.max(_MERCATOR_LAT_MIN, Math.min(_MERCATOR_LAT_MAX, lat));
+        const finalLng = Math.max(_MERCATOR_LNG_MIN, Math.min(_MERCATOR_LNG_MAX, lng));
+        
+        // Validate that coordinates are valid numbers before proceeding
+        if (isNaN(finalLat) || isNaN(finalLng)) {
+            button.textContent = 'Coordinate error';
+            setTimeout(() => {
+                button.textContent = 'Insert token';
+            }, 2000);
+            return;
+        }
+        
+        console.debug('Lottery: Using coordinates:', { finalLat, finalLng });
+        
         _LOTTERY_COUNT -= 1;
         counter.innerText = _LOTTERY_COUNT;
-        clickAt(lat, lng);
-        setMapCenter(lat, lng);
+        
+        // Temporarily disable click blocking for this programmatic click
+        window._LOTTERY_ALLOWING_CLICK = true;
+        clickAt(finalLat, finalLng);
+        // Re-enable click blocking after a short delay
+        setTimeout(() => {
+            window._LOTTERY_ALLOWING_CLICK = false;
+        }, 100);
+        
+        setMapCenter(finalLat, finalLng);
+        } // End of continueWithLocation function
     };
     button.addEventListener('click', onClick);
 
@@ -134,27 +321,78 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         const mod = MODS.lottery;
         _LOTTERY_COUNT = getOption(mod, 'nGuesses'); // Reset to original amount
         counter.innerText = _LOTTERY_COUNT;
-        console.log('Lottery: Token count reset to', _LOTTERY_COUNT);
     };
     resetButton.addEventListener('click', onReset);
 };
 
+// Remove all lottery click blockers from the map
+const removeAllLotteryClickBlockers = () => {
+    console.debug('Lottery: Removing all click blockers');
+    
+    // Clear the programmatic click flag
+    window._LOTTERY_ALLOWING_CLICK = false;
+    
+    // Remove lottery overlays from all possible containers
+    const containers = [
+        getSmallMapContainer(),
+        getSmallMap(),
+        document.querySelector('[data-qa="guess-map"]'),
+        document.querySelector('.guess-map'),
+        document.querySelector('#__next [role="region"]'),
+        document.body
+    ].filter(Boolean);
+    
+    containers.forEach(container => {
+        // Remove lottery overlays
+        const overlays = container.querySelectorAll('.gg-lottery-overlay');
+        overlays.forEach(overlay => {
+            // Clean up overlay-specific event listeners before removing
+            if (overlay._overlayEventListeners) {
+                overlay._overlayEventListeners.forEach(({ event, handler, options }) => {
+                    overlay.removeEventListener(event, handler, options);
+                });
+            }
+            overlay.remove();
+        });
+        
+        // Remove stored click handlers
+        if (container._lotteryClickHandler) {
+            container.removeEventListener('click', container._lotteryClickHandler, true);
+            delete container._lotteryClickHandler;
+        }
+        
+        // Remove any additional event listeners that might be blocking clicks
+        if (container._lotteryEventListeners) {
+            container._lotteryEventListeners.forEach(({ event, handler, options }) => {
+                container.removeEventListener(event, handler, options);
+            });
+            delete container._lotteryEventListeners;
+        }
+    });
+    
+    // Remove any globally added click blockers
+    document.querySelectorAll('.gg-lottery-overlay, [class*="lottery-click-block"]').forEach(el => el.remove());
+};
+
 // Set lottery-specific map interaction mode (allow zoom/pan, block clicks)
 const setLotteryMapMode = (enabled = true) => {
+    // Only create lottery overlays on game pages
+    if (enabled && !areModsAvailable()) {
+        console.debug('Lottery: Not on a game page, skipping lottery map mode. Path:', window.location.pathname);
+        return;
+    }
+    
     const container = getSmallMapContainer();
     if (!container) return;
     
     if (enabled) {
+        // First remove any existing blockers to avoid duplicates
+        removeAllLotteryClickBlockers();
+        
         // Lottery mode: allow zoom/pan but block clicks
         container.style.pointerEvents = 'auto';
         
-        // Remove any existing lottery overlay
-        const existingOverlay = container.querySelector('.gg-lottery-overlay');
-        if (existingOverlay) {
-            existingOverlay.remove();
-        }
-        
-        // Add lottery-specific overlay that only intercepts click events
+        // Add lottery-specific overlay that intercepts click events
         const overlay = document.createElement('div');
         overlay.className = 'gg-lottery-overlay';
         overlay.style.cssText = `
@@ -168,39 +406,99 @@ const setLotteryMapMode = (enabled = true) => {
             z-index: 1000;
         `;
         
-        // Only enable pointer events for specific interactions we want to block
-        overlay.addEventListener('click', (evt) => {
-            evt.preventDefault();
-            evt.stopPropagation();
-        }, true);
-        
-        // Override the click behavior at the container level instead of using overlay
-        container.addEventListener('click', (evt) => {
-            // Block clicks that would place markers
-            evt.preventDefault();
-            evt.stopPropagation();
-        }, true);
-        
-        // Store reference to the click handler so we can remove it later
-        container._lotteryClickHandler = (evt) => {
-            evt.preventDefault();
-            evt.stopPropagation();
+        // Only block click events, allow all other interactions (drag, zoom, etc.)
+        const overlayClickHandler = (evt) => {
+            // Only block actual clicks, not mousedown events that start drags
+            if (evt.type === 'click') {
+                // Allow programmatic clicks from lottery
+                if (window._LOTTERY_ALLOWING_CLICK) {
+                    return; // Allow programmatic clicks
+                }
+                
+                evt.preventDefault();
+                evt.stopPropagation();
+            }
         };
+        
+        // Enable pointer events only for click blocking
+        overlay.style.pointerEvents = 'auto';
+        overlay.addEventListener('click', overlayClickHandler, true);
+        
+        // Define and store the container click handler that's more selective
+        const containerClickHandler = (evt) => {
+            // Only block click events, not mousedown/mousemove for dragging
+            if (evt.type === 'click') {
+                // Allow programmatic clicks from lottery
+                if (window._LOTTERY_ALLOWING_CLICK) {
+                    return; // Allow programmatic clicks
+                }
+                
+                // Additional check: don't block if this click is part of a drag operation
+                if (!evt.target.closest('.gg-lottery-overlay-dragging')) {
+                    evt.preventDefault();
+                    evt.stopPropagation();
+                }
+            }
+        };
+        
+        // Add the click handler to the container
+        container.addEventListener('click', containerClickHandler, true);
+        
+        // Track drag state to allow drag operations
+        let isDragging = false;
+        let dragStartTime = 0;
+        
+        const mouseDownHandler = (evt) => {
+            isDragging = false;
+            dragStartTime = Date.now();
+            overlay.classList.add('gg-lottery-overlay-dragging');
+        };
+        
+        const mouseMoveHandler = (evt) => {
+            if (Date.now() - dragStartTime > 100) { // 100ms threshold for drag detection
+                isDragging = true;
+            }
+        };
+        
+        const mouseUpHandler = (evt) => {
+            setTimeout(() => {
+                isDragging = false;
+                overlay.classList.remove('gg-lottery-overlay-dragging');
+            }, 50); // Small delay to ensure click event sees the drag state
+        };
+        
+        // Add drag detection listeners
+        overlay.addEventListener('mousedown', mouseDownHandler, true);
+        overlay.addEventListener('mousemove', mouseMoveHandler, true);
+        overlay.addEventListener('mouseup', mouseUpHandler, true);
+        
+        // Store overlay event listeners for cleanup
+        overlay._overlayEventListeners = [
+            { event: 'click', handler: overlayClickHandler, options: true },
+            { event: 'mousedown', handler: mouseDownHandler, options: true },
+            { event: 'mousemove', handler: mouseMoveHandler, options: true },
+            { event: 'mouseup', handler: mouseUpHandler, options: true }
+        ];
+        
+        // Store references for cleanup
+        container._lotteryClickHandler = containerClickHandler;
+        if (!container._lotteryEventListeners) {
+            container._lotteryEventListeners = [];
+        }
+        container._lotteryEventListeners.push(
+            { event: 'click', handler: containerClickHandler, options: true },
+            { event: 'mousedown', handler: mouseDownHandler, options: true },
+            { event: 'mousemove', handler: mouseMoveHandler, options: true },
+            { event: 'mouseup', handler: mouseUpHandler, options: true }
+        );
         
         container.appendChild(overlay);
     } else {
-        // Normal mode: remove lottery overlay and click handler
-        container.style.pointerEvents = 'auto';
-        const overlay = container.querySelector('.gg-lottery-overlay');
-        if (overlay) {
-            overlay.remove();
-        }
+        // Normal mode: remove all lottery click blockers
+        removeAllLotteryClickBlockers();
         
-        // Remove the click handler
-        if (container._lotteryClickHandler) {
-            container.removeEventListener('click', container._lotteryClickHandler, true);
-            delete container._lotteryClickHandler;
-        }
+        // Restore normal pointer events
+        container.style.pointerEvents = 'auto';
     }
 };
 
@@ -210,7 +508,13 @@ const resetLotteryCount = () => {
         return; // Only reset if the mod is active
     }
     
-    console.log('Lottery: Resetting count due to page/location change');
+    // Only reset on game pages
+    if (!areModsAvailable()) {
+        console.debug('Lottery: Not on a game page, skipping reset. Path:', window.location.pathname);
+        return;
+    }
+    
+    console.debug('Lottery: Resetting counter');
     
     // Reset the counter
     _LOTTERY_COUNT = getOption(mod, 'nGuesses');
@@ -233,7 +537,6 @@ const startLotteryLocationTracking = () => {
     
     // Add beforeunload listener for page refresh detection
     window.addEventListener('beforeunload', () => {
-        console.log('Lottery: Page unload detected, will reset on next load');
     });
     
     // Add visibility change listener for tab focus/reload detection
@@ -253,17 +556,25 @@ const stopLotteryLocationTracking = () => {
     window.GG_LOCATION_TRACKER.unsubscribe('lottery');
 };
 
-const updateLottery = (forceState = null) => {
+const updateLottery = (forceState = undefined) => {
     const mod = MODS.lottery;
     const active = updateMod(mod, forceState);
+    const isGamePage = areModsAvailable();
+
+    // Handle conflicts with scoring mods
+    if (active) {
+        disableConflictingMods(mod);
+    }
 
     // Only remove the display if we're deactivating
     if (!active) {
         removeLotteryDisplay();
+        // Ensure all click blockers are removed when lottery is disabled
+        removeAllLotteryClickBlockers();
     }
 
     const smallMap = getSmallMap();
-    if (active) {
+    if (active && isGamePage) {
         // Use waitForMapsReady to ensure the 2D map is ready before proceeding
         waitForMapsReady(() => {
             // If display doesn't exist, create it
@@ -283,12 +594,22 @@ const updateLottery = (forceState = null) => {
             if (counter) {
                 counter.innerText = _LOTTERY_COUNT;
             }
+            
+            // Check if requirements are met for special options
+            checkLotteryRequirements();
         }, {
             require2D: true,
             require3D: false,
             modName: 'Lottery',
             timeout: 8000
         });
+    } else if (active && !isGamePage) {
+        // Mod is active but not on a game page - clean up any existing overlays
+        console.debug('Lottery: Mod active but not on game page, cleaning up overlays');
+        removeLotteryDisplay();
+        removeAllLotteryClickBlockers();
+        setLotteryMapMode(false);
+        stopLotteryLocationTracking();
     } else {
         const container = document.querySelector(`#gg-lottery`);
         if (container) {
@@ -322,7 +643,6 @@ const onLotteryRoundStart = () => {
             // Ensure lottery map mode is properly set
             setLotteryMapMode(true);
             
-            console.log('GeoGuessr MultiMod: Lottery reset for new round, tokens:', _LOTTERY_COUNT);
         }, {
             require2D: true,
             require3D: false,
@@ -336,7 +656,6 @@ const onLotteryRoundStart = () => {
 const onLotteryRoundEnd = () => {
     const mod = MODS.lottery;
     if (isModActive(mod)) {
-        console.log('GeoGuessr MultiMod: Lottery round ended');
     }
 };
 
@@ -389,3 +708,55 @@ if (typeof GG_ROUND !== 'undefined') {
 
 // Start tracking location changes
 startLotteryLocationTracking();
+
+/**
+ * Check if lottery mod requirements are met and show warnings if needed
+ */
+const checkLotteryRequirements = () => {
+    const mod = MODS.lottery;
+    if (!isModActive(mod)) return;
+    
+    const onlyStreetView = getOption(mod, 'onlyStreetView');
+    const onlyLand = getOption(mod, 'onlyLand');
+    
+    if ((onlyStreetView || onlyLand) && !hasGoogleApiKey()) {
+        console.warn('Lottery: "Only Street View" and "Only Land" options require a Google Maps API key');
+        
+        // Show user-friendly notification
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #ff9800;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            z-index: 9999;
+            max-width: 300px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        `;
+        notification.innerHTML = `
+            <strong>Lottery Mod Warning</strong><br>
+            "Only Street View" and "Only Land" options require a Google Maps API key.<br>
+            <small>See installer comments for setup instructions or type <code>configureGoogleApiKey()</code> in console.</small>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto-remove notification after 8 seconds
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.parentElement.removeChild(notification);
+            }
+        }, 8000);
+    }
+};
+
+// Check requirements initially
+checkLotteryRequirements();
+
+// Note: updateLottery() is called during mod initialization via script_bindings.js
+// Do not call it here as it would override the saved state from localStorage

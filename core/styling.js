@@ -7,7 +7,7 @@ const headerShadow = 'rgb(204, 48, 46) 2px 0px 0px, rgb(204, 48, 46) 1.75517px 0
 const bodyShadow = '3px 3px 0 #000, 3px 0px 3px #000, 1px 1px 0 #000, 3px 1px 2px #000';
 const greenMenuColor = '#006400';
 
-// Generic/Base styles
+// Generic/Base styles (legacy formatting preserved)
 const genericStyles = `
     body {
         overflow: hidden;
@@ -18,17 +18,17 @@ const genericStyles = `
     }
 `;
 
-// Mod container and button styles
+// Mod container and button styles (legacy formatting preserved)
 const modContainerStyles = `
     #gg-mods-container {
-        position: absolute !important;
-        width: 200px !important;
-        top: 40px !important;
-        left: 20px !important;
-        z-index: 9 !important;
-        display: flex !important;
-        flex-direction: column !important;
-        margin-top: 20px;
+        position: absolute;
+        width: 200px;
+        top: 40px;
+        left: 20px;
+        z-index: 9;
+        display: flex;
+        flex-direction: column;
+        color: white;
     }
 
     #gg-mods-header-container {
@@ -36,61 +36,69 @@ const modContainerStyles = `
         align-items: center;
         font-size: 18px;
         justify-content: space-between;
+        margin-top: 8px;
     }
 
     #gg-mods-header {
-        font-weight: bold !important;
-        text-shadow: ${headerShadow} !important;
-        position: relative !important;
+        font-weight: bold;
+        text-shadow: ${headerShadow};
+        position: relative;
     }
 
     #gg-mods-container-toggle {
-        padding: 0 !important;
-        font-size: 16px !important;
-        cursor: pointer !important;
-        text-shadow: ${headerShadow} !important;
+        padding: 0;
+        font-size: 16px;
+        cursor: pointer;
+        text-shadow: ${headerShadow};
     }
 
     #gg-mods-button-container {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 6px !important;
-        margin-top: 10px !important;
-        z-index: 9999 !important;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-top: 10px;
+        z-index: 9999;
+        pointer-events: auto;
     }
 
     .gg-mod-button {
-        background: var(--ds-color-purple-100) !important;
-        border-radius: 5px !important;
-        font-size: 14px !important;
-        cursor: pointer !important;
-        opacity: 0.9 !important;
-        transition: opacity 0.2s !important;
-        padding: 4px 10px !important;
+        background: var(--ds-color-purple-100);
+        border-radius: 5px;
+        font-size: 14px;
+        cursor: pointer;
+        opacity: 0.9;
+        transition: opacity 0.2s;
+        padding: 4px 10px;
+        pointer-events: auto;
+        position: relative;
+        z-index: 10000;
     }
 
     .gg-mod-button:hover {
-        opacity: 1 !important;
+        opacity: 1;
     }
 `;
 
-// Option menu styles
+// Option menu styles (legacy formatting preserved)
 const optionMenuStyles = `
     #gg-option-menu {
-        position: absolute;
-        left: 110%;
+        position: fixed;
+        top: 50px;
+        left: 250px;
         min-width: 300px;
+        max-width: 400px;
         padding: 15px;
-        background: var(--ds-color-purple-100, #8e44ad);
+        background: var(--ds-color-purple-100);
         border-radius: 10px;
         border: 2px solid black;
         color: white;
         font-size: 15px;
         font-weight: bold;
         text-shadow: ${bodyShadow};
-        z-index: 9999;
+        z-index: 10000;
         overflow: hidden;
         cursor: move;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     }
 
     #gg-option-title {
@@ -110,7 +118,6 @@ const optionMenuStyles = `
     .gg-option-label {
         white-space: nowrap;
         padding-right: 20px;
-        text-shadow: none !important;
     }
 
     .gg-option-input {
@@ -139,15 +146,45 @@ const optionMenuStyles = `
         height: 25px;
         border-radius: 15px;
         color: white;
-        text-shadow: ${bodyShadow};
+        shadow: ${bodyShadow};
         padding: 0;
         cursor: pointer;
+        transition: transform 0.1s ease, box-shadow 0.1s ease;
         border: none;
-        font-weight: bold;
+        outline: none;
+    }
+
+    .gg-option-form-button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .gg-option-form-button:active {
+        transform: translateY(1px);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    }
+
+    .gg-option-form-button.click-animation {
+        animation: buttonClickPulse 0.3s ease;
+    }
+
+    @keyframes buttonClickPulse {
+        0% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+        }
+        50% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+        }
+        100% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+        }
     }
 
     #gg-option-close {
-        background: red;
+       background: red;
     }
 
     #gg-option-reset {
@@ -156,7 +193,17 @@ const optionMenuStyles = `
     }
 
     #gg-option-apply {
-        background: green;
+       background: green;
+    }
+
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    input[type=number] {
+        -moz-appearance:textfield;
     }
 `;
 
@@ -275,6 +322,7 @@ const tileRevealStyles = `
         z-index: 9999;
         overflow: hidden;
         cursor: move;
+        opacity: 0.9;
     }
 
     #gg-tile-count-value {
@@ -398,7 +446,6 @@ const applyModStyles = () => {
         (IS_OPERA ? operaOptimizationStyles : '') +
         tileRevealStyles +
         lotteryStyles +
-        utilityStyles;
         utilityStyles;
         
     GM_addStyle(combinedStyles);

@@ -137,7 +137,6 @@ const QUOTES = {
         `Shy Shelly says she shall sew sheets swiftly, surely, and silently.`,
         `Scissors sizzle, thistles whistle, brittle bristles bristle briskly.`,
         `Pre-shrunk silk shirts should be strictly short-sleeved.`,
-        `Scissors sizzle, thistles whistle, brittle bristles bristle briskly.`,
         `Zippy zipper-zaggers zipped zigzag zones with zany zest.`,
     ],
 

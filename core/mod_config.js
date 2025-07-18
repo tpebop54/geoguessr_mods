@@ -101,26 +101,6 @@ const MODS = {
         }
     },
 
-    seizure: { // This one is disabled by default because it's a little insensitive and not safe for streaming. But try it if you want!
-        show: false,
-        key: 'seizure',
-        name: 'Seizure',
-        tooltip: 'Makes large map jitter around. Seizure warning!!',
-        disableInOpera: true, // Disable in Opera due to performance and rendering issues
-        options: {
-            frequency: {
-                label: 'Frequency (Hz)',
-                default: 20,
-                tooltip: 'How many times per second to make the image move around.',
-            },
-            distance: {
-                label: 'Max Distance',
-                default: 30,
-                tooltip: 'Maximum distance to jitter each movement (from original location, in pixels).',
-            }
-        }
-    },
-
     bopIt: {
         show: true,
         key: 'bop-it',
@@ -165,6 +145,16 @@ const MODS = {
                 label: 'Longitude margin (deg)',
                 default: 180,
                 tooltip: 'Guess up to this many degrees longitude away from the target',
+            },
+            onlyStreetView: {
+                label: 'Only Street View',
+                default: false,
+                tooltip: 'Only generate guesses in locations with official Google Street View coverage. Requires Google Maps API key to be configured.',
+            },
+            onlyLand: {
+                label: 'Only Land',
+                default: false,
+                tooltip: 'Only generate guesses on land (not in water). Requires Google Maps API key to be configured.',
             },
 
         },

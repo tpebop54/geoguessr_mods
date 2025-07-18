@@ -12,6 +12,7 @@ let _TILE_COUNT_DRAGGING = false;
 let _TILE_COUNT_OFFSET_X = 0;
 let _TILE_COUNT_OFFSET_Y = 0;
 let _ROUND_START_LISTENER_ADDED = false; // Track if round start listener is added
+let _LAST_GAME_URL = null; // Track the last game URL to detect actual round changes
 
 const getTileCount = () => {
     if (_TILE_COUNT == null) {
@@ -43,6 +44,12 @@ const removeTileCounter = () => {
 };
 
 const makeTileCounter = () => {
+    // Only show tile counter on game pages
+    if (!areModsAvailable()) {
+        console.debug('TileReveal: Not on a game page, skipping tile counter creation. Path:', window.location.pathname);
+        return;
+    }
+    
     removeTileCounter();
 
     const container = document.createElement('div');
@@ -102,6 +109,12 @@ const onClickTile = (evt) => {
 };
 
 const makeTiles = (nRows, nCols) => {
+    // Only create tiles on game pages
+    if (!areModsAvailable()) {
+        console.debug('TileReveal: Not on a game page, skipping tile creation. Path:', window.location.pathname);
+        return;
+    }
+    
     removeTiles();
 
     const bigMapCanvas = getBigMapCanvas();
@@ -142,7 +155,13 @@ const resetTileReveal = () => {
         return; // Only reset if the mod is active
     }
     
-    console.log('Resetting tile reveal mod due to page/location change');
+    // Only reset on game pages
+    if (!areModsAvailable()) {
+        console.debug('TileReveal: Not on a game page, skipping reset. Path:', window.location.pathname);
+        return;
+    }
+    
+    console.debug('TileReveal: Resetting tiles and counter');
     
     // Reset the counter
     resetTileCount();
@@ -154,58 +173,89 @@ const resetTileReveal = () => {
 };
 
 const startTileRevealLocationTracking = () => {
-    // Register with the global location tracker
+    // Register with the global location tracker but be very conservative about resets
     window.GG_LOCATION_TRACKER.subscribe('tilereveal', (newUrl, oldUrl) => {
-        // Check if this is a significant location change (new round/page)
-        if (window.GG_LOCATION_TRACKER.isSignificantLocationChange(oldUrl, newUrl)) {
+        // Extract game identifiers from URLs
+        const getGameId = (url) => {
+            if (!url) return null;
+            const match = url.match(/\/game\/([^\/\?#]+)/);
+            return match ? match[1] : null;
+        };
+        
+        const newGameId = getGameId(newUrl);
+        const oldGameId = getGameId(oldUrl);
+        
+        // Only reset if we have a completely different game ID (new game/round)
+        if (newGameId && oldGameId && newGameId !== oldGameId) {
+            console.debug('TileReveal: New game detected, resetting tiles. Old:', oldGameId, 'New:', newGameId);
             resetTileReveal();
+            _LAST_GAME_URL = newUrl;
+        } else if (newGameId && !oldGameId) {
+            // Entering a game from a non-game page
+            console.debug('TileReveal: Entering new game, resetting tiles. Game ID:', newGameId);
+            resetTileReveal();
+            _LAST_GAME_URL = newUrl;
         }
-    }, 2000); // Check every 2 seconds
+        
+        // Don't reset for URL changes within the same game (like making guesses)
+        if (newGameId === oldGameId && newGameId) {
+            console.debug('TileReveal: Same game, preserving revealed tiles. Game ID:', newGameId);
+        }
+    }, 3000); // Check every 3 seconds - less frequent to avoid conflicts
     
-    // Add round start listener if not already added
+    // Add round start listener if not already added - this should be the primary reset trigger
     if (!_ROUND_START_LISTENER_ADDED && typeof GEF !== 'undefined' && GEF.events) {
         GEF.events.addEventListener('round_start', () => {
-            console.log('Tile reveal: Round start detected, resetting tiles');
+            console.debug('TileReveal: Round start event received (GEF) - resetting tiles');
             setTimeout(() => {
                 resetTileReveal();
-            }, 500); // Small delay to ensure everything is loaded
+            }, 1000); // Longer delay to ensure the round has fully started
         });
         _ROUND_START_LISTENER_ADDED = true;
-        console.log('Tile reveal: Round start listener added');
     }
     
-    // Also listen for our custom round start event
-    window.addEventListener('gg_round_start', (evt) => {
-        console.log('Tile reveal: Custom round start event detected, resetting tiles');
-        setTimeout(() => {
-            resetTileReveal();
-        }, 500);
-    });
-    
-    // Listen for mod reactivation events
-    window.addEventListener('gg_mods_reactivate', (evt) => {
-        if (isModActive(MODS.tileReveal)) {
-            console.log('Tile reveal: Mod reactivation event detected, resetting tiles');
+    // Listen for custom round start events - but be very specific
+    if (!window._TILE_REVEAL_CUSTOM_LISTENER_ADDED) {
+        window.addEventListener('gg_round_start', (evt) => {
+            console.debug('TileReveal: Custom round start event received - resetting tiles');
             setTimeout(() => {
                 resetTileReveal();
-            }, 500);
-        }
-    });
+            }, 1000);
+        });
+        window._TILE_REVEAL_CUSTOM_LISTENER_ADDED = true;
+    }
     
-    // Add beforeunload listener for page refresh detection
-    window.addEventListener('beforeunload', () => {
-        console.log('Tile reveal: Page unload detected, will reset on next load');
-    });
+    // Listen for mod reactivation events - only reset when mod is reactivated, not other events
+    if (!window._TILE_REVEAL_REACTIVATE_LISTENER_ADDED) {
+        window.addEventListener('gg_mods_reactivate', (evt) => {
+            if (isModActive(MODS.tileReveal)) {
+                console.debug('TileReveal: Mod reactivation event received - resetting tiles');
+                setTimeout(() => {
+                    resetTileReveal();
+                }, 1000);
+            }
+        });
+        window._TILE_REVEAL_REACTIVATE_LISTENER_ADDED = true;
+    }
     
-    // Add visibility change listener for tab focus/reload detection
-    document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) {
-            // Page became visible again, trigger a reset
-            setTimeout(() => {
-                resetTileReveal();
-            }, 100);
+    // Remove the visibility change listener - it's too aggressive and triggers on tab switches
+    // and may be causing resets when clicking on the map
+    
+    // Add page reload detection only - much more conservative
+    if (!window._TILE_REVEAL_RELOAD_LISTENER_ADDED) {
+        window.addEventListener('beforeunload', () => {
+            // Mark that a page reload is happening
+            sessionStorage.setItem('gg_tile_reveal_reloaded', 'true');
+        });
+        
+        // Check if we just reloaded on page load
+        if (sessionStorage.getItem('gg_tile_reveal_reloaded') === 'true') {
+            sessionStorage.removeItem('gg_tile_reveal_reloaded');
+            console.debug('TileReveal: Page reload detected - will reset tiles on next activation');
         }
-    });
+        
+        window._TILE_REVEAL_RELOAD_LISTENER_ADDED = true;
+    }
 };
 
 const stopTileRevealLocationTracking = () => {
@@ -213,11 +263,12 @@ const stopTileRevealLocationTracking = () => {
     window.GG_LOCATION_TRACKER.unsubscribe('tilereveal');
 };
 
-const updateTileReveal = (forceState = null) => {
+const updateTileReveal = (forceState = undefined) => {
     const mod = MODS.tileReveal;
     const active = updateMod(mod, forceState);
+    const isGamePage = areModsAvailable();
 
-    if (active) {
+    if (active && isGamePage) {
         const nRows = getOption(mod, 'nRows');
         const nCols = getOption(mod, 'nCols');
         makeTiles(nRows, nCols);
@@ -225,13 +276,23 @@ const updateTileReveal = (forceState = null) => {
         _TILE_COUNT = getOption(mod, 'nClicks');
         _TILE_COUNT = getTileCount(); // Fix any weird inputs.
         
+        // Store the current URL when activating the mod
+        _LAST_GAME_URL = window.location.href;
+        
         // Start location tracking when the mod is activated
         startTileRevealLocationTracking();
+    } else if (active && !isGamePage) {
+        // Mod is active but not on a game page - clean up any existing overlays
+        removeTiles();
+        removeTileCounter();
+        stopTileRevealLocationTracking();
+        _LAST_GAME_URL = null;
     } else {
         removeTiles();
         removeTileCounter();
         
         // Stop location tracking when the mod is deactivated
         stopTileRevealLocationTracking();
+        _LAST_GAME_URL = null;
     }
 };

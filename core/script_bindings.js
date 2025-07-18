@@ -7,26 +7,38 @@
 // ===============================================================================================================================
 
 // Must add each mod to this list to bind the buttons and hotkeys.
-const _BINDINGS = [
-    [MODS.satView, updateSatView],
-    [MODS.rotateMap, updateRotateMap],
-    [MODS.zoomInOnly, updateZoomInOnly],
-    [MODS.showScore, updateShowScore],
-    [MODS.flashlight, updateFlashlight],
-    [MODS.seizure, updateSeizure],
-    [MODS.bopIt, updateBopIt],
-    [MODS.inFrame, updateInFrame],
-    [MODS.lottery, updateLottery],
-    [MODS.puzzle, updatePuzzle],
-    [MODS.tileReveal, updateTileReveal],
-    [MODS.displayOptions, updateDisplayOptions],
-    [MODS.scratch, updateScratch],
-];
+let _BINDINGS = null;
+
+// Lazy initialize bindings to avoid dependency loading issues
+const getBindings = () => {
+    if (_BINDINGS === null) {
+        try {
+            _BINDINGS = [
+                [MODS.satView, updateSatView],
+                [MODS.rotateMap, updateRotateMap],
+                [MODS.zoomInOnly, updateZoomInOnly],
+                [MODS.showScore, updateShowScore],
+                [MODS.flashlight, updateFlashlight],
+                [MODS.bopIt, updateBopIt],
+                [MODS.inFrame, updateInFrame],
+                [MODS.lottery, updateLottery],
+                [MODS.puzzle, updatePuzzle],
+                [MODS.tileReveal, updateTileReveal],
+                [MODS.displayOptions, updateDisplayOptions],
+                [MODS.scratch, updateScratch],
+            ];
+        } catch (err) {
+            console.error('Error initializing bindings:', err);
+            _BINDINGS = []; // Fallback to empty array
+        }
+    }
+    return _BINDINGS;
+};
 
 const bindButtons = () => {
     let boundCount = 0;
     
-    for (const [mod, callback] of _BINDINGS) {
+    for (const [mod, callback] of getBindings()) {
         if (!mod.show) {
             continue;
         }
@@ -61,27 +73,57 @@ const bindButtons = () => {
 
 const addButtons = () => { // Add mod buttons to the active round, with a little button to toggle them.
     try {
+        console.debug('GeoGuessr MultiMod: addButtons() called');
+        
+        // Only show mods menu on game and live-challenge pages
+        const currentUrl = window.location.href;
+        const currentPath = window.location.pathname;
+        
+        console.debug('GeoGuessr MultiMod: Current URL:', currentUrl);
+        console.debug('GeoGuessr MultiMod: Current path:', currentPath);
+        
+        // Check if we're on a supported game page
+        const isGameUrl = currentPath.includes('/game/') || currentPath.includes('/live-challenge/');
+        
+        if (!isGameUrl) {
+            console.debug('GeoGuessr MultiMod: Not on a game page, not showing mods menu. Path:', currentPath);
+            return false;
+        }
+        
+        console.debug('GeoGuessr MultiMod: On game page, attempting to find containers...');
+        
         const bigMapContainer = getBigMapContainer();
         const modContainer = getModDiv(); // Includes header and buttons.
         
+        console.debug('GeoGuessr MultiMod: bigMapContainer found:', !!bigMapContainer);
+        console.debug('GeoGuessr MultiMod: existing modContainer found:', !!modContainer);
+        
         if (!bigMapContainer) {
+            console.debug('GeoGuessr MultiMod: Game container not found, will retry...');
             return false;
         }
         
         if (modContainer) {
+            console.debug('GeoGuessr MultiMod: Mod container already exists');
             return false;
         }
 
+        console.debug('GeoGuessr MultiMod: Creating new mod container...');
+
+        console.debug('GeoGuessr MultiMod: Creating new mod container...');
+
         const modsContainer = document.createElement('div'); // Header and buttons.
         modsContainer.id = 'gg-mods-container';
+
+        console.debug('GeoGuessr MultiMod: Created modsContainer element');
 
         const headerContainer = document.createElement('div'); // Header and button toggle.
         headerContainer.id = 'gg-mods-header-container';
         const headerText = document.createElement('div');
         headerText.id = 'gg-mods-header';
         headerText.textContent = `TPEBOP'S MODS`;
-        const version = (typeof MOD_VERSION !== 'undefined') ? MOD_VERSION : ((THE_WINDOW || {}).MOD_VERSION || 'unknown');
-        headerText.title = `Version: ${version}`;
+        const version = (typeof MOD_VERSION !== 'undefined') ? MOD_VERSION : 'unknown';
+        headerText.title = `Version: ${version}\nPress "Ctrl Shift ." to disable all and refresh.`;
         const modMenuToggle = document.createElement('button');
         modMenuToggle.id = 'gg-mods-container-toggle';
         modMenuToggle.textContent = '▼'; // TODO: load from localStorage.
@@ -91,9 +133,18 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
         const buttonContainer = document.createElement('div'); // Mod buttons.
         buttonContainer.id = 'gg-mods-button-container';
 
+        console.debug('GeoGuessr MultiMod: Created header and button containers');
+
         let buttonCount = 0;
+        
+        console.debug('GeoGuessr MultiMod: MODS object available:', typeof MODS !== 'undefined');
+        if (typeof MODS !== 'undefined') {
+            console.debug('GeoGuessr MultiMod: MODS keys:', Object.keys(MODS));
+        }
+        
         for (const [key, mod] of Object.entries(MODS)) {
             if (!mod.show) {
+                console.debug(`GeoGuessr MultiMod: Skipping mod ${key} (show: false)`);
                 continue;
             }
             
@@ -102,98 +153,72 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
                 modButton.id = getModButtonId(mod);
                 modButton.classList.add('gg-mod-button');
                 modButton.title = mod.tooltip;
-                modButton.textContent = getButtonText(mod);
-                
-                // Apply inline styles to ensure visibility
-                modButton.style.cssText = `
-                    background: var(--ds-color-purple-100) !important;
-                    border-radius: 5px !important;
-                    font-size: 14px !important;
-                    cursor: pointer !important;
-                    opacity: 0.9 !important;
-                    padding: 4px 10px !important;
-                    margin: 2px 0 !important;
-                `;
+                const buttonText = getButtonText(mod);
+                modButton.textContent = buttonText;
+                console.debug(`Created button for ${mod.name} with text: "${buttonText}" (active: ${mod.active})`);
                 
                 buttonContainer.appendChild(modButton);
                 buttonCount++;
             } catch (err) {
-                console.error(err);
+                console.error('Error creating mod button for', key, err);
             }
         }
 
+        console.debug(`GeoGuessr MultiMod: Created ${buttonCount} mod buttons`);
+
         modsContainer.appendChild(headerContainer);
         modsContainer.appendChild(buttonContainer);
-        bigMapContainer.appendChild(modsContainer);
         
-        // Force apply critical styles directly to ensure visibility
-        modsContainer.style.cssText = `
-            position: absolute !important;
-            width: 200px !important;
-            top: 40px !important;
-            left: 20px !important;
-            z-index: 9 !important;
-            display: flex !important;
-            flex-direction: column !important;
-        `;
+        console.debug('GeoGuessr MultiMod: Assembled complete mod container');
         
-        headerContainer.style.cssText = `
-            display: flex !important;
-            align-items: center !important;
-            font-size: 18px !important;
-            justify-content: space-between !important;
-        `;
-        
-        headerText.style.cssText = `
-            font-weight: bold !important;
-        `;
-        
-        modMenuToggle.style.cssText = `
-            padding: 0 !important;
-            font-size: 16px !important;
-            cursor: pointer !important;
-        `;
-        
-        buttonContainer.style.cssText = `
-            display: flex;
-            flex-direction: column !important;
-            gap: 6px !important;
-            margin-top: 10px !important;
-        `;
-        
-        bindButtons();
 
-        // Button menu toggler - Opera-compatible approach with onclick attribute
-        let isMenuVisible = true;
-        
-        // Set onclick directly on the element for maximum compatibility
-        modMenuToggle.onclick = function(event) {
-            event.preventDefault();
-            event.stopPropagation();
-            
-            const container = document.getElementById('gg-mods-button-container');
-            if (!container) {
-                console.error('Button container not found!');
-                return;
-            }
-            
-            if (isMenuVisible) {
-                // Hide the menu
-                container.style.setProperty('display', 'none', 'important');
-                modMenuToggle.textContent = '▶';
-                isMenuVisible = false;
+        const addContainerSafely = () => {
+            // Double-check that our container won't conflict with React
+            if (!document.getElementById('gg-mods-container')) {
+                bigMapContainer.appendChild(modsContainer);
+                const verifyContainer = document.getElementById('gg-mods-container');
+                if (verifyContainer) {
+                    bindButtons();
+                } else {
+                    console.error('GeoGuessr MultiMod: Container was not found after append - something went wrong');
+                }
             } else {
-                // Show the menu
-                container.style.setProperty('display', 'flex', 'important');
-                modMenuToggle.textContent = '▼';
-                isMenuVisible = true;
+                bindButtons();
             }
         };
+        
+        // Add container with a small delay to avoid React hydration conflicts
+        console.debug('GeoGuessr MultiMod: Scheduling container addition with 100ms delay...');
+        setTimeout(addContainerSafely, 100);
+        
+        modMenuToggle.addEventListener('click', function () {
+            if (buttonContainer.classList.contains('hidden')) {
+                buttonContainer.classList.remove('hidden');
+                modMenuToggle.textContent = '▼';
+            } else {
+                buttonContainer.classList.add('hidden');
+                modMenuToggle.textContent = '▶';
+            }
+        });
+        
         return true;
     } catch (err) {
-        console.error(err);
+        console.error('Error creating mod menu:', err);
         return false;
     }
+};
+
+/**
+ * Remove the mod menu completely from the page
+ */
+const removeModMenu = () => {
+    const modContainer = getModDiv();
+    if (modContainer) {
+        console.debug('GeoGuessr MultiMod: Removing mod menu from page');
+        modContainer.remove();
+        return true;
+    }
+    return false;
 };
 
 /**
@@ -202,10 +227,25 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
  */
 const disableModsAsNeeded = () => {
     const pathname = window.location.pathname;
-    if (pathname.indexOf('live-challenge') !== -1) {
-        disableMods([
-        ], true);
+    const currentUrl = window.location.href;
+    
+    // Only enable mods on game and live-challenge pages
+    const isGameUrl = pathname.includes('/game/') || pathname.includes('/live-challenge/');
+    
+    if (!isGameUrl) {
+        console.debug('GeoGuessr MultiMod: Not on a game page, disabling all mods and hiding menu. Path:', pathname);
+        
+        // Remove any existing mod menu
+        removeModMenu();
+        
+        // Disable all mods temporarily for this session
+        const allMods = Object.values(MODS);
+        disableMods(allMods, false); // false = don't save to localStorage
+        return;
     }
+    
+    // Additional specific mod restrictions for live challenges can be added here if needed
+    // (Currently no specific restrictions for live challenges)
 };
 
 // Initialize the mod system
@@ -225,7 +265,6 @@ const setupMapEventListeners = () => {
     // Listen for new map instances being created (most important for immediate mod reapplication)
     window.addEventListener('gg_new_map_instance', (evt) => {
         const { type, map, streetView } = evt.detail;
-        console.log(`🗺️ GeoGuessr MultiMod: New ${type} map instance detected, reapplying mods immediately`);
         
         // Immediately reapply all active mods to the new map instance
         setTimeout(() => {
@@ -237,7 +276,7 @@ const setupMapEventListeners = () => {
     window.addEventListener('gg_map_tiles_loaded', () => {
         console.debug('GeoGuessr MultiMod: Map tiles loaded, checking for satellite view mod');
         // Specifically reapply satellite view if it's active
-        const satViewMod = _BINDINGS.find(([mod]) => mod.key === 'satView');
+        const satViewMod = getBindings().find(([mod]) => mod.key === 'satView');
         if (satViewMod && satViewMod[0].active) {
             console.debug('GeoGuessr MultiMod: Reapplying satellite view after tiles loaded');
             setTimeout(() => {
@@ -313,7 +352,6 @@ const checkAndActivateModsIfReady = () => {
     });
     
     if (bothMapsReady) {
-        console.log('GeoGuessr MultiMod: Both maps are ready, activating mods now!');
         
         // Small delay to ensure everything is settled
         setTimeout(() => {
@@ -324,7 +362,7 @@ const checkAndActivateModsIfReady = () => {
             }
             
             // Reactivate all active mods
-            for (const [mod, callback] of _BINDINGS) {
+            for (const [mod, callback] of getBindings()) {
                 if (mod.active && mod.show) {
                     console.debug(`Event-triggered reactivation of mod: ${mod.name}`);
                     try {
@@ -340,10 +378,9 @@ const checkAndActivateModsIfReady = () => {
 
 // Immediately reapply active mods to newly created map instances
 const reapplyActiveModsToNewMaps = () => {
-    console.log('🔄 GeoGuessr MultiMod: Reapplying active mods to new map instances');
     
     // Get list of currently active mods
-    const activeMods = _BINDINGS.filter(([mod]) => mod.active && mod.show);
+    const activeMods = getBindings().filter(([mod]) => mod.active && mod.show);
     
     if (activeMods.length === 0) {
         console.debug('No active mods to reapply');
@@ -369,14 +406,98 @@ const reapplyActiveModsToNewMaps = () => {
         }
     });
     
-    console.log('✅ GeoGuessr MultiMod: Finished reapplying active mods to new maps');
 };
 
-// Initialize when DOM is ready
-const initializeMods = () => {
+// Global keyboard shortcuts - moved to dom_utils.js
+// ===============================================================================================================================
+
+/**
+ * Monitor URL changes and handle game page logic
+ */
+const setupHomepageMonitoring = () => {
+    // Subscribe to location changes
+    if (window.GG_LOCATION_TRACKER) {
+        window.GG_LOCATION_TRACKER.subscribe('game-page-monitor', (newUrl, oldUrl) => {
+            const newPath = new URL(newUrl).pathname;
+            const isGamePage = newPath.includes('/game/') || newPath.includes('/live-challenge/');
+            
+            if (!isGamePage) {
+                console.debug('GeoGuessr MultiMod: Navigated away from game page, removing mod menu');
+                removeModMenu();
+                
+                // Disable all mods temporarily
+                const allMods = Object.values(MODS);
+                disableMods(allMods, false);
+            } else if (oldUrl) {
+                const oldPath = new URL(oldUrl).pathname;
+                const wasGamePage = oldPath.includes('/game/') || oldPath.includes('/live-challenge/');
+                
+                if (!wasGamePage) {
+                    // Navigated to game page from non-game page - mods can be active again
+                    console.debug('GeoGuessr MultiMod: Navigated to game page, mods can be active again');
+                    // The normal initialization process will handle re-creating the menu
+                }
+            }
+        }, 1000); // Check every second
+    }
+};
+
+// Wait for React hydration to complete before initializing
+const waitForReactHydration = () => {
+    return new Promise((resolve) => {
+        // Check if React has finished hydrating
+        const checkHydration = () => {
+            // Look for signs that React has finished hydrating
+            const reactRoot = document.querySelector('#__next');
+            if (!reactRoot) {
+                // React root not found yet, wait longer
+                setTimeout(checkHydration, 100);
+                return;
+            }
+            
+            // Check if React has added its event listeners (sign of hydration completion)
+            const hasReactListeners = reactRoot._reactInternalFiber || 
+                                     reactRoot._reactInternalInstance || 
+                                     reactRoot._reactInternals ||
+                                     reactRoot.__reactInternalInstance;
+            
+            if (hasReactListeners) {
+                console.debug('GeoGuessr MultiMod: React hydration detected, safe to initialize');
+                resolve();
+            } else {
+                // Wait a bit longer for React to finish
+                setTimeout(checkHydration, 100);
+            }
+        };
+        
+        // Start checking after a minimal delay to let React start
+        setTimeout(checkHydration, 500);
+    });
+};
+
+// Initialize when DOM is ready and React has hydrated
+const initializeMods = async () => {
     try {
+        // Try immediate initialization first, then wait for React hydration as backup
+        console.debug('GeoGuessr MultiMod: Starting immediate initialization attempt');
+        
+        // Try to add buttons immediately
+        const immediateResult = addButtons();
+        if (immediateResult) {
+            console.debug('GeoGuessr MultiMod: Immediate button creation successful');
+            return;
+        }
+        
+        // If immediate attempt failed, wait for React hydration
+        await waitForReactHydration();
+        
+        console.debug('GeoGuessr MultiMod: Starting initialization after React hydration');
+        
         // Setup enhanced map event listeners first
         setupMapEventListeners();
+        
+        // Setup game page monitoring for URL changes
+        setupHomepageMonitoring();
         
         // Enforce cheat protection
         enforceCheatProtection();
@@ -447,17 +568,25 @@ const initializeMods = () => {
             }
         }, 5000); // Check every 5 seconds
         
+        // Global keyboard shortcuts are now handled in dom_utils.js
+        
     } catch (err) {
         console.error(err);
     }
 };
 
-// Start initialization when DOM is ready
+// Start initialization when DOM is ready, but wait for React hydration
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeMods);
+    document.addEventListener('DOMContentLoaded', () => {
+        initializeMods().catch(err => {
+            console.error('GeoGuessr MultiMod: Initialization failed:', err);
+        });
+    });
 } else {
     // DOM is already ready
-    initializeMods();
+    initializeMods().catch(err => {
+        console.error('GeoGuessr MultiMod: Initialization failed:', err);
+    });
 }
 
 // Global variables and functions for round detection
@@ -470,7 +599,6 @@ const simulateRoundStart = () => {
     // Method 1: Check if GEF has current game data
     if (typeof GeoGuessrEventFramework !== 'undefined' && GeoGuessrEventFramework.game) {
         gameData = GeoGuessrEventFramework.game;
-        console.log('GEF Game data loaded.');
     }
     
     // Method 2: Try to extract from window objects
@@ -479,7 +607,6 @@ const simulateRoundStart = () => {
             const nextData = window.__NEXT_DATA__;
             if (nextData.props && nextData.props.pageProps) {
                 gameData = nextData.props.pageProps.game || nextData.props.pageProps;
-                console.log('GeoGuessr MultiMod: Found game data from __NEXT_DATA__');
             }
         } catch (err) {
             console.debug('GeoGuessr MultiMod: Could not extract from __NEXT_DATA__:', err);
@@ -487,7 +614,6 @@ const simulateRoundStart = () => {
     }
     
     if (gameData && handleRoundStart) {
-        console.log('GeoGuessr MultiMod: Simulating round_start with data:', gameData);
         handleRoundStart({ detail: gameData });
     } else {
         console.warn('GeoGuessr MultiMod: Could not find game data for simulation or handleRoundStart not defined');
@@ -496,6 +622,8 @@ const simulateRoundStart = () => {
 
 // Enhanced map data fetching with retry logic
 fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) => {
+    console.debug(`GeoGuessr MultiMod: fetchMapDataWithRetry called with mapId: ${mapId}`);
+    
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             console.debug(`GeoGuessr MultiMod: Fetching map data attempt ${attempt}/${maxRetries}`);
@@ -512,10 +640,12 @@ fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) => {
             }
             
             const data = await response.json();
+            console.debug(`GeoGuessr MultiMod: Received map data:`, data);
+            console.debug(`GeoGuessr MultiMod: maxErrorDistance value:`, data?.maxErrorDistance);
             
             // Validate that we got the expected data structure
             if (!data || typeof data.maxErrorDistance === 'undefined') {
-                throw new Error('Invalid map data structure received');
+                throw new Error(`Invalid map data structure received. Data: ${JSON.stringify(data)}`);
             }
             
             GG_MAP = data;
@@ -561,7 +691,6 @@ const ensureGGMapLoaded = () => {
 
 // Function to reactivate all currently active mods
 const reactivateActiveMods = () => {
-    console.log('GeoGuessr MultiMod: Reactivating active mods after round start');
     
     // Dispatch a custom event that mods can listen for
     const reactivationEvent = new CustomEvent('gg_mods_reactivate', {
@@ -570,7 +699,7 @@ const reactivateActiveMods = () => {
     window.dispatchEvent(reactivationEvent);
     
     // Log which mods are active and should be reactivated
-    const activeMods = _BINDINGS.filter(([mod]) => mod.active && mod.show).map(([mod]) => mod.name);
+    const activeMods = getBindings().filter(([mod]) => mod.active && mod.show).map(([mod]) => mod.name);
     console.debug('Active mods to reactivate:', activeMods);
     
     // Enhanced map readiness detection
@@ -633,7 +762,7 @@ const reactivateActiveMods = () => {
                 
                 // Add a small additional delay to ensure everything is stable
                 setTimeout(() => {
-                    for (const [mod, callback] of _BINDINGS) {
+                    for (const [mod, callback] of getBindings()) {
                         if (mod.active && mod.show) {
                             console.debug(`Reactivating mod: ${mod.name}`);
                             try {
@@ -653,7 +782,7 @@ const reactivateActiveMods = () => {
                 console.warn(`Map readiness timeout after ${attempt} attempts, forcing mod reactivation`);
                 
                 // Force reactivation even if maps aren't fully ready
-                for (const [mod, callback] of _BINDINGS) {
+                for (const [mod, callback] of getBindings()) {
                     if (mod.active && mod.show) {
                         console.debug(`Force reactivating mod: ${mod.name}`);
                         try {
@@ -686,7 +815,6 @@ const reactivateActiveMods = () => {
 
 // Round start event handler
 handleRoundStart = (evt) => {
-    console.log('GeoGuessr MultiMod: Round start detected:', evt);
     
     // Reset mod button binding state for new round
     _MODS_LOADED = false;
@@ -713,18 +841,34 @@ handleRoundStart = (evt) => {
     try {
         let round, mapID;
         
+        console.debug('GeoGuessr MultiMod: Round start event detail:', evt.detail);
+        
         // Extract round and map data from event
         if (evt.detail && evt.detail.rounds) {
             round = evt.detail.rounds[evt.detail.rounds.length - 1];
             mapID = evt.detail.map?.id;
+            console.debug('GeoGuessr MultiMod: Method 1 - rounds structure, mapID:', mapID);
         } else if (evt.detail && evt.detail.game) {
             // Alternative structure
             round = evt.detail.game.round || evt.detail.game;
             mapID = evt.detail.game.map?.id || evt.detail.game.mapId;
+            console.debug('GeoGuessr MultiMod: Method 2 - game structure, mapID:', mapID);
         } else if (evt.detail) {
             // Direct structure
             round = evt.detail;
             mapID = evt.detail.map?.id || evt.detail.mapId;
+            console.debug('GeoGuessr MultiMod: Method 3 - direct structure, mapID:', mapID);
+        }
+        
+        // Additional debugging for map ID extraction
+        if (evt.detail) {
+            console.debug('GeoGuessr MultiMod: Event detail keys:', Object.keys(evt.detail));
+            if (evt.detail.map) {
+                console.debug('GeoGuessr MultiMod: Map object:', evt.detail.map);
+            }
+            if (evt.detail.game && evt.detail.game.map) {
+                console.debug('GeoGuessr MultiMod: Game.map object:', evt.detail.game.map);
+            }
         }
         
         if (!round) {
@@ -734,7 +878,21 @@ handleRoundStart = (evt) => {
         
         if (!mapID) {
             console.warn('GeoGuessr MultiMod: Could not extract map ID from event');
-            return;
+            console.warn('GeoGuessr MultiMod: Available event structure:', evt.detail);
+            
+            // Fallback: try legacy approach
+            try {
+                if (evt.detail && evt.detail.map && evt.detail.map.id) {
+                    mapID = evt.detail.map.id;
+                    console.debug('GeoGuessr MultiMod: Using legacy fallback mapID:', mapID);
+                }
+            } catch (fallbackErr) {
+                console.debug('GeoGuessr MultiMod: Legacy fallback also failed:', fallbackErr);
+            }
+            
+            if (!mapID) {
+                return;
+            }
         }
         
         GG_ROUND = round;
@@ -743,6 +901,22 @@ handleRoundStart = (evt) => {
         
         fetchMapDataWithRetry(mapID).catch(err => {
             console.error('GeoGuessr MultiMod: Final map data fetch failed:', err);
+            
+            // Legacy fallback approach - simple fetch without retries
+            console.debug('GeoGuessr MultiMod: Trying legacy fallback fetch approach');
+            fetch(`https://www.geoguessr.com/api/maps/${mapID}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && typeof data.maxErrorDistance !== 'undefined') {
+                        GG_MAP = data;
+                        console.debug('GeoGuessr MultiMod: Legacy fallback successful, GG_MAP loaded:', GG_MAP);
+                    } else {
+                        console.warn('GeoGuessr MultiMod: Legacy fallback returned invalid data');
+                    }
+                })
+                .catch(legacyErr => {
+                    console.error('GeoGuessr MultiMod: Legacy fallback also failed:', legacyErr);
+                });
         });
         
     } catch (err) {
@@ -796,7 +970,6 @@ function initializeEventFramework() {
             setTimeout(initializeEventFramework, 2000);
             return;
         }
-        console.log('GeoGuessr MultiMod: GeoGuessrEventFramework successfully initialized');
         
         // Start global background map loading
         startGlobalMapLoading();
@@ -808,7 +981,6 @@ function initializeEventFramework() {
                 GEF.events.addEventListener('round_start', handleRoundStart);
                 
                 GEF.events.addEventListener('round_end', (evt) => {
-                    console.log('GeoGuessr MultiMod: round_end event detected');
                     // Clear the periodic check interval
                     if (mapDataCheckInterval) {
                         clearInterval(mapDataCheckInterval);
@@ -824,7 +996,6 @@ function initializeEventFramework() {
                 
                 // Test listener to verify events are working
                 GEF.events.addEventListener('guess', (evt) => {
-                    console.log('GeoGuessr MultiMod: guess event detected:', evt);
                 });
             } catch (err) {
                 console.error('GeoGuessr MultiMod: Failed to add event listeners:', err);
@@ -843,12 +1014,10 @@ function initializeEventFramework() {
         const detectRoundChange = () => {
             const newUrl = window.location.href;
             if (newUrl !== currentUrl) {
-                console.log('GeoGuessr MultiMod: URL change detected:', currentUrl, '->', newUrl);
                 currentUrl = newUrl;
                 
                 // Check if this looks like a game URL
                 if (newUrl.includes('/game/') || newUrl.includes('/challenge/')) {
-                    console.log('GeoGuessr MultiMod: Game URL detected, simulating round_start');
                     roundChangeDetected = true;
                     
                     // Try to extract game data from the page
@@ -886,7 +1055,6 @@ function initializeEventFramework() {
         };
         
         handleRoundStart = (evt) => {
-            console.log('GeoGuessr MultiMod: Round start detected:', evt);
             
             // Reset mod button binding state for new round
             _MODS_LOADED = false;
@@ -909,13 +1077,11 @@ function initializeEventFramework() {
             // Delay mod reactivation to allow maps to fully load
             // Use multiple attempts with increasing delays
             setTimeout(() => {
-                console.log('GeoGuessr MultiMod: First reactivation attempt...');
                 reactivateActiveMods();
             }, 3000); // Increased initial delay to 3 seconds
             
             // Backup reactivation attempt in case the first one fails
             setTimeout(() => {
-                console.log('GeoGuessr MultiMod: Backup reactivation attempt...');
                 reactivateActiveMods();
             }, 6000); // Backup attempt after 6 seconds
             
@@ -1046,7 +1212,7 @@ function initializeEventFramework() {
             }
             
             // Handle hotkeys for mods
-            for (const [mod, callback] of _BINDINGS) {
+            for (const [mod, callback] of getBindings()) {
                 if (mod.hotkey && evt.code === mod.hotkey) {
                     evt.preventDefault();
                     closeOptionMenu();
@@ -1085,7 +1251,6 @@ const setupDOMObserver = () => {
                         // Delay to let the game fully initialize
                         setTimeout(() => {
                             if (!GG_ROUND) {
-                                console.log('GeoGuessr MultiMod: No round data from GEF, attempting DOM-based detection');
                                 simulateRoundStart();
                             }
                         }, 3000);
@@ -1119,7 +1284,6 @@ const startGlobalMapLoading = () => {
             
             // Don't keep retrying the same failed map
             if (mapId && mapId !== lastAttemptedMapId) {
-                console.log('GeoGuessr MultiMod: Background attempting to load GG_MAP for mapId:', mapId);
                 lastAttemptedMapId = mapId;
                 
                 fetchMapDataWithRetry(mapId, 2, 2000).catch(err => {
@@ -1135,7 +1299,6 @@ const stopGlobalMapLoading = () => {
         clearInterval(globalMapLoadInterval);
         globalMapLoadInterval = null;
         lastAttemptedMapId = null;
-        console.log('GeoGuessr MultiMod: Stopped global background map loading');
     }
 };
 
@@ -1143,67 +1306,33 @@ const stopGlobalMapLoading = () => {
 const debugModActivation = () => {
     console.group('🔧 GeoGuessr MultiMod Debug Information');
     
-    console.log('📍 Current Location:', window.location.href);
-    console.log('🎯 Game Elements Check:');
-    console.log('  - Big Map Container:', !!getBigMapContainer());
-    console.log('  - Small Map Container:', !!getSmallMapContainer());
-    console.log('  - Game Content:', !!getGameContent());
-    console.log('  - Panorama Element:', !!document.querySelector('[data-qa="panorama"]'));
-    console.log('  - Canvas Element:', !!document.querySelector('.widget-scene-canvas'));
     
-    console.log('🗺️ Google Maps State:');
-    console.log('  - GOOGLE_MAP exists:', !!GOOGLE_MAP);
     if (GOOGLE_MAP) {
         try {
-            console.log('  - GOOGLE_MAP has getBounds:', typeof GOOGLE_MAP.getBounds === 'function');
-            console.log('  - GOOGLE_MAP bounds:', GOOGLE_MAP.getBounds ? GOOGLE_MAP.getBounds() : 'N/A');
-            console.log('  - GOOGLE_MAP center:', GOOGLE_MAP.getCenter ? GOOGLE_MAP.getCenter() : 'N/A');
-            console.log('  - GOOGLE_MAP heading:', GOOGLE_MAP.getHeading ? GOOGLE_MAP.getHeading() : 'N/A');
-            console.log('  - GOOGLE_MAP mapTypeId:', GOOGLE_MAP.getMapTypeId ? GOOGLE_MAP.getMapTypeId() : 'N/A');
         } catch (err) {
-            console.log('  - Error checking GOOGLE_MAP:', err.message);
         }
     }
     
-    console.log('  - GOOGLE_STREETVIEW exists:', !!GOOGLE_STREETVIEW);
     if (GOOGLE_STREETVIEW) {
         try {
-            console.log('  - GOOGLE_STREETVIEW has getPosition:', typeof GOOGLE_STREETVIEW.getPosition === 'function');
-            console.log('  - GOOGLE_STREETVIEW position:', GOOGLE_STREETVIEW.getPosition ? GOOGLE_STREETVIEW.getPosition() : 'N/A');
-            console.log('  - GOOGLE_STREETVIEW pov:', GOOGLE_STREETVIEW.getPov ? GOOGLE_STREETVIEW.getPov() : 'N/A');
         } catch (err) {
-            console.log('  - Error checking GOOGLE_STREETVIEW:', err.message);
         }
     }
     
-    console.log('🎮 Game State:');
-    console.log('  - GG_ROUND:', !!GG_ROUND);
-    console.log('  - GG_MAP:', !!GG_MAP);
-    console.log('  - Map Readiness State:', mapReadinessState);
     
-    console.log('🔲 Mod Buttons:');
-    console.log('  - Mod container exists:', !!getModDiv());
-    console.log('  - Button count:', document.querySelectorAll('.gg-mod-button').length);
-    console.log('  - _MODS_LOADED:', _MODS_LOADED);
     
-    console.log('🎛️ Active Mods:');
-    const activeMods = _BINDINGS.filter(([mod]) => mod.active && mod.show);
+    const activeMods = getBindings().filter(([mod]) => mod.active && mod.show);
     activeMods.forEach(([mod]) => {
-        console.log(`  - ${mod.name}: ${mod.active ? '✅' : '❌'} (Button state: ${mod.active ? 'enabled' : 'disabled'})`);
         
         // Show specific mod effects for debugging
         if (mod.key === 'satView' && GOOGLE_MAP) {
             try {
-                console.log(`    Current mapTypeId: ${GOOGLE_MAP.getMapTypeId()}`);
             } catch (err) {
-                console.log(`    Error getting mapTypeId: ${err.message}`);
             }
         }
         if (mod.key === 'rotateMap' && GOOGLE_MAP) {
             try {
-                console.log(`    Current heading: ${GOOGLE_MAP.getHeading()}`);
             } catch (err) {
-                console.log(`    Error getting heading: ${err.message}`);
             }
         }
     });
@@ -1216,21 +1345,18 @@ window.debugGGMods = debugModActivation;
 
 // Manual reactivation function for debugging
 window.reactivateGGMods = () => {
-    console.log('🔄 Manually triggering mod reactivation...');
     debugModActivation();
     reactivateActiveMods();
 };
 
 // Function to force check map readiness
 window.checkGGMapsReady = () => {
-    console.log('🔍 Checking map readiness...');
     debugModActivation();
     checkAndActivateModsIfReady();
 };
 
 // Function to manually reapply mods to current maps
 window.reapplyGGMods = () => {
-    console.log('🔧 Manually reapplying mods to current maps...');
     debugModActivation();
     reapplyActiveModsToNewMaps();
 };
@@ -1240,39 +1366,19 @@ window.debugSatelliteView = () => {
     console.group('🛰️ Satellite View Debug Information');
     
     const satViewMod = MODS.satView;
-    console.log('Satellite view mod state:', {
-        active: satViewMod?.active,
-        show: satViewMod?.show,
-        key: satViewMod?.key
-    });
     
     if (GOOGLE_MAP) {
         try {
-            console.log('Current map state:', {
-                mapTypeId: GOOGLE_MAP.getMapTypeId(),
-                hasGetBounds: typeof GOOGLE_MAP.getBounds === 'function',
-                hasBounds: !!GOOGLE_MAP.getBounds(),
-                hasGetCenter: typeof GOOGLE_MAP.getCenter === 'function',
-                hasCenter: !!GOOGLE_MAP.getCenter(),
-                hasMapDiv: !!GOOGLE_MAP.getDiv(),
-                hasTiles: !!GOOGLE_MAP.getDiv()?.querySelector('.gm-style img')
-            });
-            
             // Try to manually set satellite view
-            console.log('Attempting manual satellite view activation...');
             GOOGLE_MAP.setMapTypeId('satellite');
             
             setTimeout(() => {
-                console.log('After manual activation:', {
-                    mapTypeId: GOOGLE_MAP.getMapTypeId()
-                });
+                // Check if satellite view was applied
             }, 1000);
             
         } catch (err) {
             console.error('Error in satellite view debug:', err);
         }
-    } else {
-        console.log('GOOGLE_MAP not available');
     }
     
     console.groupEnd();
@@ -1280,11 +1386,119 @@ window.debugSatelliteView = () => {
 
 // Function to manually force satellite view reapplication
 window.forceSatelliteView = () => {
-    console.log('🛰️ Manually forcing satellite view reapplication...');
-    const satViewBinding = _BINDINGS.find(([mod]) => mod.key === 'satView');
+    const satViewBinding = getBindings().find(([mod]) => mod.key === 'satView');
     if (satViewBinding) {
         satViewBinding[1](true); // Force reapply
     } else {
         console.warn('Satellite view binding not found');
     }
 };
+
+// Manual recovery functions for troubleshooting
+window.debugModsState = () => {
+    const selectors = [
+        `div[class^="game_canvas__"]`,
+        `div[class*="game_canvas"]`,
+        `#panorama-container`,
+        `div[class*="panorama"]`,
+        `div[class*="game-layout_content"]`,
+        `div[class*="game_content"]`,
+    ];
+    selectors.forEach(selector => {
+        const element = document.querySelector(selector);
+    });
+    
+    if (typeof MODS !== 'undefined') {
+    }
+    
+};
+
+window.forceRecreateModMenu = () => {
+    
+    // Remove existing mod container
+    const existing = document.getElementById('gg-mods-container');
+    if (existing) {
+        existing.remove();
+    }
+    
+    // Try to add buttons
+    const result = addButtons();
+    
+    if (result) {
+        bindButtons();
+    } else {
+        debugModsState();
+    }
+    
+    return result;
+};
+
+window.forceModsInit = () => {
+    console.log('=== FORCE MODS INIT DEBUG ===');
+    
+    initializeMods();
+    
+    // Try manual recreation after short delay
+    setTimeout(() => {
+        if (!getModDiv()) {
+            console.log('Container still not found, trying forceRecreateModMenu...');
+            forceRecreateModMenu();
+        } else {
+            console.log('Container found after initializeMods!');
+        }
+    }, 2000);
+};
+
+// Add a comprehensive debugging function
+window.debugModsDetailed = () => {
+    console.log('=== DETAILED MODS DEBUG ===');
+    
+    // Check current page
+    console.log('Current URL:', window.location.href);
+    console.log('Current path:', window.location.pathname);
+    
+    // Check if on game page
+    const currentPath = window.location.pathname;
+    const isGameUrl = currentPath.includes('/game/') || currentPath.includes('/live-challenge/');
+    console.log('Is game URL:', isGameUrl);
+    
+    // Check MODS object
+    console.log('MODS object exists:', typeof MODS !== 'undefined');
+    if (typeof MODS !== 'undefined') {
+        console.log('MODS keys:', Object.keys(MODS));
+        console.log('MODS count:', Object.keys(MODS).length);
+        
+        // Check which mods are set to show
+        const showingMods = Object.entries(MODS).filter(([key, mod]) => mod.show);
+        console.log('Mods set to show:', showingMods.map(([key, mod]) => `${key}: ${mod.name}`));
+    }
+    
+    // Check containers
+    const bigMapContainer = getBigMapContainer();
+    console.log('bigMapContainer found:', !!bigMapContainer);
+    if (bigMapContainer) {
+        console.log('bigMapContainer tagName:', bigMapContainer.tagName);
+        console.log('bigMapContainer className:', bigMapContainer.className);
+        console.log('bigMapContainer id:', bigMapContainer.id);
+    }
+    
+    const modContainer = getModDiv();
+    console.log('modContainer found:', !!modContainer);
+    
+    // Check React root
+    const reactRoot = document.querySelector('#__next');
+    console.log('React root found:', !!reactRoot);
+    
+    // Try to call addButtons manually
+    console.log('Attempting manual addButtons call...');
+    try {
+        const result = addButtons();
+        console.log('addButtons result:', result);
+    } catch (err) {
+        console.error('addButtons error:', err);
+    }
+    
+    console.log('=== DEBUG COMPLETE ===');
+};
+
+// ...existing code...
