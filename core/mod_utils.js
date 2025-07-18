@@ -21,7 +21,7 @@ const areModsAvailable = () => {
 
 const getActualLoc = () => {
     const actual = GG_ROUND || GG_LOC; // These are extracted in different ways. May need to clean it up at some point.
-    if (!GG_ROUND && !GG_CLICK) {
+    if (!actual) {
         return undefined;
     }
     const loc = { lat: actual.lat, lng: actual.lng };

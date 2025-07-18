@@ -126,17 +126,53 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         const nDegLng = getOption(mod, 'nDegLng');
         const onlyStreetView = getOption(mod, 'onlyStreetView');
         const onlyLand = getOption(mod, 'onlyLand');
+        
+        // Debug the location detection
+        console.debug('Lottery: Location detection debug:', {
+            GG_ROUND: typeof GG_ROUND !== 'undefined' ? GG_ROUND : 'undefined',
+            GG_LOC: typeof GG_LOC !== 'undefined' ? GG_LOC : 'undefined', 
+            GG_CLICK: typeof GG_CLICK !== 'undefined' ? GG_CLICK : 'undefined',
+            hasGoogleApiKey: window.GOOGLE_MAPS_API_KEY ? 'yes' : 'no'
+        });
+        
         const actual = getActualLoc();
         
         // Validate that we have a valid actual location
         if (!actual || isNaN(actual.lat) || isNaN(actual.lng)) {
             console.error('Lottery: Invalid actual location:', actual);
-            button.textContent = 'Location error';
-            setTimeout(() => {
-                button.textContent = 'Insert token';
-            }, 2000);
+            console.error('Lottery: Location variables state:', {
+                GG_ROUND_exists: typeof GG_ROUND !== 'undefined',
+                GG_LOC_exists: typeof GG_LOC !== 'undefined',
+                GG_CLICK_exists: typeof GG_CLICK !== 'undefined'
+            });
+            
+            // Try to wait a bit and retry
+            button.textContent = 'Waiting for location...';
+            button.disabled = true;
+            
+            setTimeout(async () => {
+                const retryActual = getActualLoc();
+                if (!retryActual || isNaN(retryActual.lat) || isNaN(retryActual.lng)) {
+                    console.error('Lottery: Location still not available after retry');
+                    button.textContent = 'Location error';
+                    setTimeout(() => {
+                        button.textContent = 'Insert token';
+                        button.disabled = false;
+                    }, 2000);
+                    return;
+                } else {
+                    // Continue with the retry actual location
+                    console.debug('Lottery: Location now available, continuing...');
+                    continueWithLocation(retryActual);
+                }
+            }, 1000);
             return;
         }
+        
+        // Continue with the main logic
+        continueWithLocation(actual);
+        
+        async function continueWithLocation(actual) {
         
         // Validate options are valid numbers
         if (isNaN(nDegLat) || isNaN(nDegLng) || nDegLat <= 0 || nDegLng <= 0) {
@@ -184,13 +220,17 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         let location;
         if (onlyStreetView || onlyLand) {
             // Check if API key is available for these features
-            const hasApiKey = window.GOOGLE_MAPS_API_KEY && window.GOOGLE_MAPS_API_KEY.trim().length > 0;
-            if (!hasApiKey) {
+            if (!hasGoogleApiKey()) {
                 console.warn('Lottery mod: API-dependent features (Only Street View/Only Land) attempted without Google Maps API key');
+                console.debug('Lottery: API key state:', {
+                    exists: !!window.GOOGLE_MAPS_API_KEY,
+                    length: window.GOOGLE_MAPS_API_KEY ? window.GOOGLE_MAPS_API_KEY.length : 0,
+                    firstChars: window.GOOGLE_MAPS_API_KEY ? window.GOOGLE_MAPS_API_KEY.substring(0, 10) + '...' : 'none'
+                });
                 button.textContent = 'API key required';
                 button.disabled = true;
                 setTimeout(() => {
-                    button.textContent = 'TAKE IT';
+                    button.textContent = 'Insert token';
                     button.disabled = false;
                 }, 2000);
                 return;
@@ -272,6 +312,7 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         }, 100);
         
         setMapCenter(finalLat, finalLng);
+        } // End of continueWithLocation function
     };
     button.addEventListener('click', onClick);
 
