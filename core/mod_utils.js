@@ -1314,16 +1314,14 @@ const generatePointsInRing = (centerLat, centerLng, radiusMeters, numPoints) => 
  */
 const clampToMercatorBounds = (lat, lng) => {
     // Standard Web Mercator projection limits to avoid poles and ensure visibility
-    const MAX_MERCATOR_LNG = 180;
-    const MIN_MERCATOR_LNG = -180;
     
     // Clamp latitude to Mercator bounds
     const clampedLat = Math.max(_MERCATOR_LAT_MIN, Math.min(_MERCATOR_LAT_MAX, lat));
     
     // Clamp longitude to valid range
     let clampedLng = lng;
-    if (clampedLng > MAX_MERCATOR_LNG) clampedLng = MAX_MERCATOR_LNG;
-    if (clampedLng < MIN_MERCATOR_LNG) clampedLng = MIN_MERCATOR_LNG;
+    if (clampedLng > _MERCATOR_LNG_MAX) clampedLng = _MERCATOR_LNG_MAX;
+    if (clampedLng < _MERCATOR_LNG_MIN) clampedLng = _MERCATOR_LNG_MIN;
     
     return { lat: clampedLat, lng: clampedLng };
 };

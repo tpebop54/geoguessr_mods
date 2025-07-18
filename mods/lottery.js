@@ -149,8 +149,6 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         }
         
         // Calculate latitude bounds and clamp to safe Mercator projection limits
-        // This ensures we never try to generate coordinates outside the visible map
-        // Use global Mercator constants from mod_utils.js
         const rawMinLat = actual.lat - nDegLat;
         const rawMaxLat = actual.lat + nDegLat;
         let minLat = Math.max(_MERCATOR_LAT_MIN, rawMinLat);
@@ -171,8 +169,15 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
             maxLng = 179.9999;
         } else {
             const normalizedLng = ((actual.lng + 180) % 360 + 360) % 360 - 180;
-            minLng = Math.max(minLng, normalizedLng - nDegLng);
-            maxLng = Math.min(maxLng, normalizedLng + nDegLng);
+            minLng = normalizedLng - nDegLng;
+            maxLng = normalizedLng + nDegLng;
+        }
+        
+        // Validate longitude bounds
+        if (minLng == null || maxLng == null || isNaN(minLng) || isNaN(maxLng)) {
+            console.warn('Lottery: Invalid longitude bounds detected, using fallback');
+            minLng = -179.9999;
+            maxLng = 179.9999;
         }
         
         // Generate location with criteria if any special options are enabled
@@ -233,9 +238,11 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
             }
         } else {
             // Use simple random location generation
+            console.debug('Lottery: Using simple location generation with bounds:', { minLat, maxLat, minLng, maxLng });
             location = getRandomLocSinusoidal(minLat, maxLat, minLng, maxLng);
         }
         
+        console.debug('Lottery: Generated location:', location);
         const { lat, lng } = location;
         
         // Must be within Mercator bounds.
@@ -244,7 +251,6 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         
         // Validate that coordinates are valid numbers before proceeding
         if (isNaN(finalLat) || isNaN(finalLng)) {
-            console.error('Lottery: Generated invalid coordinates:', { finalLat, finalLng, originalLocation: location });
             button.textContent = 'Coordinate error';
             setTimeout(() => {
                 button.textContent = 'Insert token';
