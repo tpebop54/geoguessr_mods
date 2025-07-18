@@ -150,19 +150,17 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         
         // Calculate latitude bounds and clamp to safe Mercator projection limits
         // This ensures we never try to generate coordinates outside the visible map
-        const mercator_lat_min = -85.05112878;
-        const mercator_lat_max = 85.05112878;
-        
+        // Use global Mercator constants from mod_utils.js
         const rawMinLat = actual.lat - nDegLat;
         const rawMaxLat = actual.lat + nDegLat;
-        let minLat = Math.max(mercator_lat_min, rawMinLat);
-        let maxLat = Math.min(mercator_lat_max, rawMaxLat);
+        let minLat = Math.max(_MERCATOR_LAT_MIN, rawMinLat);
+        let maxLat = Math.min(_MERCATOR_LAT_MAX, rawMaxLat);
 
         // Ensure we have valid latitude bounds
         if (minLat >= maxLat) {
             console.debug('Lottery: Invalid latitude bounds, using fallback');
-            minLat = Math.max(mercator_lat_min, actual.lat - 10);
-            maxLat = Math.min(mercator_lat_max, actual.lat + 10);
+            minLat = Math.max(_MERCATOR_LAT_MIN, actual.lat - 10);
+            maxLat = Math.min(_MERCATOR_LAT_MAX, actual.lat + 10);
         }
 
         // The logic gets confusing across the prime meridian with large lng ranges.
@@ -240,15 +238,9 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         
         const { lat, lng } = location;
         
-        // Final safety check: ensure coordinates are within valid map bounds
-        // Use the constants defined at the beginning of the function
-        const safeLat = Math.max(mercator_lat_min, Math.min(mercator_lat_max, lat));
-        const safeLng = Math.max(-180, Math.min(180, lng));
-        
-        // Additional check: ensure the coordinates are not exactly at the poles or extreme edges
-        // which could cause issues with map projection
-        const finalLat = Math.max(-85, Math.min(85, safeLat));
-        const finalLng = Math.max(-179.99, Math.min(179.99, safeLng));
+        // Must be within Mercator bounds.
+        const finalLat = Math.max(_MERCATOR_LAT_MIN, Math.min(_MERCATOR_LAT_MAX, lat));
+        const finalLng = Math.max(_MERCATOR_LNG_MIN, Math.min(_MERCATOR_LNG_MAX, lng));
         
         // Validate that coordinates are valid numbers before proceeding
         if (isNaN(finalLat) || isNaN(finalLng)) {

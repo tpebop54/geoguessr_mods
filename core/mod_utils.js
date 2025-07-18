@@ -6,6 +6,13 @@
 // Mod utility functions.
 // ===============================================================================================================================
 
+// Global Mercator projection constants - shared across mods
+// These represent the maximum safe latitude bounds for Web Mercator projection
+const _MERCATOR_LAT_MIN = -85.05112878;
+const _MERCATOR_LAT_MAX = 85.05112878;
+const _MERCATOR_LNG_MIN = -180;
+const _MERCATOR_LNG_MAX = 180;
+
 // True if solo game or live challenge. 
 const areModsAvailable = () => {
     const currentPath = window.location.pathname;
@@ -437,7 +444,7 @@ const clickAt = (lat, lng) => { // Trigger actual click on guessMap at { lat, ln
     }
     
     // Clamp coordinates to safe Mercator bounds to prevent off-map clicks
-    const safeLat = Math.max(-85.05112878, Math.min(85.05112878, lat));
+    const safeLat = Math.max(_MERCATOR_LAT_MIN, Math.min(_MERCATOR_LAT_MAX, lat));
     const safeLng = Math.max(-180, Math.min(180, lng));
         
     const google = getGoogle();
@@ -705,14 +712,11 @@ const createMapSafeModUpdate = (originalUpdateFunction, options = {}) => {
  * Now uses safe Mercator bounds when no limits are specified.
  */
 const getRandomLatSinusoidal = (lat1, lat2) => {
-    const MERCATOR_MAX_LAT = 85.05112878;
-    const MERCATOR_MIN_LAT = -85.05112878;
-    
     if (lat1 == null || lat2 == null) {
         // For full world, use safe Mercator bounds instead of poles
         // Generate uniform random and apply asin transformation within Mercator limits
-        const maxSin = Math.sin(MERCATOR_MAX_LAT * (Math.PI / 180));
-        const minSin = Math.sin(MERCATOR_MIN_LAT * (Math.PI / 180));
+        const maxSin = Math.sin(_MERCATOR_LAT_MAX * (Math.PI / 180));
+        const minSin = Math.sin(_MERCATOR_LAT_MIN * (Math.PI / 180));
         
         const u = Math.random(); // Uniform in [0, 1]
         const sinLat = minSin + u * (maxSin - minSin);
@@ -723,8 +727,8 @@ const getRandomLatSinusoidal = (lat1, lat2) => {
     }
     
     // Clamp to valid Mercator latitude range
-    lat1 = Math.max(MERCATOR_MIN_LAT, Math.min(MERCATOR_MAX_LAT, lat1));
-    lat2 = Math.max(MERCATOR_MIN_LAT, Math.min(MERCATOR_MAX_LAT, lat2));
+    lat1 = Math.max(_MERCATOR_LAT_MIN, Math.min(_MERCATOR_LAT_MAX, lat1));
+    lat2 = Math.max(_MERCATOR_LAT_MIN, Math.min(_MERCATOR_LAT_MAX, lat2));
     if (lat1 > lat2) {
         [lat1, lat2] = [lat2, lat1];
     }
@@ -754,17 +758,15 @@ const getRandomLatSinusoidal = (lat1, lat2) => {
  */
 const getRandomLocSinusoidal = (minLat = null, maxLat = null, minLng = null, maxLng = null) => {
     // Apply Mercator bounds to input parameters to ensure we never generate invalid coordinates
-    const MERCATOR_MAX_LAT = 85.05112878;
-    const MERCATOR_MIN_LAT = -85.05112878;
     
     // Clamp input bounds to Mercator limits
-    if (minLat !== null) minLat = Math.max(MERCATOR_MIN_LAT, Math.min(MERCATOR_MAX_LAT, minLat));
-    if (maxLat !== null) maxLat = Math.max(MERCATOR_MIN_LAT, Math.min(MERCATOR_MAX_LAT, maxLat));
+    if (minLat !== null) minLat = Math.max(_MERCATOR_LAT_MIN, Math.min(_MERCATOR_LAT_MAX, minLat));
+    if (maxLat !== null) maxLat = Math.max(_MERCATOR_LAT_MIN, Math.min(_MERCATOR_LAT_MAX, maxLat));
     
     // If no bounds specified, use safe Mercator bounds instead of full globe
     if (minLat === null && maxLat === null) {
-        minLat = MERCATOR_MIN_LAT;
-        maxLat = MERCATOR_MAX_LAT;
+        minLat = _MERCATOR_LAT_MIN;
+        maxLat = _MERCATOR_LAT_MAX;
     }
     
     const lat = getRandomLatSinusoidal(minLat, maxLat);
@@ -1264,7 +1266,7 @@ const generatePointsInCircle = (centerLat, centerLng, radiusMeters, numPoints) =
         const lng = centerLng + lngOffset;
         
         // Check bounds
-        if (lat >= -85 && lat <= 85 && lng >= -180 && lng <= 180) {
+        if (lat >= _MERCATOR_LAT_MIN && lat <= _MERCATOR_LAT_MAX && lng >= _MERCATOR_LNG_MIN && lng <= _MERCATOR_LNG_MAX) {
             points.push({ lat, lng });
         }
     }
@@ -1294,7 +1296,7 @@ const generatePointsInRing = (centerLat, centerLng, radiusMeters, numPoints) => 
         const lng = centerLng + lngOffset;
         
         // Check bounds
-        if (lat >= -85 && lat <= 85 && lng >= -180 && lng <= 180) {
+        if (lat >= _MERCATOR_LAT_MIN && lat <= _MERCATOR_LAT_MAX && lng >= _MERCATOR_LNG_MIN && lng <= _MERCATOR_LNG_MAX) {
             points.push({ lat, lng });
         }
     }
@@ -1312,13 +1314,11 @@ const generatePointsInRing = (centerLat, centerLng, radiusMeters, numPoints) => 
  */
 const clampToMercatorBounds = (lat, lng) => {
     // Standard Web Mercator projection limits to avoid poles and ensure visibility
-    const MAX_MERCATOR_LAT = 85.05112878; // This is the exact limit used by Google Maps
-    const MIN_MERCATOR_LAT = -85.05112878;
     const MAX_MERCATOR_LNG = 180;
     const MIN_MERCATOR_LNG = -180;
     
     // Clamp latitude to Mercator bounds
-    const clampedLat = Math.max(MIN_MERCATOR_LAT, Math.min(MAX_MERCATOR_LAT, lat));
+    const clampedLat = Math.max(_MERCATOR_LAT_MIN, Math.min(_MERCATOR_LAT_MAX, lat));
     
     // Clamp longitude to valid range
     let clampedLng = lng;
