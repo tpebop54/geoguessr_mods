@@ -77,6 +77,14 @@ const makeTileCounter = () => {
         _TILE_COUNT_DRAGGING = false;
     };
 
+    // Create container for the tile count display and reset button
+    const contentContainer = document.createElement('div');
+    contentContainer.id = 'gg-tile-count-container';
+
+    // Create the tile count display
+    const countDisplay = document.createElement('div');
+    countDisplay.id = 'gg-tile-count-display';
+
     const label = document.createElement('span');
     label.textContent = 'Tiles remaining: ';
 
@@ -84,8 +92,42 @@ const makeTileCounter = () => {
     count.id = 'gg-tile-count-value';
     count.textContent = getTileCount();
 
-    container.appendChild(label);
-    container.appendChild(count);
+    countDisplay.appendChild(label);
+    countDisplay.appendChild(count);
+
+    // Create the reset button
+    const resetButton = document.createElement('button');
+    resetButton.id = 'gg-tile-reset-button';
+    resetButton.textContent = '↺';
+    resetButton.title = 'Reset all tiles';
+
+    // Reset button functionality
+    const onReset = () => {
+        console.debug('TileReveal: Manual reset button clicked');
+        
+        // Reset the tile count to the original value
+        resetTileCount();
+        
+        // Remove all 'removed' classes from tiles to make them black again
+        const tiles = document.querySelectorAll('.gg-tile-block');
+        tiles.forEach(tile => {
+            tile.classList.remove('removed');
+        });
+        
+        console.debug('TileReveal: Reset completed - all tiles restored and counter reset to:', _TILE_COUNT);
+    };
+    
+    resetButton.addEventListener('click', onReset);
+    resetButton.addEventListener('mousedown', (evt) => {
+        evt.stopPropagation(); // Prevent dragging when clicking the button
+    });
+
+    // Add elements to the content container
+    contentContainer.appendChild(countDisplay);
+    contentContainer.appendChild(resetButton);
+    
+    // Add content container to main container
+    container.appendChild(contentContainer);
     document.body.appendChild(container);
 
     _TILE_COUNT_DISPLAY = container;

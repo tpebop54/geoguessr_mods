@@ -23,7 +23,7 @@ const modContainerStyles = `
     #gg-mods-container {
         position: absolute;
         width: 200px;
-        top: 40px;
+        top: 54px;
         left: 20px;
         z-index: 9;
         display: flex;
@@ -325,9 +325,38 @@ const tileRevealStyles = `
         opacity: 0.9;
     }
 
+    #gg-tile-count-container {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    #gg-tile-count-display {
+        display: flex;
+        align-items: center;
+    }
+
     #gg-tile-count-value {
         padding-left: 0.5em;
         pointer-events: none;
+    }
+
+    #gg-tile-reset-button {
+        font-size: 25px;
+        border-radius: 10px;
+        padding: 5px 12px;
+        color: white;
+        background: #c41e3a;
+        opacity: 75%;
+        cursor: pointer;
+        border: none;
+        transition: opacity 0.2s ease;
+    }
+
+    #gg-tile-reset-button:hover {
+        opacity: 90%;
     }
 
     #gg-tile-overlay {
