@@ -221,18 +221,9 @@ const initGmapsIntegration = () => {
                 }
             }, intervalMs);
         };
-
-        waitForMapsToLoad(loadState);
         waitForMapsToLoad(() => {
-            fixFormatting();
-            if (DEBUG) {
-                addDebugger();
-            }
-            if (_CHEAT_DETECTION) {
-                setTimeout(() => {
-                    clickGarbage(900);
-                }, 500);
-            }
+            const event = new CustomEvent('gg_maps_ready');
+            document.dispatchEvent(event, { bubbles: true });
         });
         initGoogle();
     });

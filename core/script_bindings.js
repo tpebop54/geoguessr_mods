@@ -320,7 +320,7 @@ const waitForReactHydration = () => {
 };
 
 // Activate mods that were loaded from localStorage
-const activateLoadedMods = () => {    
+const activateLoadedMods = () => {
     try {
         for (const [mod, callback] of getBindings()) {
             if (mod.show && mod.active) {
@@ -347,6 +347,17 @@ const initializeMods = async () => {
         loadState(); // From localStorage, if available.
         disableModsAsNeeded();
         activateLoadedMods();
+        fixFormatting();
+
+        if (_CHEAT_DETECTION) {
+            setTimeout(() => {
+                clickGarbage(900);
+            }, 500);
+        }
+
+        if (DEBUG) {
+            addDebugger();
+        }
 
         // Create observer to monitor DOM changes and add buttons when the game interface loads.
         const observer = new MutationObserver(() => {
@@ -389,9 +400,13 @@ const initializeMods = async () => {
     }
 };
 
+document.addEventListener('gg_maps_ready', () => { 
+    debugger
+});
+
 // Start initialization when DOM is ready, but wait for React hydration
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('gg_maps_ready', () => {
         initializeMods().catch(err => {
             console.error('Mod nitialization failed:', err);
         });
