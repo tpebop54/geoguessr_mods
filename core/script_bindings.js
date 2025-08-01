@@ -351,39 +351,19 @@ const activateLoadedMods = () => {
 // Initialize when DOM is ready and React has hydrated
 const initializeMods = async () => {
     try {
-
-        // Try to add buttons immediately
-        const immediateResult = addButtons();
-        if (immediateResult) {
-            return;
-        }
-
-        await waitForReactHydration(); // If initial load fails.
+        await waitForReactHydration();
         setUpMapEventListeners();
         setUpHomepageMonitoring();
         enforceCheatProtection();
         loadState(); // From localStorage, if available.
         disableModsAsNeeded();
-        
-        // After loading state, ensure active mods are actually activated
         activateLoadedMods();
 
-        // Create observer to monitor DOM changes and add buttons when the game interface loads
+        // Create observer to monitor DOM changes and add buttons when the game interface loads.
         const observer = new MutationObserver(() => {
             try {
-                const buttonsAdded = addButtons();
-
-                // Ensure buttons are bound even if they were already created
-                if (!buttonsAdded) {
-                    bindButtons(); // Try to bind existing buttons
-                }
-
-                // Remove game reactions div (anti-cheat method from GeoGuessr that's annoying)
-                const reactionsDiv = getGameReactionsDiv();
-                if (reactionsDiv) {
-                    reactionsDiv.parentElement.removeChild(reactionsDiv);
-                }
-                return buttonsAdded;
+                addButtons();
+                bindButtons();
             } catch (err) {
                 console.error(err);
             }
@@ -394,6 +374,7 @@ const initializeMods = async () => {
         if (nextElement) {
             observer.observe(nextElement, { subtree: true, childList: true });
             addButtons();
+            bindButtons();
         } else {
             const alternatives = ['#root', 'body', 'main'];
             let foundElement = null;
@@ -409,6 +390,7 @@ const initializeMods = async () => {
             if (foundElement) {
                 observer.observe(foundElement, { subtree: true, childList: true });
                 addButtons();
+                bindButtons();
             } else {
                 setTimeout(initializeMods, 1000);
             }
@@ -422,13 +404,12 @@ const initializeMods = async () => {
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         initializeMods().catch(err => {
-            console.error('GeoGuessr MultiMod: Initialization failed:', err);
+            console.error('Mod nitialization failed:', err);
         });
     });
 } else {
-    // DOM is already ready
     initializeMods().catch(err => {
-        console.error('GeoGuessr MultiMod: Initialization failed:', err);
+        console.error('Mod nitialization failed:', err);
     });
 }
 
