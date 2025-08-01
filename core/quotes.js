@@ -51,7 +51,7 @@ const QUOTES = {
         `Do not go gentle into that good night. Old age should burn and rave at close of day. Rage, rage against the dying of the light. — Dylan Thomas`,
         `You can be mad as a mad dog at the way things went. You could swear, and curse the fates. But when it comes to the end, you have to let go. — Benjamin Button`,
         `It's a funny thing about comin' home. Looks the same, smells the same, feels the same. You'll realize what's changed is you. — Benjamin Button`,
-        `Do you consider your big toe to be your pointer toe or your thumb toe? — Tpebop`,
+        `This is how I did it. I never saved anything for the swim back. — Vincent Freeman`,
     ],
 
     media: [ // Funny, light-hearted, or from movies/TV/celebrities. Some of the heavy stuff is also from media, but they belong in the heavy section.
@@ -124,7 +124,8 @@ const QUOTES = {
         `The longest place name in the world is 85 characters long and is in New Zealand (Taumatawhakatangihangakoauauotamateaturipukakapikimaungahoronukupokaiwhenuakitanatahu).`,
         `Siphonophores are made up of multiple organisms that work together as one. They can be up to 40 meters long.`,
         `The world's largest living organism is a fungus in Oregon that covers 2,385 acres (965 hectares).`,
-        `The world's largest snowflake on record was 15 inches wide and 8 inches thick.`
+        `The world's largest snowflake on record was 15 inches wide and 8 inches thick.`,
+        `The feathers of a bald eagle weigh more than its skeletal structure.`,
     ],
 
     tongueTwisters: [
@@ -162,6 +163,7 @@ const QUOTES = {
         `What's the strangest thing you've ever done out of boredom?`,
         `What's something you've never admitted you don't know how to do?`,
         `What's something you own way too many of but keep buying anyway?`,
+        `Do you consider your big toe to be your pointer toe or your thumb toe? — Tpebop`,
     ]
 
 };

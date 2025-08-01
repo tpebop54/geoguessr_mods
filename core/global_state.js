@@ -92,6 +92,10 @@ const loadState = () => { // Load state from local storage if it exists, else us
     for (const [key, mod] of Object.entries(MODS)) {
         console.debug(`  ${key}: ${mod.active}`);
     }
+    
+    // Also log which mods should be activated
+    const activeMods = Object.entries(MODS).filter(([key, mod]) => mod.active && mod.show);
+    console.debug(`loadState: Found ${activeMods.length} mods that should be active:`, activeMods.map(([key, mod]) => mod.name));
 
     return MODS;
 };

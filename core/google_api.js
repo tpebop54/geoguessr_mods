@@ -44,20 +44,18 @@ const injecter = (overrider) => {
 };
 
 const initMods = () => { // Enable mods that were already enabled via localStorage.
-    console.debug('initMods: Starting mod initialization...');
-    // Check if getBindings is available (script_bindings.js loaded)
-    if (typeof getBindings === 'function') {
-        for (const [mod, callback] of getBindings()) {
-            if (mod.show && isModActive(mod)) {
-                console.debug(`initMods: Restoring mod ${mod.name} (was active in localStorage)`);
-                callback(true); // Pass true to indicate this is state restoration, not user click
+    if (!getBindings) {
+        setTimeout(initMods, 500);
+        return;
+    }
+    for (const [mod, callback] of getBindings()) {
+        if (mod.show && isModActive(mod)) {
+            try {
+                callback(true);
+            } catch (err) {
+                console.error(err);
             }
         }
-        console.debug('initMods: Completed mod initialization');
-    } else {
-        console.warn('getBindings not available yet, deferring mod initialization');
-        // Retry after a short delay
-        setTimeout(initMods, 500);
     }
 };
 
@@ -89,21 +87,21 @@ const initializeGoogleMapsIntegration = () => {
     document.addEventListener('ggCoordinates', (evt) => { // Used for duels.
         GG_LOC = evt.detail;
     });
-    
+
     injecter(() => {
         const google = getGoogle();
         if (!google) {
             return;
         }
-        
+
         google.maps.Map = class extends google.maps.Map {
             constructor(...args) {
                 super(...args);
-                
+
                 // Check if Opera browser - it has issues with Vector rendering
-                const isOpera = typeof isOperaBrowser === 'function' ? isOperaBrowser() : 
+                const isOpera = typeof isOperaBrowser === 'function' ? isOperaBrowser() :
                     ((!!THE_WINDOW.opr && !!opr.addons) || !!THE_WINDOW.opera || navigator.userAgent.indexOf(' OPR/') >= 0);
-                
+
                 try {
                     if (isOpera) {
                         // Opera fallback: use raster rendering
@@ -122,7 +120,7 @@ const initializeGoogleMapsIntegration = () => {
                         console.error('Fallback to raster also failed:', fallbackErr);
                     }
                 }
-                
+
                 this.setHeadingInteractionEnabled(true);
                 this.setTiltInteractionEnabled(true);
                 GOOGLE_MAP = this; // This is used for map functions that have nothing to do with the active map. GG_MAP is used for the active round.
@@ -137,34 +135,34 @@ const initializeGoogleMapsIntegration = () => {
                 google.maps.event.addListener(this, 'click', (evt) => {
                     onMapClick(evt);
                 });
-                
+
                 // Add map ready detection for better mod synchronization
                 google.maps.event.addListener(this, 'tilesloaded', () => {
                     console.debug('Google Maps: 2D map tiles loaded');
                     // Dispatch custom event that mods can listen for
                     THE_WINDOW.dispatchEvent(new CustomEvent('gg_map_2d_ready', { detail: this }));
-                    
+
                     // Apply any pending satellite view state
                     setTimeout(() => {
                         THE_WINDOW.dispatchEvent(new CustomEvent('gg_map_tiles_loaded', { detail: this }));
                     }, 100);
                 });
-                
+
                 google.maps.event.addListener(this, 'idle', () => {
                     console.debug('Google Maps: 2D map idle (fully loaded)');
                     THE_WINDOW.dispatchEvent(new CustomEvent('gg_map_2d_idle', { detail: this }));
-                    
+
                     // Additional event for mods that need map to be completely settled
                     setTimeout(() => {
                         THE_WINDOW.dispatchEvent(new CustomEvent('gg_map_fully_ready', { detail: this }));
                     }, 200);
                 });
-                
+
                 // Trigger immediate mod reapplication when this new map instance is created
                 console.debug('Google Maps: New 2D map instance created, scheduling mod reapplication');
                 setTimeout(() => {
-                    THE_WINDOW.dispatchEvent(new CustomEvent('gg_new_map_instance', { 
-                        detail: { type: '2d', map: this } 
+                    THE_WINDOW.dispatchEvent(new CustomEvent('gg_new_map_instance', {
+                        detail: { type: '2d', map: this }
                     }));
                 }, 100);
             }
@@ -174,18 +172,18 @@ const initializeGoogleMapsIntegration = () => {
             constructor(...args) {
                 super(...args);
                 GOOGLE_STREETVIEW = this;
-                
+
                 // Add event listeners for Street View readiness
                 google.maps.event.addListener(this, 'position_changed', () => {
                     console.debug('Google Maps: Street View position changed');
                     THE_WINDOW.dispatchEvent(new CustomEvent('gg_streetview_position_changed', { detail: this }));
                 });
-                
+
                 google.maps.event.addListener(this, 'pano_changed', () => {
                     console.debug('Google Maps: Street View panorama changed');
                     THE_WINDOW.dispatchEvent(new CustomEvent('gg_streetview_pano_changed', { detail: this }));
                 });
-                
+
                 // Listen for when the panorama is fully loaded
                 this.addListener('status_changed', () => {
                     if (this.getStatus() === google.maps.StreetViewStatus.OK) {
@@ -193,12 +191,12 @@ const initializeGoogleMapsIntegration = () => {
                         THE_WINDOW.dispatchEvent(new CustomEvent('gg_streetview_ready', { detail: this }));
                     }
                 });
-                
+
                 // Trigger immediate mod reapplication when this new street view instance is created
                 console.debug('Google Maps: New Street View instance created, scheduling mod reapplication');
                 setTimeout(() => {
-                    THE_WINDOW.dispatchEvent(new CustomEvent('gg_new_map_instance', { 
-                        detail: { type: '3d', streetView: this } 
+                    THE_WINDOW.dispatchEvent(new CustomEvent('gg_new_map_instance', {
+                        detail: { type: '3d', streetView: this }
                     }));
                 }, 100);
             }

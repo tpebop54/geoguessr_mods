@@ -327,6 +327,27 @@ const waitForReactHydration = () => {
     });
 };
 
+// Activate mods that were loaded from localStorage
+const activateLoadedMods = () => {
+    console.debug('activateLoadedMods: Starting activation of saved mods...');
+    
+    try {
+        for (const [mod, callback] of getBindings()) {
+            if (mod.show && mod.active) {
+                console.debug(`activateLoadedMods: Activating mod ${mod.name} (was active in localStorage)`);
+                try {
+                    callback(true); // Pass true to indicate this is state restoration, not user click
+                } catch (err) {
+                    console.error(`activateLoadedMods: Error activating mod ${mod.name}:`, err);
+                }
+            }
+        }
+        console.debug('activateLoadedMods: Completed mod activation');
+    } catch (err) {
+        console.error('activateLoadedMods: Error during mod activation:', err);
+    }
+};
+
 // Initialize when DOM is ready and React has hydrated
 const initializeMods = async () => {
     try {
@@ -343,6 +364,9 @@ const initializeMods = async () => {
         enforceCheatProtection();
         loadState(); // From localStorage, if available.
         disableModsAsNeeded();
+        
+        // After loading state, ensure active mods are actually activated
+        activateLoadedMods();
 
         // Create observer to monitor DOM changes and add buttons when the game interface loads
         const observer = new MutationObserver(() => {
@@ -726,7 +750,6 @@ setTimeout(() => {
 
 function initializeEventFramework() {
     // Initialize GeoGuessrEventFramework for round events and map data
-    /* eslint-disable no-undef */
     try {
         // Try to find GeoGuessrEventFramework from multiple sources
         let GEF = null;
@@ -1079,114 +1102,4 @@ const startGlobalMapLoading = () => {
             }
         }
     }, 5000); // Check every 5 seconds
-};
-
-const stopGlobalMapLoading = () => {
-    if (globalMapLoadInterval) {
-        clearInterval(globalMapLoadInterval);
-        globalMapLoadInterval = null;
-        lastAttemptedMapId = null;
-    }
-};
-
-// Enhanced debugging for mod activation issues
-const debugModActivation = () => {
-    console.group('🔧 GeoGuessr MultiMod Debug Information');
-
-
-    if (GOOGLE_MAP) {
-        try {
-        } catch (err) {
-        }
-    }
-
-    if (GOOGLE_STREETVIEW) {
-        try {
-        } catch (err) {
-        }
-    }
-
-
-
-    const activeMods = getBindings().filter(([mod]) => mod.active && mod.show);
-    activeMods.forEach(([mod]) => {
-
-        // Show specific mod effects for debugging
-        if (mod.key === 'satView' && GOOGLE_MAP) {
-            try {
-            } catch (err) {
-            }
-        }
-        if (mod.key === 'rotateMap' && GOOGLE_MAP) {
-            try {
-            } catch (err) {
-            }
-        }
-    });
-
-    console.groupEnd();
-};
-
-// Add debug command to global scope for easy access
-THE_WINDOW.debugGGMods = debugModActivation;
-
-// Manual reactivation function for debugging
-THE_WINDOW.reactivateGGMods = () => {
-    debugModActivation();
-    reactivateActiveMods();
-};
-
-// Function to force check map readiness
-THE_WINDOW.checkGGMapsReady = () => {
-    debugModActivation();
-    checkAndActivateModsIfReady();
-};
-
-// Function to manually reapply mods to current maps
-THE_WINDOW.reapplyGGMods = () => {
-    debugModActivation();
-    reapplyActiveModsToNewMaps();
-};
-
-// Function to manually force satellite view reapplication
-THE_WINDOW.forceSatelliteView = () => {
-    const satViewBinding = getBindings().find(([mod]) => mod.key === 'satView');
-    if (satViewBinding) {
-        satViewBinding[1](true); // Force reapply
-    } else {
-        console.warn('Satellite view binding not found');
-    }
-};
-
-THE_WINDOW.forceRecreateModMenu = () => {
-
-    const existing = document.getElementById('gg-mods-container');
-    if (existing) {
-        existing.remove();
-    }
-
-    const result = addButtons();
-    if (result) {
-        bindButtons();
-    } else {
-        debugModsState();
-    }
-
-    return result;
-};
-
-THE_WINDOW.forceModsInit = () => {
-    console.log('=== FORCE MODS INIT DEBUG ===');
-
-    initializeMods();
-
-    // Try manual recreation after short delay
-    setTimeout(() => {
-        if (!getModDiv()) {
-            console.log('Container still not found, trying forceRecreateModMenu...');
-            forceRecreateModMenu();
-        } else {
-            console.log('Container found after initializeMods!');
-        }
-    }, 2000);
 };
