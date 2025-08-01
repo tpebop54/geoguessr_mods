@@ -119,7 +119,7 @@ const MODS = {
         options: {
             nGuesses: {
                 label: 'Max. guesses',
-                default: 10,
+                default: 20,
                 tooltip: 'Maximum number of random guesses you get before you have to take the guess.',
             },
             nDegLat: {

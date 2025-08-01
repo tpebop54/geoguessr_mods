@@ -165,7 +165,6 @@ const disableModsAsNeeded = () => {
 let MAP_STATE = {
     map2d: false,
     map3d: false,
-    streetViewReady: false,
     tilesLoaded: false,
     lastRoundStart: 0,
 };
@@ -175,10 +174,10 @@ const setUpMapEventListeners = () => {
         console.debug('New map instance event: ', evt);
         setTimeout(() => {
             reapplyActiveModsToNewMaps();
-        }, 200);
+        }, 500);
     });
 
-    THE_WINDOW.addEventListener('gg_map_tiles_loaded', () => { // TODO: this is for satView in Opera. Check if it's needed.
+    THE_WINDOW.addEventListener('gg_map_tiles_loaded', () => { // TODO: this is for satView in Opera. Check if it's still needed.
         const satViewMod = getBindings().find(([mod]) => mod.key === 'satView');
         if (satViewMod && satViewMod[0].active) {
             setTimeout(() => {
@@ -187,26 +186,14 @@ const setUpMapEventListeners = () => {
         }
     });
 
-    THE_WINDOW.addEventListener('gg_map_fully_ready', () => {
-        setTimeout(() => {
-            reapplyActiveModsToNewMaps();
-        }, 500);
-    });
-
     THE_WINDOW.addEventListener('gg_map_2d_ready', () => {
         MAP_STATE.map2d = true;
         MAP_STATE.tilesLoaded = true;
         reapplyActiveModsToNewMaps();
     });
 
-    THE_WINDOW.addEventListener('gg_map_2d_idle', () => {
-        MAP_STATE.map2d = true;
-        reapplyActiveModsToNewMaps();
-    });
-
     THE_WINDOW.addEventListener('gg_streetview_ready', () => {
         MAP_STATE.map3d = true;
-        MAP_STATE.streetViewReady = true;
         reapplyActiveModsToNewMaps();
     });
 
@@ -219,7 +206,6 @@ const setUpMapEventListeners = () => {
         MAP_STATE = {
             map2d: false,
             map3d: false,
-            streetViewReady: false,
             tilesLoaded: false,
             lastRoundStart: Date.now()
         };
@@ -242,7 +228,6 @@ const reapplyActiveModsToNewMaps = () => {
         }
     });
 };
-
 
 // Refresh state from localStorage and activate mods.
 const activateLoadedMods = () => {

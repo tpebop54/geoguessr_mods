@@ -106,9 +106,8 @@ const initGmapsIntegration = () => {
 
                 this.setHeadingInteractionEnabled(true);
                 this.setTiltInteractionEnabled(true);
-                GOOGLE_MAP = this; // This is used for map functions that have nothing to do with the active map. GG_MAP is used for the active round.
+                GOOGLE_MAP = this; // GG_MAP is used for the active round, this is used for the Google map event listeners.
 
-                // Add event listeners to THIS map instance
                 google.maps.event.addListener(this, 'dragstart', () => {
                     _IS_DRAGGING_SMALL_MAP = true;
                 });
@@ -119,17 +118,16 @@ const initGmapsIntegration = () => {
                     onMapClick(evt);
                 });
                 google.maps.event.addListener(this, 'tilesloaded', () => {
-                    THE_WINDOW.dispatchEvent(new CustomEvent('gg_map_2d_ready', { detail: this }));
-                    setTimeout(() => {
-                        THE_WINDOW.dispatchEvent(new CustomEvent('gg_map_tiles_loaded', { detail: this }));
-                    }, 100);
+                    THE_WINDOW.dispatchEvent(new CustomEvent('gg_map_tiles_loaded', { detail: this }));
                 });
-
+                google.maps.event.addListenerOnce(this, 'idle', () => {
+                    THE_WINDOW.dispatchEvent(new CustomEvent('gg_map_2d_ready', { detail: this }));
+                });
                 google.maps.event.addListener(this, 'idle', () => {
                     THE_WINDOW.dispatchEvent(new CustomEvent('gg_map_2d_idle', { detail: this }));
-                    setTimeout(() => {
-                        THE_WINDOW.dispatchEvent(new CustomEvent('gg_map_fully_ready', { detail: this }));
-                    }, 200);
+                });
+                google.maps.event.addListener(this, 'bounds_changed', () => {
+                    THE_WINDOW.dispatchEvent(new CustomEvent('gg_map_bounds_changed', { detail: this }));
                 });
                 setTimeout(() => {
                     THE_WINDOW.dispatchEvent(new CustomEvent('gg_new_map_instance', {
