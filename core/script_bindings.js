@@ -164,72 +164,64 @@ const disableModsAsNeeded = () => {
     }
 };
 
-// Initialize the mod system
+// Initialize the mod system.
 // ===============================================================================================================================
 
-// Track map readiness states
-let mapReadinessState = {
+const MAP_STATE = {
     map2d: false,
     map3d: false,
     streetViewReady: false,
     tilesLoaded: false,
-    lastRoundStart: 0
+    lastRoundStart: 0,
 };
 
-// Enhanced map event listeners for more reliable mod activation
 const setUpMapEventListeners = () => {
-    // Listen for new map instances being created (most important for immediate mod reapplication)
     THE_WINDOW.addEventListener('gg_new_map_instance', (evt) => {
-        const { type, map, streetView } = evt.detail;
-
-        // Immediately reapply all active mods to the new map instance
+        console.debug('New map instance event: ', evt);
         setTimeout(() => {
             reapplyActiveModsToNewMaps();
-        }, 200); // Short delay to ensure map is fully initialized
+        }, 200);
     });
 
-    THE_WINDOW.addEventListener('gg_map_tiles_loaded', () => {
-        // Specifically reapply satellite view if it's active
+    THE_WINDOW.addEventListener('gg_map_tiles_loaded', () => { // TODO: this is for satView in Opera. Check if it's needed.
         const satViewMod = getBindings().find(([mod]) => mod.key === 'satView');
         if (satViewMod && satViewMod[0].active) {
             setTimeout(() => {
-                satViewMod[1](true); // Force reapply satellite view
+                satViewMod[1](true);
             }, 300);
         }
     });
 
     THE_WINDOW.addEventListener('gg_map_fully_ready', () => {
         setTimeout(() => {
-            // Final reapplication of all active mods
             reapplyActiveModsToNewMaps();
         }, 500);
     });
 
     THE_WINDOW.addEventListener('gg_map_2d_ready', () => {
-        mapReadinessState.map2d = true;
-        mapReadinessState.tilesLoaded = true;
+        MAP_STATE.map2d = true;
+        MAP_STATE.tilesLoaded = true;
         checkAndActivateModsIfReady();
     });
 
     THE_WINDOW.addEventListener('gg_map_2d_idle', () => {
-        mapReadinessState.map2d = true;
+        MAP_STATE.map2d = true;
         checkAndActivateModsIfReady();
     });
 
     THE_WINDOW.addEventListener('gg_streetview_ready', () => {
-        mapReadinessState.map3d = true;
-        mapReadinessState.streetViewReady = true;
+        MAP_STATE.map3d = true;
+        MAP_STATE.streetViewReady = true;
         checkAndActivateModsIfReady();
     });
 
     THE_WINDOW.addEventListener('gg_streetview_position_changed', () => {
-        mapReadinessState.map3d = true;
+        MAP_STATE.map3d = true;
         checkAndActivateModsIfReady();
     });
 
-    // Listen for round start events to reset state
     THE_WINDOW.addEventListener('gg_round_start', (evt) => {
-        mapReadinessState = {
+        MAP_STATE = {
             map2d: false,
             map3d: false,
             streetViewReady: false,
@@ -239,32 +231,14 @@ const setUpMapEventListeners = () => {
     });
 };
 
-// Check if both maps are ready and activate mods if needed
-const checkAndActivateModsIfReady = () => {
-    // Only proceed if we've had a recent round start
-    if (Date.now() - mapReadinessState.lastRoundStart > 30000) {
-        return; // Too old, ignore
-    }
-
-    const bothMapsReady = mapReadinessState.map2d && mapReadinessState.map3d;
-
-    map2d: mapReadinessState.map2d,
-        map3d: mapReadinessState.map3d,
-            bothReady: bothMapsReady,
-                timeSinceRoundStart: Date.now() - mapReadinessState.lastRoundStart
-});
-
+const bothMapsReady = MAP_STATE.map2d && MAP_STATE.map3d;
 if (bothMapsReady) {
 
-    // Small delay to ensure everything is settled
     setTimeout(() => {
-        // Ensure buttons exist
         if (!getModDiv()) {
             addButtons();
             bindButtons();
         }
-
-        // Reactivate all active mods
         for (const [mod, callback] of getBindings()) {
             if (mod.active && mod.show) {
                 try {
@@ -274,37 +248,25 @@ if (bothMapsReady) {
                 }
             }
         }
-    }, 1000); // 1 second delay for stability
-}
+    }, 1000);
 };
 
-// Immediately reapply active mods to newly created map instances
 const reapplyActiveModsToNewMaps = () => {
-
-    // Get list of currently active mods
     const activeMods = getBindings().filter(([mod]) => mod.active && mod.show);
-
     if (activeMods.length === 0) {
         return;
     }
-
-
-    // Ensure mod buttons exist first
     if (!getModDiv()) {
         addButtons();
         bindButtons();
     }
-
-    // Reapply each active mod immediately
     activeMods.forEach(([mod, callback]) => {
         try {
-            // Force the mod to reapply by calling with true
             callback(true);
         } catch (err) {
-            console.error(`❌ Error reapplying mod ${mod.name}:`, err);
+            console.error(`Error reapplying mod ${mod.name}:`, err);
         }
     });
-
 };
 
 // Global keyboard shortcuts - moved to dom_utils.js
@@ -358,12 +320,9 @@ const waitForReactHydration = () => {
             if (hasReactListeners) {
                 resolve();
             } else {
-                // Wait a bit longer for React to finish
                 setTimeout(checkHydration, 100);
             }
         };
-
-        // Start checking after a minimal delay to let React start
         setTimeout(checkHydration, 500);
     });
 };
