@@ -7,13 +7,11 @@
 // ===============================================================================================================================
 
 // Global Mercator projection constants - shared across mods
-// These represent the maximum safe latitude bounds for Web Mercator projection
 const _MERCATOR_LAT_MIN = -85.05112878;
 const _MERCATOR_LAT_MAX = 85.05112878;
 const _MERCATOR_LNG_MIN = -180;
 const _MERCATOR_LNG_MAX = 180;
 
-// True if solo game or live challenge. 
 const areModsAvailable = (path) => {
     path = path || THE_WINDOW.location.pathname;
     if (path.includes('/multiplayer') && ON_MY_HONOR.toLowerCase() !== 'on my honor') {
@@ -66,11 +64,11 @@ const setMapCenter = (lat = null, lng = null, zoom = null) => { // All optional 
     }
 };
 
-const getDistance = (p1, p2) => {
+const getDistance = (p1, p2) => { // Meters.
     const google = getGoogle();
     const ll1 = new google.maps.LatLng(p1.lat, p1.lng);
     const ll2 = new google.maps.LatLng(p2.lat, p2.lng);
-    const dist = google.maps.geometry.spherical.computeDistanceBetween(ll1, ll2); // meters.
+    const dist = google.maps.geometry.spherical.computeDistanceBetween(ll1, ll2);
     return dist;
 };
 
@@ -97,7 +95,6 @@ const getScore = () => {
     }
     const dist = getDistance(actual, guess);
 
-    // Use synchronous fallback if GG_MAP isn't loaded yet
     let maxErrorDist;
     if (isGGMapLoaded()) {
         maxErrorDist = GG_MAP.maxErrorDistance;
@@ -110,6 +107,7 @@ const getScore = () => {
     return score;
 };
 
+// TODO: is this necessary?
 // Async version of getScore that waits for GG_MAP to load (for cases where you need accurate data)
 const getScoreAsync = async () => {
     const actual = getActualLoc();
@@ -124,8 +122,7 @@ const getScoreAsync = async () => {
     }
     const dist = getDistance(actual, guess);
 
-    // Get GG_MAP with enhanced fallback handling
-    const mapData = await getGGMapWithFallback(2000); // Wait up to 2 seconds
+    const mapData = await getGGMapWithFallback(2000);
     const maxErrorDist = mapData.maxErrorDistance;
     const score = Math.round(5000 * Math.pow(Math.E, -10 * dist / maxErrorDist));
     
@@ -136,147 +133,6 @@ const getScoreAsync = async () => {
     return score;
 };
 
-/**
- * TODO: maxErrorDistance is not showing up because GG_MAP is not showing up, so this formula is off.
- * Calculate the probability of getting exactly 5000 points on a random click.
- * This analyzes the scoring formula: score = 5000 * e^(-10 * distance / maxErrorDistance)
- * For 5000 points, distance must be essentially 0 (within rounding tolerance).
- * 
- * @param {Object} actualLocation - The actual location {lat, lng}
- * @param {number} maxErrorDistance - Maximum error distance for the map (from GG_MAP.maxErrorDistance)
- * @param {Object} mapBounds - Optional map bounds to limit the calculation area
- * @returns {Object} Probability analysis including exact probability and distance thresholds
- */
-const calculatePerfectScoreProbability = (actualLocation, maxErrorDistance = 20015086, mapBounds = null) => {
-    if (!actualLocation || typeof actualLocation.lat !== 'number' || typeof actualLocation.lng !== 'number') {
-        throw new Error('Invalid actual location provided');
-    }
-
-    // For a score of exactly 5000, we need: 5000 = 5000 * e^(-10 * dist / maxErrorDist)
-    // This means: e^(-10 * dist / maxErrorDist) = 1
-    // Therefore: -10 * dist / maxErrorDist = 0
-    // So: dist = 0
-    
-    // However, due to rounding, we get 5000 points if the calculated score >= 4999.5
-    // 4999.5 = 5000 * e^(-10 * dist / maxErrorDist)
-    // 0.9999 = e^(-10 * dist / maxErrorDist)
-    // ln(0.9999) = -10 * dist / maxErrorDist
-    // dist = -maxErrorDist * ln(0.9999) / 10
-    
-    const minScoreForPerfect = 4999.5;
-    const requiredRatio = minScoreForPerfect / 5000; // 0.9999
-    const maxDistanceForPerfect = -maxErrorDistance * Math.log(requiredRatio) / 10;
-    
-    console.log(`Maximum distance for 5000 points: ${maxDistanceForPerfect.toFixed(2)} meters`);
-    
-    // Calculate the area within this distance from the actual location
-    const perfectScoreArea = Math.PI * Math.pow(maxDistanceForPerfect, 2); // m²
-    
-    // Calculate total map area
-    let totalMapArea;
-    if (mapBounds) {
-        // Calculate area within the provided bounds
-        const { north, south, east, west } = mapBounds;
-        
-        // Handle longitude wrap-around
-        let lngSpan = east - west;
-        if (lngSpan < 0) lngSpan += 360;
-        
-        const latSpan = north - south;
-        
-        // Convert to meters (approximate)
-        const earthCircumference = 40075000; // meters at equator
-        const avgLat = (north + south) / 2;
-        const latToMeters = earthCircumference / 360;
-        const lngToMeters = (earthCircumference * Math.cos(avgLat * Math.PI / 180)) / 360;
-        
-        const mapWidth = lngSpan * lngToMeters;
-        const mapHeight = latSpan * latToMeters;
-        totalMapArea = mapWidth * mapHeight;
-    } else {
-        // Use full Earth surface area
-        totalMapArea = 510072000000000; // Earth's surface area in m²
-    }
-    
-    // Calculate probability
-    const probability = perfectScoreArea / totalMapArea;
-    
-    // Additional useful metrics
-    const probabilityPercent = probability * 100;
-    const oneInXChance = probability > 0 ? Math.round(1 / probability) : Infinity;
-    
-    // Calculate distance thresholds for different score ranges
-    const scoreThresholds = [5000, 4999, 4995, 4990, 4980, 4950, 4900, 4800, 4500, 4000];
-    const distanceThresholds = scoreThresholds.map(targetScore => {
-        if (targetScore >= 5000) return 0;
-        const ratio = targetScore / 5000;
-        return -maxErrorDistance * Math.log(ratio) / 10;
-    });
-    
-    const result = {
-        probability: probability,
-        probabilityPercent: probabilityPercent,
-        oneInXChance: oneInXChance,
-        maxDistanceForPerfect: maxDistanceForPerfect,
-        perfectScoreAreaM2: perfectScoreArea,
-        totalMapAreaM2: totalMapArea,
-        actualLocation: actualLocation,
-        maxErrorDistance: maxErrorDistance,
-        scoreDistanceThresholds: scoreThresholds.map((score, i) => ({
-            score: score,
-            maxDistance: distanceThresholds[i]
-        })),
-        summary: {
-            description: `Probability of getting exactly 5000 points on a random click`,
-            probability: `${probabilityPercent.toExponential(2)}%`,
-            odds: `1 in ${oneInXChance.toLocaleString()}`,
-            perfectRadius: `${maxDistanceForPerfect.toFixed(2)} meters`,
-            context: mapBounds ? 'Within current map bounds' : 'Anywhere on Earth'
-        }
-    };
-    
-    return result;
-};
-
-/**
- * Calculate perfect score probability for the current game state
- * @returns {Promise<Object>} Probability analysis for current location and map
- */
-const calculateCurrentPerfectScoreProbability = async () => {
-    const actualLocation = getActualLoc();
-    if (!actualLocation) {
-        throw new Error('No actual location available - are you in an active game?');
-    }
-    
-    // Get current map data
-    const mapData = await getGGMapWithFallback(2000);
-    const maxErrorDistance = mapData.maxErrorDistance;
-    
-    // Try to get current map bounds if available
-    let mapBounds = null;
-    try {
-        if (GOOGLE_MAP && GOOGLE_MAP.getBounds) {
-            mapBounds = getMapBounds();
-        }
-    } catch (e) {
-        console.warn('Could not get map bounds, using global calculation');
-    }
-    
-    const result = calculatePerfectScoreProbability(actualLocation, maxErrorDistance, mapBounds);
-    
-    // Add current game context
-    result.gameContext = {
-        mapName: mapData.name || 'Unknown',
-        mapId: mapData.id || 'unknown',
-        maxErrorDistance: maxErrorDistance,
-        usingMapBounds: !!mapBounds,
-        actualLocation: actualLocation
-    };
-    
-    return result;
-};
-
-/** Show if loc is within the given lat/long bounds. bounds from getMapBounds, loc from any { lat, lng } source. */
 const isInBounds = (loc, bounds) => {
     let { north, east, south, west } = bounds;
     let { lat, lng } = loc;
@@ -343,7 +199,7 @@ const scoreListener = async (evt) => {
             scoreString = String(result);
         }
     } else {
-        scoreString = String(getScore()); // Use synchronous version by default
+        scoreString = String(getScore());
     }
 
     let fadeTarget = document.getElementById('gg-score-div');
@@ -440,7 +296,6 @@ const clickAt = (lat, lng) => { // Trigger actual click on guessMap at { lat, ln
         return;
     }
     
-    // Validate coordinates to ensure they're within safe map bounds
     if (isNaN(lat) || isNaN(lng)) {
         console.error('Invalid coordinates provided to clickAt:', lat, lng);
         return;
@@ -522,7 +377,6 @@ const setGuessMapEvents = (enabled = true) => {
     }
 };
 
-// Utility function to check if GG_MAP is properly loaded
 const isGGMapLoaded = () => {
     return GG_MAP && typeof GG_MAP.maxErrorDistance !== 'undefined' && GG_MAP.maxErrorDistance > 0;
 };
@@ -543,7 +397,6 @@ const getGGMapWithFallback = async (maxWaitTime = 5000) => {
         return GG_MAP;
     }
     
-    // Return fallback if still not loaded
     console.warn('GG_MAP not loaded within timeout, using fallback');
     return {
         maxErrorDistance: 20015086, // Default world map max distance
@@ -555,7 +408,7 @@ const getGGMapWithFallback = async (maxWaitTime = 5000) => {
 // Utility function for mods to wait for both 2D and 3D maps to be ready
 const waitForMapsReady = (callback, options = {}) => {
     const {
-        timeout = 10000,       // Increased timeout to 10 seconds
+        timeout = 10000,
         intervalMs = 200,
         require2D = true,
         require3D = true,
@@ -613,7 +466,6 @@ const waitForMapsReady = (callback, options = {}) => {
                 );
             }
             
-            // Additional check: ensure basic game elements are present
             const gameElementsReady = (
                 document.querySelector('div[class^="game_content__"]') ||
                 document.querySelector('[data-qa="panorama"]')
@@ -623,7 +475,7 @@ const waitForMapsReady = (callback, options = {}) => {
             
             if (allReady) {
                 console.debug(`${modName}: All maps ready, executing callback`);
-                callback(true); // Pass true to indicate this is automatic activation
+                callback(true);
                 return true;
             }
             
@@ -1328,77 +1180,3 @@ const clampToMercatorBounds = (lat, lng) => {
     
     return { lat: clampedLat, lng: clampedLng };
 };
-
-// Global helper functions for console use
-if (typeof window !== 'undefined') {
-    /**
-     * Console function to calculate the probability of getting 5000 points
-     * Usage: perfectScoreOdds() - calculates for current game
-     * Usage: perfectScoreOdds(lat, lng) - calculates for specific location
-     */
-    THE_WINDOW.perfectScoreOdds = async (lat = null, lng = null) => {
-        try {
-            let result;
-            
-            if (lat !== null && lng !== null) {
-                // Calculate for specific location
-                const mapData = await getGGMapWithFallback(2000);
-                result = calculatePerfectScoreProbability(
-                    { lat, lng }, 
-                    mapData.maxErrorDistance
-                );
-                console.log(`Perfect score probability for location (${lat}, ${lng}):`);
-            } else {
-                // Calculate for current game
-                result = await calculateCurrentPerfectScoreProbability();
-                console.log('Perfect score probability for current location:');
-            }
-            
-            console.log('='.repeat(60));
-            console.log(`🎯 Probability: ${result.summary.probability}`);
-            console.log(`🎲 Odds: ${result.summary.odds}`);
-            console.log(`📐 Perfect radius: ${result.summary.perfectRadius}`);
-            console.log(`🗺️  Context: ${result.summary.context}`);
-            console.log('='.repeat(60));
-            
-            // Show score thresholds
-            console.log('Score distance thresholds:');
-            result.scoreDistanceThresholds.slice(0, 6).forEach(threshold => {
-                console.log(`  ${threshold.score} points: ≤ ${threshold.maxDistance.toFixed(1)}m`);
-            });
-            
-            return result;
-        } catch (error) {
-            console.error('Error calculating perfect score probability:', error.message);
-            console.log('Make sure you are in an active GeoGuessr game!');
-            return null;
-        }
-    };
-
-    /**
-     * Show detailed score analysis for current game
-     */
-    THE_WINDOW.scoreAnalysis = async () => {
-        try {
-            const result = await perfectScoreOdds();
-            if (!result) return;
-            
-            console.log('\n📊 Detailed Score Analysis:');
-            console.log('='.repeat(60));
-            console.log(`Actual location: ${result.actualLocation.lat.toFixed(6)}, ${result.actualLocation.lng.toFixed(6)}`);
-            console.log(`Max error distance: ${(result.maxErrorDistance / 1000).toFixed(0)} km`);
-            console.log(`Perfect score area: ${(result.perfectScoreAreaM2 / 1000000).toFixed(2)} km²`);
-            console.log(`Total map area: ${(result.totalMapAreaM2 / 1000000000).toFixed(0)} million km²`);
-            
-            if (result.gameContext) {
-                console.log(`Map: ${result.gameContext.mapName}`);
-                console.log(`Using map bounds: ${result.gameContext.usingMapBounds ? 'Yes' : 'No'}`);
-            }
-            
-            return result;
-        } catch (error) {
-            console.error('Error in score analysis:', error.message);
-            return null;
-        }
-    };
-}
