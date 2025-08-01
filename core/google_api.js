@@ -118,31 +118,19 @@ const initGmapsIntegration = () => {
                 google.maps.event.addListener(this, 'click', (evt) => {
                     onMapClick(evt);
                 });
-
-                // Add map ready detection for better mod synchronization
                 google.maps.event.addListener(this, 'tilesloaded', () => {
-                    console.debug('Google Maps: 2D map tiles loaded');
-                    // Dispatch custom event that mods can listen for
                     THE_WINDOW.dispatchEvent(new CustomEvent('gg_map_2d_ready', { detail: this }));
-
-                    // Apply any pending satellite view state
                     setTimeout(() => {
                         THE_WINDOW.dispatchEvent(new CustomEvent('gg_map_tiles_loaded', { detail: this }));
                     }, 100);
                 });
 
                 google.maps.event.addListener(this, 'idle', () => {
-                    console.debug('Google Maps: 2D map idle (fully loaded)');
                     THE_WINDOW.dispatchEvent(new CustomEvent('gg_map_2d_idle', { detail: this }));
-
-                    // Additional event for mods that need map to be completely settled
                     setTimeout(() => {
                         THE_WINDOW.dispatchEvent(new CustomEvent('gg_map_fully_ready', { detail: this }));
                     }, 200);
                 });
-
-                // Trigger immediate mod reapplication when this new map instance is created
-                console.debug('Google Maps: New 2D map instance created, scheduling mod reapplication');
                 setTimeout(() => {
                     THE_WINDOW.dispatchEvent(new CustomEvent('gg_new_map_instance', {
                         detail: { type: '2d', map: this }
@@ -157,24 +145,18 @@ const initGmapsIntegration = () => {
                 GOOGLE_STREETVIEW = this;
 
                 google.maps.event.addListener(this, 'position_changed', () => {
-                    console.debug('Google Maps: Street View position changed');
                     THE_WINDOW.dispatchEvent(new CustomEvent('gg_streetview_position_changed', { detail: this }));
                 });
 
                 google.maps.event.addListener(this, 'pano_changed', () => {
-                    console.debug('Google Maps: Street View panorama changed');
                     THE_WINDOW.dispatchEvent(new CustomEvent('gg_streetview_pano_changed', { detail: this }));
                 });
-
-                // Listen for when the panorama is fully loaded
                 this.addListener('status_changed', () => {
                     if (this.getStatus() === google.maps.StreetViewStatus.OK) {
                         console.debug('Google Maps: Street View panorama loaded successfully');
                         THE_WINDOW.dispatchEvent(new CustomEvent('gg_streetview_ready', { detail: this }));
                     }
                 });
-
-                // Trigger immediate mod reapplication when this new street view instance is created
                 console.debug('Google Maps: New Street View instance created');
                 setTimeout(() => {
                     THE_WINDOW.dispatchEvent(new CustomEvent('gg_new_map_instance', {

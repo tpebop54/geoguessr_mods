@@ -109,7 +109,6 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
         modsContainer.appendChild(buttonContainer);
 
         const addContainerSafely = () => {
-            // Double-check that our container won't conflict with React
             if (!document.getElementById('gg-mods-container')) {
                 bigMapContainer.appendChild(modsContainer);
                 const verifyContainer = document.getElementById('gg-mods-container');
@@ -341,6 +340,7 @@ const activateLoadedMods = () => {
 const initializeMods = async () => {
     try {
         await waitForReactHydration();
+        addButtons();
         setUpMapEventListeners();
         setUpHomepageMonitoring();
         enforceCheatProtection();

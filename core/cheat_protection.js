@@ -183,14 +183,9 @@ const splitQuote = (quote) => {
 
 const clearCheatOverlay = () => {
     if (_CHEAT_OVERLAY && document.body.contains(_CHEAT_OVERLAY)) {
-        // Quick removal - don't wait for maps to be ready, just remove it
-        console.debug('Cheat protection: Removing overlay immediately');
-        
-        // Fade out the overlay for a smoother transition (but faster)
         _CHEAT_OVERLAY.style.transition = 'opacity 0.3s ease-out';
         _CHEAT_OVERLAY.style.opacity = '0';
         
-        // Remove after shorter transition
         setTimeout(() => {
             if (_CHEAT_OVERLAY && document.body.contains(_CHEAT_OVERLAY)) {
                 try {
@@ -202,48 +197,39 @@ const clearCheatOverlay = () => {
                         document.body.removeChild(_CHEAT_OVERLAY);
                     } catch (err2) {
                         console.error('Cheat protection: Fallback removal also failed:', err2);
-                        // Force hide as last resort
                         _CHEAT_OVERLAY.style.display = 'none';
                         _CHEAT_OVERLAY.style.visibility = 'hidden';
                     }
                 }
                 _CHEAT_OVERLAY = undefined;
             }
-        }, 300); // Reduced from 500ms to 300ms for faster removal
+        }, 300);
     }
 };
 
 const createQuoteOverlay = () => {
-    // Only show overlay on game pages
     const currentPath = THE_WINDOW.location.pathname;
     
     if (!areModsAvailable()) {
         console.debug('Cheat protection: Not on a game page, skipping overlay. Path:', currentPath);
         return;
     }
-    
-    // If overlay already exists, don't create another one
+
     if (_CHEAT_OVERLAY && document.body.contains(_CHEAT_OVERLAY)) {
         return;
     }
-    
-    // If body isn't ready, wait for it
     if (!document.body) {
         setTimeout(createQuoteOverlay, 100);
         return;
     }
-    
-    // Check if quotes system is ready (only needed if quotes are enabled)
     const quotesEnabled = (typeof THE_WINDOW.ENABLE_QUOTES !== 'undefined') ? THE_WINDOW.ENABLE_QUOTES : false;
     if (quotesEnabled && !THE_WINDOW._QUOTES) {
-        // Quotes not loaded yet, try again after a delay
         setTimeout(() => {
             createQuoteOverlay();
         }, 200);
         return;
     }
     
-    // Initialize quotes if needed (only if quotes are enabled)
     if (_QUOTES_FLAT.length === 0 && quotesEnabled) {
         try {
             if (typeof initQuotesFlat === 'function') {
@@ -252,12 +238,9 @@ const createQuoteOverlay = () => {
         } catch (err) {
             console.warn('Cheat protection: Error initializing quotes:', err);
         }
-        
-        // If still no quotes after initialization, check if quotes are disabled
         if (_QUOTES_FLAT.length === 0) {
             const quotesEnabled = (typeof THE_WINDOW.ENABLE_QUOTES !== 'undefined') ? THE_WINDOW.ENABLE_QUOTES : false;
             if (quotesEnabled) {
-                // Quotes are enabled but not loaded yet, try again later
                 setTimeout(() => {
                     createQuoteOverlay();
                 }, 200);
@@ -265,8 +248,6 @@ const createQuoteOverlay = () => {
             }
         }
     }
-    
-    // Create the overlay now that everything is ready
     createQuoteOverlayNow();
 };
 
