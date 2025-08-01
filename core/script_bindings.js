@@ -201,23 +201,23 @@ const setUpMapEventListeners = () => {
     THE_WINDOW.addEventListener('gg_map_2d_ready', () => {
         MAP_STATE.map2d = true;
         MAP_STATE.tilesLoaded = true;
-        checkAndActivateModsIfReady();
+        reapplyActiveModsToNewMaps();
     });
 
     THE_WINDOW.addEventListener('gg_map_2d_idle', () => {
         MAP_STATE.map2d = true;
-        checkAndActivateModsIfReady();
+        reapplyActiveModsToNewMaps();
     });
 
     THE_WINDOW.addEventListener('gg_streetview_ready', () => {
         MAP_STATE.map3d = true;
         MAP_STATE.streetViewReady = true;
-        checkAndActivateModsIfReady();
+        reapplyActiveModsToNewMaps();
     });
 
     THE_WINDOW.addEventListener('gg_streetview_position_changed', () => {
         MAP_STATE.map3d = true;
-        checkAndActivateModsIfReady();
+        reapplyActiveModsToNewMaps();
     });
 
     THE_WINDOW.addEventListener('gg_round_start', (evt) => {

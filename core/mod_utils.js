@@ -1082,54 +1082,6 @@ const findNearestLand = async (lat, lng, maxRadius = 5000, maxAttempts = 20) => 
 };
 
 /**
- * Add timeout protection to API operations
- * @param {Promise} promise - The promise to add timeout to
- * @param {number} timeoutMs - Timeout in milliseconds
- * @param {string} operationName - Name of the operation for error messages
- * @returns {Promise} Promise that rejects if timeout is reached
- */
-const withTimeout = (promise, timeoutMs, operationName = 'API operation') => {
-    return Promise.race([
-        promise,
-        new Promise((_, reject) => 
-            setTimeout(() => reject(new Error(`${operationName} timed out after ${timeoutMs}ms`)), timeoutMs)
-        )
-    ]);
-};
-
-/**
- * Generate random points in a circle around a center point
- * @param {number} centerLat - Center latitude
- * @param {number} centerLng - Center longitude  
- * @param {number} radiusMeters - Radius in meters
- * @param {number} numPoints - Number of points to generate
- * @returns {Array<{lat: number, lng: number}>} Array of coordinate points
- */
-const generatePointsInCircle = (centerLat, centerLng, radiusMeters, numPoints) => {
-    const points = [];
-    
-    for (let i = 0; i < numPoints; i++) {
-        // Random angle and distance for uniform distribution in circle
-        const angle = Math.random() * 2 * Math.PI;
-        const distance = Math.sqrt(Math.random()) * radiusMeters; // sqrt for uniform area distribution
-        
-        // Convert to lat/lng offsets
-        const latOffset = (distance * Math.cos(angle)) / 111320; // ~111.32 km per degree lat
-        const lngOffset = (distance * Math.sin(angle)) / (111320 * Math.cos(centerLat * Math.PI / 180));
-        
-        const lat = centerLat + latOffset;
-        const lng = centerLng + lngOffset;
-        
-        // Check bounds
-        if (lat >= _MERCATOR_LAT_MIN && lat <= _MERCATOR_LAT_MAX && lng >= _MERCATOR_LNG_MIN && lng <= _MERCATOR_LNG_MAX) {
-            points.push({ lat, lng });
-        }
-    }
-    
-    return points;
-};
-
-/**
  * Generate points in a ring around a center point
  * @param {number} centerLat - Center latitude
  * @param {number} centerLng - Center longitude  
