@@ -401,6 +401,10 @@ const initializeMods = async () => {
 };
 
 document.addEventListener('gg_maps_ready', () => {
+    debugger;
+});
+
+document.addEventListener('gg_maps_ready', () => {
     initializeMods();
 });
 
