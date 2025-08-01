@@ -51,7 +51,6 @@ const bindButtons = () => {
         button._isBound = true;
         UPDATE_CALLBACKS[mod.key] = callback;
     }
-    _MODS_LOADED = true;
 };
 
 const addButtons = () => { // Add mod buttons to the active round, with a little button to toggle them.
@@ -133,8 +132,9 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
         });
 
         setTimeout(addButtonContainer, 100);
-
+        _MODS_LOADED = true;
         return true;
+
     } catch (err) {
         console.error('Error creating mod menu:', err);
         return false;
@@ -258,6 +258,10 @@ const activateLoadedMods = () => {
 };
 
 const initializeMods = async () => {
+    if (_MODS_LOADED) {
+        return;
+    }
+
     const mapsReady = MAP_STATE.map2d && MAP_STATE.map3d;
     if (!mapsReady) {
         console.debug(`Maps not loaded yet; can't activate mods.`);
@@ -321,9 +325,6 @@ const initializeMods = async () => {
     }
 };
 
-document.addEventListener('gg_maps_ready', () => {
-    debugger;
-});
 
 document.addEventListener('gg_maps_ready', () => {
     initializeMods();
@@ -420,7 +421,6 @@ const ensureGGMapLoaded = () => {
 
 
 const reactivateActiveMods = () => {
-
     // Dispatch a custom event that mods can listen for
     const reactivationEvent = new CustomEvent('gg_mods_reactivate', {
         detail: { timestamp: Date.now() }
@@ -433,8 +433,8 @@ const reactivateActiveMods = () => {
             if (!google || !google.maps) {
                 return false;
             }
-            const map2dReady = OOGLE_MAP && GOOGLE_MAP.getBounds && getSmallMap();
-            const map3dReady = GOOGLE_STREETVIEW && GOOGLE_STREETVIEW.getPosition && getBigMapCanvas();
+            const map2dReady = GOOGLE_MAP && getSmallMap();
+            const map3dReady = GOOGLE_STREETVIEW && getBigMapCanvas();
             return map2dReady && map3dReady;
         } catch (err) {
             console.error('Error checking map readiness:', err);

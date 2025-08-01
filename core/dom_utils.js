@@ -412,6 +412,7 @@ const updateMod = (mod, forceState = undefined) => {
     // If mods aren't loaded, log a warning but continue with the update
     // This allows mods to be activated during round transitions
     if (!_MODS_LOADED) {
+        console.warn(`Mods not loaded yet, but trying to update ${mod.name}. This may cause issues.`);
     }
 
     const previousState = isModActive(mod);

@@ -143,6 +143,7 @@ const initGmapsIntegration = () => {
             constructor(...args) {
                 super(...args);
                 GOOGLE_STREETVIEW = this;
+                THE_WINDOW.dispatchEvent(new CustomEvent('gg_streetview_ready', { detail: this }));
 
                 google.maps.event.addListener(this, 'position_changed', () => {
                     THE_WINDOW.dispatchEvent(new CustomEvent('gg_streetview_position_changed', { detail: this }));
