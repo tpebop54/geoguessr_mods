@@ -41,8 +41,8 @@ class CoordinateDetector {
         const self = this;
 
         // Override XMLHttpRequest
-        const originalXHROpen = window.XMLHttpRequest.prototype.open;
-        window.XMLHttpRequest.prototype.open = function (...args) {
+        const originalXHROpen = THE_WINDOW.XMLHttpRequest.prototype.open;
+        THE_WINDOW.XMLHttpRequest.prototype.open = function (...args) {
             const xhr = this;
 
             xhr.addEventListener('load', function () {
@@ -60,8 +60,8 @@ class CoordinateDetector {
         };
 
         // Override fetch
-        const originalFetch = window.fetch;
-        window.fetch = async (...args) => {
+        const originalFetch = THE_WINDOW.fetch;
+        THE_WINDOW.fetch = async (...args) => {
             const response = await originalFetch(...args);
 
             try {
@@ -311,7 +311,7 @@ function initCoordinateDetection() {
     });
 
     detector.startMonitoring();
-    window.coordinateDetector = detector; // Make available globally
+    THE_WINDOW.coordinateDetector = detector; // Make available globally
     return detector;
 }
 

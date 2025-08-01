@@ -17,11 +17,11 @@ const _tryMultiple = (selectors) => { // Different modes, different versions, Ge
 };
 
 const getGoogle = () => { // Used to interact with the panorama and mini-map.
-    return window.google || unsafeWindow.google;
+    return THE_WINDOW.google || unsafeWindow.google;
 };
 
 const isOperaBrowser = () => { // Check if current browser is Opera (has WebGL/Vector rendering issues)
-    return (!!window.opr && !!opr.addons) || !!window.opera || navigator.userAgent.indexOf(' OPR/') >= 0;
+    return (!!THE_WINDOW.opr && !!opr.addons) || !!THE_WINDOW.opera || navigator.userAgent.indexOf(' OPR/') >= 0;
 };
 
 const getTicketBar = () => { // Top header.This shows up for unregistered players to display that they need an account.
@@ -263,7 +263,7 @@ const makeOptionMenu = (mod) => {
     for (const [key, option] of Object.entries(defaults)) {
         // Skip Google Maps API-dependent options if no API key is configured
         const isApiDependentOption = (mod.key === 'lottery' && (key === 'onlyStreetView' || key === 'onlyLand'));
-        const hasApiKey = window.GOOGLE_MAPS_API_KEY && window.GOOGLE_MAPS_API_KEY.trim().length > 0;
+        const hasApiKey = THE_WINDOW.GOOGLE_MAPS_API_KEY && THE_WINDOW.GOOGLE_MAPS_API_KEY.trim().length > 0;
         
         if (isApiDependentOption && !hasApiKey) {
             console.debug(`Skipping API-dependent option '${key}' for lottery mod - no API key configured`);
@@ -765,11 +765,11 @@ const setupGlobalKeyBindings = () => {
         if (evt.ctrlKey && evt.shiftKey && evt.key === '>') {
             console.log('Nuclear option triggered: disabling all mods');
             clearState();
-            window.location.reload();
+            THE_WINDOW.location.reload();
         }
 
         // Google Maps integration - only enabled if API key is configured
-        const hasApiKey = !!window.GOOGLE_MAPS_API_KEY;
+        const hasApiKey = !!THE_WINDOW.GOOGLE_MAPS_API_KEY;
         if (hasApiKey && evt.ctrlKey && (evt.key === '[' || evt.key === ']')) {
             evt.preventDefault(); // Prevent browser shortcuts
             handleGoogleMapsShortcut(evt.key);

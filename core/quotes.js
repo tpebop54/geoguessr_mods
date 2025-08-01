@@ -167,7 +167,7 @@ const QUOTES = {
 };
 
 function initQuotes() {
-    window._QUOTES = QUOTES; // Make available globally
+    THE_WINDOW._QUOTES = QUOTES; // Make available globally
     return QUOTES;
 }
 

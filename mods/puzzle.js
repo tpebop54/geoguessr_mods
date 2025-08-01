@@ -148,9 +148,9 @@ async function drawCanvas2d() {
                     tileUrl = `https://streetviewpixels-pa.googleapis.com/v1/tile?cb_client=apiv3&panoid=${panoID}&output=tile&x=${x}&y=${y}&zoom=${fovZoom}&nbt=1&fover=2`;
                     
                     // Only warn once per session
-                    if (!window._puzzleApiKeyWarned) {
+                    if (!THE_WINDOW._puzzleApiKeyWarned) {
                         warnMissingApiKey('Puzzle mod');
-                        window._puzzleApiKeyWarned = true;
+                        THE_WINDOW._puzzleApiKeyWarned = true;
                     }
                 }
                 img.src = tileUrl;

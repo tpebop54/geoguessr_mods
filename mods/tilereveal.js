@@ -51,7 +51,7 @@ const removeTileCounter = () => {
 const makeTileCounter = () => {
     // Only show tile counter on game pages
     if (!areModsAvailable()) {
-        console.debug('TileReveal: Not on a game page, skipping tile counter creation. Path:', window.location.pathname);
+        console.debug('TileReveal: Not on a game page, skipping tile counter creation. Path:', THE_WINDOW.location.pathname);
         return;
     }
     
@@ -158,7 +158,7 @@ const onClickTile = (evt) => {
 const makeTiles = (nRows, nCols) => {
     // Only create tiles on game pages
     if (!areModsAvailable()) {
-        console.debug('TileReveal: Not on a game page, skipping tile creation. Path:', window.location.pathname);
+        console.debug('TileReveal: Not on a game page, skipping tile creation. Path:', THE_WINDOW.location.pathname);
         return;
     }
     
@@ -205,7 +205,7 @@ const resetTileReveal = () => {
     
     // Only reset on game pages
     if (!areModsAvailable()) {
-        console.debug('TileReveal: Not on a game page, skipping reset. Path:', window.location.pathname);
+        console.debug('TileReveal: Not on a game page, skipping reset. Path:', THE_WINDOW.location.pathname);
         return;
     }
     
@@ -240,7 +240,7 @@ const resetTileReveal = () => {
 
 const startTileRevealLocationTracking = () => {
     // Register with the global location tracker but be very conservative about resets
-    window.GG_LOCATION_TRACKER.subscribe('tilereveal', (newUrl, oldUrl) => {
+    THE_WINDOW.GG_LOCATION_TRACKER.subscribe('tilereveal', (newUrl, oldUrl) => {
         console.debug('TileReveal: URL change detected:', { oldUrl, newUrl });
         
         // Extract game identifiers from URLs
@@ -295,8 +295,8 @@ const startTileRevealLocationTracking = () => {
     }
     
     // Listen for custom round start events - but be very specific
-    if (!window._TILE_REVEAL_CUSTOM_LISTENER_ADDED) {
-        window.addEventListener('gg_round_start', (evt) => {
+    if (!THE_WINDOW._TILE_REVEAL_CUSTOM_LISTENER_ADDED) {
+        THE_WINDOW.addEventListener('gg_round_start', (evt) => {
             console.debug('TileReveal: gg_round_start event received:', evt.detail);
             // Add a small delay to ensure the round is fully initialized
             setTimeout(() => {
@@ -304,13 +304,13 @@ const startTileRevealLocationTracking = () => {
                 resetTileReveal();
             }, 500); // Shorter delay to be more responsive
         });
-        window._TILE_REVEAL_CUSTOM_LISTENER_ADDED = true;
+        THE_WINDOW._TILE_REVEAL_CUSTOM_LISTENER_ADDED = true;
         console.debug('TileReveal: gg_round_start event listener added');
     }
     
     // Listen for mod reactivation events - only reset when mod is reactivated, not other events
-    if (!window._TILE_REVEAL_REACTIVATE_LISTENER_ADDED) {
-        window.addEventListener('gg_mods_reactivate', (evt) => {
+    if (!THE_WINDOW._TILE_REVEAL_REACTIVATE_LISTENER_ADDED) {
+        THE_WINDOW.addEventListener('gg_mods_reactivate', (evt) => {
             console.debug('TileReveal: Mod reactivation event received');
             if (isModActive(MODS.tileReveal)) {
                 console.debug('TileReveal: TileReveal mod is active - resetting tiles');
@@ -321,7 +321,7 @@ const startTileRevealLocationTracking = () => {
                 console.debug('TileReveal: TileReveal mod is not active - skipping reset');
             }
         });
-        window._TILE_REVEAL_REACTIVATE_LISTENER_ADDED = true;
+        THE_WINDOW._TILE_REVEAL_REACTIVATE_LISTENER_ADDED = true;
         console.debug('TileReveal: gg_mods_reactivate event listener added');
     }
     
@@ -329,8 +329,8 @@ const startTileRevealLocationTracking = () => {
     // and may be causing resets when clicking on the map
     
     // Add page reload detection only - much more conservative
-    if (!window._TILE_REVEAL_RELOAD_LISTENER_ADDED) {
-        window.addEventListener('beforeunload', () => {
+    if (!THE_WINDOW._TILE_REVEAL_RELOAD_LISTENER_ADDED) {
+        THE_WINDOW.addEventListener('beforeunload', () => {
             // Mark that a page reload is happening
             sessionStorage.setItem('gg_tile_reveal_reloaded', 'true');
         });
@@ -341,13 +341,13 @@ const startTileRevealLocationTracking = () => {
             console.debug('TileReveal: Page reload detected - will reset tiles on next activation');
         }
         
-        window._TILE_REVEAL_RELOAD_LISTENER_ADDED = true;
+        THE_WINDOW._TILE_REVEAL_RELOAD_LISTENER_ADDED = true;
     }
 };
 
 const stopTileRevealLocationTracking = () => {
     // Unregister from the global location tracker
-    window.GG_LOCATION_TRACKER.unsubscribe('tilereveal');
+    THE_WINDOW.GG_LOCATION_TRACKER.unsubscribe('tilereveal');
 };
 
 const updateTileReveal = (forceState = undefined) => {
@@ -379,7 +379,7 @@ const updateTileReveal = (forceState = undefined) => {
         }
         
         // Store the current URL when activating the mod
-        _LAST_GAME_URL = window.location.href;
+        _LAST_GAME_URL = THE_WINDOW.location.href;
         
         // Start location tracking when the mod is activated
         startTileRevealLocationTracking();

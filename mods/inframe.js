@@ -90,7 +90,7 @@ const updateInFrame = (forceState = undefined) => {
     }
     
     // Add custom round start event listener
-    window.addEventListener('gg_round_start', (evt) => {
+    THE_WINDOW.addEventListener('gg_round_start', (evt) => {
         console.debug('InFrame: Custom round start event detected, re-initializing');
         if (MODS.inFrame.active) {
             setTimeout(() => {
@@ -107,7 +107,7 @@ const updateInFrame = (forceState = undefined) => {
     });
     
     // Listen for mod reactivation events
-    window.addEventListener('gg_mods_reactivate', (evt) => {
+    THE_WINDOW.addEventListener('gg_mods_reactivate', (evt) => {
         if (MODS.inFrame.active) {
             console.debug('InFrame: Mod reactivation event detected, re-initializing');
             setTimeout(() => {

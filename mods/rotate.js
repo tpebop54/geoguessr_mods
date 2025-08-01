@@ -52,7 +52,7 @@ const updateRotateMapLogic = (forceState = undefined) => {
         const nMilliseconds = Number(getOption(mod, 'every')) * 1000;
         const nDegrees = Number(getOption(mod, 'degrees'));
         if (isNaN(nMilliseconds) || isNaN(nDegrees) || nMilliseconds < 0) {
-            window.alert('Invalid interval or amount.');
+            THE_WINDOW.alert('Invalid interval or amount.');
             return;
         }
         if (ROTATION_INTERVAL) {

@@ -23,7 +23,7 @@ let _LOTTERY_DRAGGING_OFFSET_X; // X offset from mouse to element edge when drag
 let _LOTTERY_DRAGGING_OFFSET_Y; // Y offset from mouse to element edge when dragging starts.
 
 // Initialize the flag to control programmatic clicks
-window._LOTTERY_ALLOWING_CLICK = false;
+THE_WINDOW._LOTTERY_ALLOWING_CLICK = false;
 
 const removeLotteryDisplay = () => {
     if (_LOTTERY_DISPLAY) {
@@ -35,7 +35,7 @@ const removeLotteryDisplay = () => {
 const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     // Only show lottery display on game pages
     if (!areModsAvailable()) {
-        console.debug('Lottery: Not on a game page, skipping lottery display creation. Path:', window.location.pathname);
+        console.debug('Lottery: Not on a game page, skipping lottery display creation. Path:', THE_WINDOW.location.pathname);
         return;
     }
     
@@ -132,7 +132,7 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
             GG_ROUND: typeof GG_ROUND !== 'undefined' ? GG_ROUND : 'undefined',
             GG_LOC: typeof GG_LOC !== 'undefined' ? GG_LOC : 'undefined', 
             GG_CLICK: typeof GG_CLICK !== 'undefined' ? GG_CLICK : 'undefined',
-            hasGoogleApiKey: window.GOOGLE_MAPS_API_KEY ? 'yes' : 'no'
+            hasGoogleApiKey: THE_WINDOW.GOOGLE_MAPS_API_KEY ? 'yes' : 'no'
         });
         
         const actual = getActualLoc();
@@ -223,9 +223,9 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
             if (!hasGoogleApiKey()) {
                 console.warn('Lottery mod: API-dependent features (Only Street View/Only Land) attempted without Google Maps API key');
                 console.debug('Lottery: API key state:', {
-                    exists: !!window.GOOGLE_MAPS_API_KEY,
-                    length: window.GOOGLE_MAPS_API_KEY ? window.GOOGLE_MAPS_API_KEY.length : 0,
-                    firstChars: window.GOOGLE_MAPS_API_KEY ? window.GOOGLE_MAPS_API_KEY.substring(0, 10) + '...' : 'none'
+                    exists: !!THE_WINDOW.GOOGLE_MAPS_API_KEY,
+                    length: THE_WINDOW.GOOGLE_MAPS_API_KEY ? THE_WINDOW.GOOGLE_MAPS_API_KEY.length : 0,
+                    firstChars: THE_WINDOW.GOOGLE_MAPS_API_KEY ? THE_WINDOW.GOOGLE_MAPS_API_KEY.substring(0, 10) + '...' : 'none'
                 });
                 button.textContent = 'API key required';
                 button.disabled = true;
@@ -304,11 +304,11 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         counter.innerText = _LOTTERY_COUNT;
         
         // Temporarily disable click blocking for this programmatic click
-        window._LOTTERY_ALLOWING_CLICK = true;
+        THE_WINDOW._LOTTERY_ALLOWING_CLICK = true;
         clickAt(finalLat, finalLng);
         // Re-enable click blocking after a short delay
         setTimeout(() => {
-            window._LOTTERY_ALLOWING_CLICK = false;
+            THE_WINDOW._LOTTERY_ALLOWING_CLICK = false;
         }, 100);
         
         setMapCenter(finalLat, finalLng);
@@ -330,7 +330,7 @@ const removeAllLotteryClickBlockers = () => {
     console.debug('Lottery: Removing all click blockers');
     
     // Clear the programmatic click flag
-    window._LOTTERY_ALLOWING_CLICK = false;
+    THE_WINDOW._LOTTERY_ALLOWING_CLICK = false;
     
     // Remove lottery overlays from all possible containers
     const containers = [
@@ -378,7 +378,7 @@ const removeAllLotteryClickBlockers = () => {
 const setLotteryMapMode = (enabled = true) => {
     // Only create lottery overlays on game pages
     if (enabled && !areModsAvailable()) {
-        console.debug('Lottery: Not on a game page, skipping lottery map mode. Path:', window.location.pathname);
+        console.debug('Lottery: Not on a game page, skipping lottery map mode. Path:', THE_WINDOW.location.pathname);
         return;
     }
     
@@ -411,7 +411,7 @@ const setLotteryMapMode = (enabled = true) => {
             // Only block actual clicks, not mousedown events that start drags
             if (evt.type === 'click') {
                 // Allow programmatic clicks from lottery
-                if (window._LOTTERY_ALLOWING_CLICK) {
+                if (THE_WINDOW._LOTTERY_ALLOWING_CLICK) {
                     return; // Allow programmatic clicks
                 }
                 
@@ -429,7 +429,7 @@ const setLotteryMapMode = (enabled = true) => {
             // Only block click events, not mousedown/mousemove for dragging
             if (evt.type === 'click') {
                 // Allow programmatic clicks from lottery
-                if (window._LOTTERY_ALLOWING_CLICK) {
+                if (THE_WINDOW._LOTTERY_ALLOWING_CLICK) {
                     return; // Allow programmatic clicks
                 }
                 
@@ -510,7 +510,7 @@ const resetLotteryCount = () => {
     
     // Only reset on game pages
     if (!areModsAvailable()) {
-        console.debug('Lottery: Not on a game page, skipping reset. Path:', window.location.pathname);
+        console.debug('Lottery: Not on a game page, skipping reset. Path:', THE_WINDOW.location.pathname);
         return;
     }
     
@@ -528,15 +528,15 @@ const resetLotteryCount = () => {
 
 const startLotteryLocationTracking = () => {
     // Register with the global location tracker
-    window.GG_LOCATION_TRACKER.subscribe('lottery', (newUrl, oldUrl) => {
+    THE_WINDOW.GG_LOCATION_TRACKER.subscribe('lottery', (newUrl, oldUrl) => {
         // Check if this is a significant location change (new round/page)
-        if (window.GG_LOCATION_TRACKER.isSignificantLocationChange(oldUrl, newUrl)) {
+        if (THE_WINDOW.GG_LOCATION_TRACKER.isSignificantLocationChange(oldUrl, newUrl)) {
             resetLotteryCount();
         }
     }, 2000); // Check every 2 seconds
     
     // Add beforeunload listener for page refresh detection
-    window.addEventListener('beforeunload', () => {
+    THE_WINDOW.addEventListener('beforeunload', () => {
     });
     
     // Add visibility change listener for tab focus/reload detection
@@ -544,7 +544,7 @@ const startLotteryLocationTracking = () => {
         if (!document.hidden) {
             // Page became visible again, trigger a check
             setTimeout(() => {
-                const currentUrl = window.GG_LOCATION_TRACKER.getCurrentUrl();
+                const currentUrl = THE_WINDOW.GG_LOCATION_TRACKER.getCurrentUrl();
                 resetLotteryCount();
             }, 100);
         }
@@ -553,7 +553,7 @@ const startLotteryLocationTracking = () => {
 
 const stopLotteryLocationTracking = () => {
     // Unregister from the global location tracker
-    window.GG_LOCATION_TRACKER.unsubscribe('lottery');
+    THE_WINDOW.GG_LOCATION_TRACKER.unsubscribe('lottery');
 };
 
 const updateLottery = (forceState = undefined) => {
@@ -660,12 +660,12 @@ const onLotteryRoundEnd = () => {
 };
 
 // Connect to global event system for round events
-window.addEventListener('gg_round_start', (evt) => {
+THE_WINDOW.addEventListener('gg_round_start', (evt) => {
     onLotteryRoundStart();
 });
 
 // Listen for mod reactivation events
-window.addEventListener('gg_mods_reactivate', (evt) => {
+THE_WINDOW.addEventListener('gg_mods_reactivate', (evt) => {
     if (isModActive(MODS.lottery)) {
         onLotteryRoundStart();
     }

@@ -190,12 +190,12 @@ let displayLocationTrackingActive = false;
 const setupDisplayLocationTracking = () => {
     if (displayLocationTrackingActive) return;
     
-    if (!window.GG_LOCATION_TRACKER) {
+    if (!THE_WINDOW.GG_LOCATION_TRACKER) {
         console.warn('Display mod: Location tracker not available, options may not persist');
         return;
     }
     
-    window.GG_LOCATION_TRACKER.subscribe('display-options', (newUrl, oldUrl) => {
+    THE_WINDOW.GG_LOCATION_TRACKER.subscribe('display-options', (newUrl, oldUrl) => {
         console.debug('Display mod: Location change detected, restoring display options');
         
         // Small delay to allow the page to settle
@@ -255,8 +255,8 @@ const updateDisplayOptions = (forceState = undefined) => {
         }
         
         // Cleanup location tracking if mod is disabled
-        if (displayLocationTrackingActive && window.GG_LOCATION_TRACKER) {
-            window.GG_LOCATION_TRACKER.unsubscribe('display-options');
+        if (displayLocationTrackingActive && THE_WINDOW.GG_LOCATION_TRACKER) {
+            THE_WINDOW.GG_LOCATION_TRACKER.unsubscribe('display-options');
             displayLocationTrackingActive = false;
             console.debug('Display mod: Location tracking disabled');
         }
@@ -294,7 +294,7 @@ const applyDisplayFilters = (filterStr, transformStr) => {
 };
 
 // Add round start and reactivation event listeners
-window.addEventListener('gg_round_start', (evt) => {
+THE_WINDOW.addEventListener('gg_round_start', (evt) => {
     console.debug('Display mod: Custom round start event detected');
     const mod = MODS.displayOptions;
     if (isModActive(mod)) {
@@ -304,7 +304,7 @@ window.addEventListener('gg_round_start', (evt) => {
     }
 });
 
-window.addEventListener('gg_mods_reactivate', (evt) => {
+THE_WINDOW.addEventListener('gg_mods_reactivate', (evt) => {
     console.debug('Display mod: Mod reactivation event detected');
     const mod = MODS.displayOptions;
     if (isModActive(mod)) {

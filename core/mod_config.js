@@ -8,7 +8,7 @@
 // ===============================================================================================================================
 
 const _isOpera = () => {
-    return (!!window.opr && !!opr.addons) || !!window.opera || navigator.userAgent.indexOf(' OPR/') >= 0;
+    return (!!THE_WINDOW.opr && !!opr.addons) || !!THE_WINDOW.opera || navigator.userAgent.indexOf(' OPR/') >= 0;
 };
 
 const IS_OPERA = _isOpera();

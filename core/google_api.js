@@ -74,7 +74,7 @@ const initGoogle = () => {
     if (!google) {
         const err = 'Google was not initialized properly. Refresh the page.';
         throw new Error(err);
-        window.alert(err);
+        THE_WINDOW.alert(err);
     }
     GOOGLE_SVC = new google.maps.ImageMapType({
         getTileUrl: (point, zoom) => `https://www.google.com/maps/vt?pb=!1m7!8m6!1m3!1i${zoom}!2i${point.x}!3i${point.y}!2i9!3x1!2m8!1e2!2ssvv!4m2!1scc!2s*211m3*211e2*212b1*213e2*212b1*214b1!4m2!1ssvl!2s*211b0*212b1!3m8!2sen!3sus!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m4!1e0!8m2!1e1!1e1!6m6!1e12!2i2!11e0!39b0!44e0!50e`,
@@ -102,7 +102,7 @@ const initializeGoogleMapsIntegration = () => {
                 
                 // Check if Opera browser - it has issues with Vector rendering
                 const isOpera = typeof isOperaBrowser === 'function' ? isOperaBrowser() : 
-                    ((!!window.opr && !!opr.addons) || !!window.opera || navigator.userAgent.indexOf(' OPR/') >= 0);
+                    ((!!THE_WINDOW.opr && !!opr.addons) || !!THE_WINDOW.opera || navigator.userAgent.indexOf(' OPR/') >= 0);
                 
                 try {
                     if (isOpera) {
@@ -142,28 +142,28 @@ const initializeGoogleMapsIntegration = () => {
                 google.maps.event.addListener(this, 'tilesloaded', () => {
                     console.debug('Google Maps: 2D map tiles loaded');
                     // Dispatch custom event that mods can listen for
-                    window.dispatchEvent(new CustomEvent('gg_map_2d_ready', { detail: this }));
+                    THE_WINDOW.dispatchEvent(new CustomEvent('gg_map_2d_ready', { detail: this }));
                     
                     // Apply any pending satellite view state
                     setTimeout(() => {
-                        window.dispatchEvent(new CustomEvent('gg_map_tiles_loaded', { detail: this }));
+                        THE_WINDOW.dispatchEvent(new CustomEvent('gg_map_tiles_loaded', { detail: this }));
                     }, 100);
                 });
                 
                 google.maps.event.addListener(this, 'idle', () => {
                     console.debug('Google Maps: 2D map idle (fully loaded)');
-                    window.dispatchEvent(new CustomEvent('gg_map_2d_idle', { detail: this }));
+                    THE_WINDOW.dispatchEvent(new CustomEvent('gg_map_2d_idle', { detail: this }));
                     
                     // Additional event for mods that need map to be completely settled
                     setTimeout(() => {
-                        window.dispatchEvent(new CustomEvent('gg_map_fully_ready', { detail: this }));
+                        THE_WINDOW.dispatchEvent(new CustomEvent('gg_map_fully_ready', { detail: this }));
                     }, 200);
                 });
                 
                 // Trigger immediate mod reapplication when this new map instance is created
                 console.debug('Google Maps: New 2D map instance created, scheduling mod reapplication');
                 setTimeout(() => {
-                    window.dispatchEvent(new CustomEvent('gg_new_map_instance', { 
+                    THE_WINDOW.dispatchEvent(new CustomEvent('gg_new_map_instance', { 
                         detail: { type: '2d', map: this } 
                     }));
                 }, 100);
@@ -178,26 +178,26 @@ const initializeGoogleMapsIntegration = () => {
                 // Add event listeners for Street View readiness
                 google.maps.event.addListener(this, 'position_changed', () => {
                     console.debug('Google Maps: Street View position changed');
-                    window.dispatchEvent(new CustomEvent('gg_streetview_position_changed', { detail: this }));
+                    THE_WINDOW.dispatchEvent(new CustomEvent('gg_streetview_position_changed', { detail: this }));
                 });
                 
                 google.maps.event.addListener(this, 'pano_changed', () => {
                     console.debug('Google Maps: Street View panorama changed');
-                    window.dispatchEvent(new CustomEvent('gg_streetview_pano_changed', { detail: this }));
+                    THE_WINDOW.dispatchEvent(new CustomEvent('gg_streetview_pano_changed', { detail: this }));
                 });
                 
                 // Listen for when the panorama is fully loaded
                 this.addListener('status_changed', () => {
                     if (this.getStatus() === google.maps.StreetViewStatus.OK) {
                         console.debug('Google Maps: Street View panorama loaded successfully');
-                        window.dispatchEvent(new CustomEvent('gg_streetview_ready', { detail: this }));
+                        THE_WINDOW.dispatchEvent(new CustomEvent('gg_streetview_ready', { detail: this }));
                     }
                 });
                 
                 // Trigger immediate mod reapplication when this new street view instance is created
                 console.debug('Google Maps: New Street View instance created, scheduling mod reapplication');
                 setTimeout(() => {
-                    window.dispatchEvent(new CustomEvent('gg_new_map_instance', { 
+                    THE_WINDOW.dispatchEvent(new CustomEvent('gg_new_map_instance', { 
                         detail: { type: '3d', streetView: this } 
                     }));
                 }, 100);

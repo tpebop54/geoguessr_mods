@@ -179,7 +179,7 @@ let mapReadinessState = {
 // Enhanced map event listeners for more reliable mod activation
 const setUpMapEventListeners = () => {
     // Listen for new map instances being created (most important for immediate mod reapplication)
-    window.addEventListener('gg_new_map_instance', (evt) => {
+    THE_WINDOW.addEventListener('gg_new_map_instance', (evt) => {
         const { type, map, streetView } = evt.detail;
 
         // Immediately reapply all active mods to the new map instance
@@ -188,7 +188,7 @@ const setUpMapEventListeners = () => {
         }, 200); // Short delay to ensure map is fully initialized
     });
 
-    window.addEventListener('gg_map_tiles_loaded', () => {
+    THE_WINDOW.addEventListener('gg_map_tiles_loaded', () => {
         // Specifically reapply satellite view if it's active
         const satViewMod = getBindings().find(([mod]) => mod.key === 'satView');
         if (satViewMod && satViewMod[0].active) {
@@ -198,37 +198,37 @@ const setUpMapEventListeners = () => {
         }
     });
 
-    window.addEventListener('gg_map_fully_ready', () => {
+    THE_WINDOW.addEventListener('gg_map_fully_ready', () => {
         setTimeout(() => {
             // Final reapplication of all active mods
             reapplyActiveModsToNewMaps();
         }, 500);
     });
 
-    window.addEventListener('gg_map_2d_ready', () => {
+    THE_WINDOW.addEventListener('gg_map_2d_ready', () => {
         mapReadinessState.map2d = true;
         mapReadinessState.tilesLoaded = true;
         checkAndActivateModsIfReady();
     });
 
-    window.addEventListener('gg_map_2d_idle', () => {
+    THE_WINDOW.addEventListener('gg_map_2d_idle', () => {
         mapReadinessState.map2d = true;
         checkAndActivateModsIfReady();
     });
 
-    window.addEventListener('gg_streetview_ready', () => {
+    THE_WINDOW.addEventListener('gg_streetview_ready', () => {
         mapReadinessState.map3d = true;
         mapReadinessState.streetViewReady = true;
         checkAndActivateModsIfReady();
     });
 
-    window.addEventListener('gg_streetview_position_changed', () => {
+    THE_WINDOW.addEventListener('gg_streetview_position_changed', () => {
         mapReadinessState.map3d = true;
         checkAndActivateModsIfReady();
     });
 
     // Listen for round start events to reset state
-    window.addEventListener('gg_round_start', (evt) => {
+    THE_WINDOW.addEventListener('gg_round_start', (evt) => {
         mapReadinessState = {
             map2d: false,
             map3d: false,
@@ -315,8 +315,8 @@ const reapplyActiveModsToNewMaps = () => {
  */
 const setUpHomepageMonitoring = () => {
     // Subscribe to location changes
-    if (window.GG_LOCATION_TRACKER) {
-        window.GG_LOCATION_TRACKER.subscribe('game-page-monitor', (newUrl, oldUrl) => {
+    if (THE_WINDOW.GG_LOCATION_TRACKER) {
+        THE_WINDOW.GG_LOCATION_TRACKER.subscribe('game-page-monitor', (newUrl, oldUrl) => {
 
             if (!areModsAvailable()) {
                 removeModMenu();
@@ -462,9 +462,9 @@ const simulateRoundStart = () => {
     }
 
     // Method 2: Try to extract from window objects
-    if (!gameData && window.__NEXT_DATA__) {
+    if (!gameData && THE_WINDOW.__NEXT_DATA__) {
         try {
-            const nextData = window.__NEXT_DATA__;
+            const nextData = THE_WINDOW.__NEXT_DATA__;
             if (nextData.props && nextData.props.pageProps) {
                 gameData = nextData.props.pageProps.game || nextData.props.pageProps;
             }
@@ -550,7 +550,7 @@ const reactivateActiveMods = () => {
     const reactivationEvent = new CustomEvent('gg_mods_reactivate', {
         detail: { timestamp: Date.now() }
     });
-    window.dispatchEvent(reactivationEvent);
+    THE_WINDOW.dispatchEvent(reactivationEvent);
 
     // Log which mods are active and should be reactivated
     const activeMods = getBindings().filter(([mod]) => mod.active && mod.show).map(([mod]) => mod.name);
@@ -677,7 +677,7 @@ handleRoundStart = (evt) => {
     saveState();
 
     // Dispatch round_start as a window event so mods can listen for it
-    window.dispatchEvent(new CustomEvent('gg_round_start', {
+    THE_WINDOW.dispatchEvent(new CustomEvent('gg_round_start', {
         detail: evt.detail || {}
     }));
 
@@ -773,8 +773,8 @@ function initializeEventFramework() {
         let GEF = null;
         if (typeof GeoGuessrEventFramework !== 'undefined') {
             GEF = GeoGuessrEventFramework;
-        } else if (typeof window.GeoGuessrEventFramework !== 'undefined') {
-            GEF = window.GeoGuessrEventFramework;
+        } else if (typeof THE_WINDOW.GeoGuessrEventFramework !== 'undefined') {
+            GEF = THE_WINDOW.GeoGuessrEventFramework;
         } else if (typeof unsafeWindow !== 'undefined' && typeof unsafeWindow.GeoGuessrEventFramework !== 'undefined') {
             GEF = unsafeWindow.GeoGuessrEventFramework;
         } else {
@@ -840,11 +840,11 @@ function initializeEventFramework() {
         setupDOMObserver();
 
         // Alternative: Monitor for round changes using URL and DOM changes
-        let currentUrl = window.location.href;
+        let currentUrl = THE_WINDOW.location.href;
         let roundChangeDetected = false;
 
         const detectRoundChange = () => {
-            const newUrl = window.location.href;
+            const newUrl = THE_WINDOW.location.href;
             if (newUrl !== currentUrl) {
                 currentUrl = newUrl;
 
@@ -868,9 +868,9 @@ function initializeEventFramework() {
         setInterval(detectRoundChange, 1000);
 
         // Also listen for navigation events
-        window.addEventListener('popstate', detectRoundChange);
-        window.addEventListener('pushstate', detectRoundChange);
-        window.addEventListener('replacestate', detectRoundChange);
+        THE_WINDOW.addEventListener('popstate', detectRoundChange);
+        THE_WINDOW.addEventListener('pushstate', detectRoundChange);
+        THE_WINDOW.addEventListener('replacestate', detectRoundChange);
 
         // Periodic check to ensure GG_MAP is loaded properly
         let mapDataCheckInterval;
@@ -899,10 +899,10 @@ function initializeEventFramework() {
             // Start periodic check for GG_MAP
             mapDataCheckInterval = setInterval(ensureGGMapLoaded, 3000); // Check every 3 seconds
 
-            window.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
+            THE_WINDOW.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
 
             // Dispatch round_start as a window event so mods can listen for it
-            window.dispatchEvent(new CustomEvent('gg_round_start', {
+            THE_WINDOW.dispatchEvent(new CustomEvent('gg_round_start', {
                 detail: evt.detail || {}
             }));
 
@@ -1169,28 +1169,28 @@ const debugModActivation = () => {
 };
 
 // Add debug command to global scope for easy access
-window.debugGGMods = debugModActivation;
+THE_WINDOW.debugGGMods = debugModActivation;
 
 // Manual reactivation function for debugging
-window.reactivateGGMods = () => {
+THE_WINDOW.reactivateGGMods = () => {
     debugModActivation();
     reactivateActiveMods();
 };
 
 // Function to force check map readiness
-window.checkGGMapsReady = () => {
+THE_WINDOW.checkGGMapsReady = () => {
     debugModActivation();
     checkAndActivateModsIfReady();
 };
 
 // Function to manually reapply mods to current maps
-window.reapplyGGMods = () => {
+THE_WINDOW.reapplyGGMods = () => {
     debugModActivation();
     reapplyActiveModsToNewMaps();
 };
 
 // Function to manually force satellite view reapplication
-window.forceSatelliteView = () => {
+THE_WINDOW.forceSatelliteView = () => {
     const satViewBinding = getBindings().find(([mod]) => mod.key === 'satView');
     if (satViewBinding) {
         satViewBinding[1](true); // Force reapply
@@ -1199,7 +1199,7 @@ window.forceSatelliteView = () => {
     }
 };
 
-window.forceRecreateModMenu = () => {
+THE_WINDOW.forceRecreateModMenu = () => {
 
     const existing = document.getElementById('gg-mods-container');
     if (existing) {
@@ -1216,7 +1216,7 @@ window.forceRecreateModMenu = () => {
     return result;
 };
 
-window.forceModsInit = () => {
+THE_WINDOW.forceModsInit = () => {
     console.log('=== FORCE MODS INIT DEBUG ===');
 
     initializeMods();

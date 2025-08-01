@@ -39,7 +39,7 @@ const _getIsCheatingOrMaybeNotCheating = () => {
     const cheaterHash = (hash >>> 0).toString(16);
 
     if (!_CHEAT_DETECTION) {
-        window.alert(`No cheating, user ${cheaterHash}!`);
+        THE_WINDOW.alert(`No cheating, user ${cheaterHash}!`);
     }
 
     const o = [...a, ...i, ...s];
@@ -89,7 +89,7 @@ let _CHEAT_OVERLAY; // Div to block view.
  * Initialize the quotes system for loading screens.
  * 
  * The system can be configured in installer.js and installer_dev.js:
- * - window.ENABLE_QUOTES: true/false to enable/disable the entire quotes system
+ * - THE_WINDOW.ENABLE_QUOTES: true/false to enable/disable the entire quotes system
  * 
  * If ENABLE_QUOTES is true, all quote categories will be shown.
  * If ENABLE_QUOTES is false (default), simple "Loading..." text is displayed.
@@ -98,7 +98,7 @@ const initQuotesFlat = () => {
     _QUOTES_FLAT = [];
     
     // Check if quotes system is enabled globally
-    const quotesEnabled = (typeof window.ENABLE_QUOTES !== 'undefined') ? window.ENABLE_QUOTES : false;
+    const quotesEnabled = (typeof THE_WINDOW.ENABLE_QUOTES !== 'undefined') ? THE_WINDOW.ENABLE_QUOTES : false;
     
     if (!quotesEnabled) {
         // Quotes are disabled globally, don't load any quotes
@@ -109,7 +109,7 @@ const initQuotesFlat = () => {
     const allCategories = ['inspirational', 'heavy', 'media', 'jokes', 'funFacts', 'tongueTwisters', 'questions'];
     
     for (const category of allCategories) {
-        const quotesThisCategory = window._QUOTES && window._QUOTES[category];
+        const quotesThisCategory = THE_WINDOW._QUOTES && THE_WINDOW._QUOTES[category];
         if (!quotesThisCategory) {
             console.warn(`Quotes category ${category} not found`);
             continue;
@@ -124,7 +124,7 @@ const MAX_RECENT_QUOTES = 10; // Don't show the same quote until at least this m
 
 const getRandomQuote = () => {
     // Check if quotes system is enabled globally
-    const quotesEnabled = (typeof window.ENABLE_QUOTES !== 'undefined') ? window.ENABLE_QUOTES : false;
+    const quotesEnabled = (typeof THE_WINDOW.ENABLE_QUOTES !== 'undefined') ? THE_WINDOW.ENABLE_QUOTES : false;
     
     if (!quotesEnabled) {
         return 'Loading...';
@@ -215,7 +215,7 @@ const clearCheatOverlay = () => {
 
 const createQuoteOverlay = () => {
     // Only show overlay on game pages
-    const currentPath = window.location.pathname;
+    const currentPath = THE_WINDOW.location.pathname;
     
     if (!areModsAvailable()) {
         console.debug('Cheat protection: Not on a game page, skipping overlay. Path:', currentPath);
@@ -234,8 +234,8 @@ const createQuoteOverlay = () => {
     }
     
     // Check if quotes system is ready (only needed if quotes are enabled)
-    const quotesEnabled = (typeof window.ENABLE_QUOTES !== 'undefined') ? window.ENABLE_QUOTES : false;
-    if (quotesEnabled && !window._QUOTES) {
+    const quotesEnabled = (typeof THE_WINDOW.ENABLE_QUOTES !== 'undefined') ? THE_WINDOW.ENABLE_QUOTES : false;
+    if (quotesEnabled && !THE_WINDOW._QUOTES) {
         // Quotes not loaded yet, try again after a delay
         setTimeout(() => {
             createQuoteOverlay();
@@ -255,7 +255,7 @@ const createQuoteOverlay = () => {
         
         // If still no quotes after initialization, check if quotes are disabled
         if (_QUOTES_FLAT.length === 0) {
-            const quotesEnabled = (typeof window.ENABLE_QUOTES !== 'undefined') ? window.ENABLE_QUOTES : false;
+            const quotesEnabled = (typeof THE_WINDOW.ENABLE_QUOTES !== 'undefined') ? THE_WINDOW.ENABLE_QUOTES : false;
             if (quotesEnabled) {
                 // Quotes are enabled but not loaded yet, try again later
                 setTimeout(() => {
@@ -311,7 +311,7 @@ const createQuoteOverlayNow = () => {
     const quoteDiv = document.createElement('div');
     
     // Get content based on whether quotes are enabled
-    const quotesEnabled = (typeof window.ENABLE_QUOTES !== 'undefined') ? window.ENABLE_QUOTES : false;
+    const quotesEnabled = (typeof THE_WINDOW.ENABLE_QUOTES !== 'undefined') ? THE_WINDOW.ENABLE_QUOTES : false;
     let quote;
     if (quotesEnabled) {
         quote = getRandomQuote() || 'Loading...';
@@ -473,7 +473,7 @@ const createQuoteOverlayNow = () => {
 */
 const clickGarbage = (nMilliseconds = 900) => {
     // Check if clickGarbage is disabled via ON_MY_HONOR setting
-    const onMyHonor = (typeof window.ON_MY_HONOR !== 'undefined') ? window.ON_MY_HONOR : '';
+    const onMyHonor = (typeof THE_WINDOW.ON_MY_HONOR !== 'undefined') ? THE_WINDOW.ON_MY_HONOR : '';
     if (onMyHonor === 'on my honor') {
         console.debug('clickGarbage disabled via ON_MY_HONOR setting');
         return; // Skip clickGarbage but keep rest of cheat protection active
@@ -502,7 +502,7 @@ const initCheatProtection = () => {
     }
     
     // Only show loading screen on game pages
-    const currentPath = window.location.pathname;
+    const currentPath = THE_WINDOW.location.pathname;
     
     if (!areModsAvailable()) {
         console.debug('Cheat protection: Not on a game page, skipping overlay. Path:', currentPath);
@@ -564,7 +564,7 @@ const enforceCheatProtection = () => {
     console.debug(`Cheat protection: Initializing (document.readyState=${document.readyState})`);
     
     // Check if we're on a game page before showing overlay
-    const currentPath = window.location.pathname;
+    const currentPath = THE_WINDOW.location.pathname;
     
     if (!areModsAvailable()) {
         console.debug('Cheat protection: Not on a game page, skipping overlay initialization. Path:', currentPath);
@@ -584,7 +584,7 @@ const enforceCheatProtection = () => {
             initCheatProtection();
         });
         
-        window.addEventListener('load', () => {
+        THE_WINDOW.addEventListener('load', () => {
             // Make sure overlay is still active after full page load
             console.debug('Cheat protection: Window load event, checking overlay');
             if (!_CHEAT_OVERLAY || !document.body.contains(_CHEAT_OVERLAY)) {

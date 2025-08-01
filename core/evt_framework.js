@@ -102,7 +102,7 @@ const THE_WINDOW = unsafeWindow || window;
             }
         }
         loadState() {
-            let data = window.localStorage.getItem('GeoGuessrEventFramework_STATE');
+            let data = THE_WINDOW.localStorage.getItem('GeoGuessrEventFramework_STATE');
             if (!data) {
                 return;
             }
@@ -114,7 +114,7 @@ const THE_WINDOW = unsafeWindow || window;
             this.saveState();
         }
         saveState() {
-            window.localStorage.setItem('GeoGuessrEventFramework_STATE', JSON.stringify(this.state));
+            THE_WINDOW.localStorage.setItem('GeoGuessrEventFramework_STATE', JSON.stringify(this.state));
         }
         hex2a(hexx) {
             const hex = hexx.toString(); //force conversion

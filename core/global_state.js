@@ -9,12 +9,12 @@
 let GOOGLE_STREETVIEW, GOOGLE_MAP, GOOGLE_SVC; // Assigned in the google API portion of the script.
 let PREV_GOOGLE_STREETVIEW_POV, PREV_GOOGLE_STREETVIEW_POSITION; // Stored state of streetview POV and position, used to detect if either has changed.s
 
-const STATE_KEY = 'gg_state'; // Key in window.localStorage.
+const STATE_KEY = 'gg_state'; // Key in THE_WINDOW.localStorage.
 
 const saveState = () => {
     try {
         const stateToSave = JSON.stringify(MODS);
-        window.localStorage.setItem(STATE_KEY, stateToSave);
+        THE_WINDOW.localStorage.setItem(STATE_KEY, stateToSave);
         console.debug('Saved state to localStorage with mods:', Object.keys(MODS));
         
         // Add detailed logging for active states
@@ -25,7 +25,7 @@ const saveState = () => {
         console.debug('Active mod states saved:', activeStates);
         
         // Verify the save worked by reading it back
-        const verification = window.localStorage.getItem(STATE_KEY);
+        const verification = THE_WINDOW.localStorage.getItem(STATE_KEY);
         if (verification === stateToSave) {
             console.debug('State save verification: SUCCESS');
         } else {
@@ -37,12 +37,12 @@ const saveState = () => {
 };
 
 const clearState = () => {
-    window.localStorage.removeItem(STATE_KEY);
+    THE_WINDOW.localStorage.removeItem(STATE_KEY);
     console.debug('Cleared state from localStorage');
 };
 
 const loadState = () => { // Load state from local storage if it exists, else use default.
-    const stateStr = window.localStorage.getItem(STATE_KEY);
+    const stateStr = THE_WINDOW.localStorage.getItem(STATE_KEY);
     
     let storedState;
     try {
@@ -138,7 +138,7 @@ const verifyDisplayOptions = () => {
 
 // Call verification after state is loaded
 const originalLoadState = loadState;
-window.loadState = function() {
+THE_WINDOW.loadState = function() {
     const result = originalLoadState.apply(this, arguments);
     
     // Verify display options specifically

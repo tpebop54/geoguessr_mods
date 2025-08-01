@@ -7,7 +7,7 @@ class LocationTracker {
     constructor() {
         this.subscribers = new Map(); // Map of trackerId -> callback function
         this.intervals = new Map();   // Map of trackerId -> interval ID
-        this.lastKnownUrl = window.location.href;
+        this.lastKnownUrl = THE_WINDOW.location.href;
         this.isGlobalTracking = false;
         this.globalInterval = null;
     }
@@ -25,7 +25,7 @@ class LocationTracker {
 
         this.subscribers.set(trackerId, {
             callback: callback,
-            lastUrl: window.location.href
+            lastUrl: THE_WINDOW.location.href
         });
 
         // Start individual polling for this subscriber
@@ -62,7 +62,7 @@ class LocationTracker {
         const subscriber = this.subscribers.get(trackerId);
         if (!subscriber) return;
 
-        const currentUrl = window.location.href;
+        const currentUrl = THE_WINDOW.location.href;
         if (currentUrl !== subscriber.lastUrl) {
             console.debug(`Location change detected for '${trackerId}': ${subscriber.lastUrl} -> ${currentUrl}`);
             subscriber.lastUrl = currentUrl;
@@ -84,7 +84,7 @@ class LocationTracker {
 
         this.isGlobalTracking = true;
         this.globalInterval = setInterval(() => {
-            const currentUrl = window.location.href;
+            const currentUrl = THE_WINDOW.location.href;
             if (currentUrl !== this.lastKnownUrl) {
                 const previousUrl = this.lastKnownUrl;
                 this.lastKnownUrl = currentUrl;
@@ -122,7 +122,7 @@ class LocationTracker {
      * Get the current URL
      */
     getCurrentUrl() {
-        return window.location.href;
+        return THE_WINDOW.location.href;
     }
 
     /**
@@ -178,8 +178,8 @@ class LocationTracker {
 }
 
 // Create global instance
-if (typeof window.GG_LOCATION_TRACKER === 'undefined') {
-    window.GG_LOCATION_TRACKER = new LocationTracker();
+if (typeof THE_WINDOW.GG_LOCATION_TRACKER === 'undefined') {
+    THE_WINDOW.GG_LOCATION_TRACKER = new LocationTracker();
     console.debug('Global location tracker initialized');
 }
 

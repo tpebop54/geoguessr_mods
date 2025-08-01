@@ -15,7 +15,7 @@ const _MERCATOR_LNG_MAX = 180;
 
 // True if solo game or live challenge. 
 const areModsAvailable = (path) => {
-    path = path || window.location.pathname;
+    path = path || THE_WINDOW.location.pathname;
     if (path.includes('/multiplayer') && ON_MY_HONOR.toLowerCase() !== 'on my honor') {
         return false;
     }
@@ -791,8 +791,8 @@ const buildGoogleApiUrl = (baseUrl, params = {}) => {
     const url = new URL(baseUrl);
     
     // Add API key if available
-    if (window.GOOGLE_MAPS_API_KEY && window.GOOGLE_MAPS_API_KEY.trim() !== '') {
-        url.searchParams.set('key', window.GOOGLE_MAPS_API_KEY);
+    if (THE_WINDOW.GOOGLE_MAPS_API_KEY && THE_WINDOW.GOOGLE_MAPS_API_KEY.trim() !== '') {
+        url.searchParams.set('key', THE_WINDOW.GOOGLE_MAPS_API_KEY);
     }
     
     // Add additional parameters
@@ -808,9 +808,9 @@ const buildGoogleApiUrl = (baseUrl, params = {}) => {
  * @returns {boolean} True if API key is configured
  */
 const hasGoogleApiKey = () => {
-    return window.GOOGLE_MAPS_API_KEY && 
-           window.GOOGLE_MAPS_API_KEY.trim() !== '' && 
-           window.GOOGLE_MAPS_API_KEY.length > 10; // Basic validation
+    return THE_WINDOW.GOOGLE_MAPS_API_KEY && 
+           THE_WINDOW.GOOGLE_MAPS_API_KEY.trim() !== '' && 
+           THE_WINDOW.GOOGLE_MAPS_API_KEY.length > 10; // Basic validation
 };
 
 /**
@@ -839,8 +839,8 @@ const validateGoogleApiKey = (apiKey) => {
  * Initialize and validate the Google Maps API key
  */
 const initializeGoogleApiKey = () => {
-    if (window.GOOGLE_MAPS_API_KEY && window.GOOGLE_MAPS_API_KEY.trim() !== '') {
-        const apiKey = window.GOOGLE_MAPS_API_KEY.trim();
+    if (THE_WINDOW.GOOGLE_MAPS_API_KEY && THE_WINDOW.GOOGLE_MAPS_API_KEY.trim() !== '') {
+        const apiKey = THE_WINDOW.GOOGLE_MAPS_API_KEY.trim();
         
         if (validateGoogleApiKey(apiKey)) {
             return true;
@@ -856,7 +856,7 @@ const initializeGoogleApiKey = () => {
 
 // Initialize API key on load
 if (typeof window !== 'undefined') {
-    window.addEventListener('load', () => {
+    THE_WINDOW.addEventListener('load', () => {
         setTimeout(initializeGoogleApiKey, 1000);
     });
 }
@@ -1336,7 +1336,7 @@ if (typeof window !== 'undefined') {
      * Usage: perfectScoreOdds() - calculates for current game
      * Usage: perfectScoreOdds(lat, lng) - calculates for specific location
      */
-    window.perfectScoreOdds = async (lat = null, lng = null) => {
+    THE_WINDOW.perfectScoreOdds = async (lat = null, lng = null) => {
         try {
             let result;
             
@@ -1378,7 +1378,7 @@ if (typeof window !== 'undefined') {
     /**
      * Show detailed score analysis for current game
      */
-    window.scoreAnalysis = async () => {
+    THE_WINDOW.scoreAnalysis = async () => {
         try {
             const result = await perfectScoreOdds();
             if (!result) return;
