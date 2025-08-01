@@ -11,7 +11,7 @@ let _BINDINGS = null;
 
 // Lazy initialize bindings to avoid dependency loading issues
 const getBindings = () => {
-    if (_BINDINGS === null) {
+    if (_BINDINGS == null || _BINDINGS.length === 0) {
         try {
             _BINDINGS = [
                 [MODS.satView, updateSatView],
@@ -36,8 +36,6 @@ const getBindings = () => {
 };
 
 const bindButtons = () => {
-    let boundCount = 0;
-
     for (const [mod, callback] of getBindings()) {
         if (!mod.show) {
             continue;
@@ -52,7 +50,6 @@ const bindButtons = () => {
         });
         button._isBound = true;
         UPDATE_CALLBACKS[mod.key] = callback;
-        boundCount++;
     }
     _MODS_LOADED = true;
 };
@@ -167,7 +164,7 @@ const disableModsAsNeeded = () => {
 // Initialize the mod system.
 // ===============================================================================================================================
 
-const MAP_STATE = {
+let MAP_STATE = {
     map2d: false,
     map3d: false,
     streetViewReady: false,
@@ -269,12 +266,7 @@ const reapplyActiveModsToNewMaps = () => {
     });
 };
 
-// Global keyboard shortcuts - moved to dom_utils.js
-// ===============================================================================================================================
-
-/**
- * Monitor URL changes and handle game page logic
- */
+// Monitor URL changes and handle game page logic
 const setUpHomepageMonitoring = () => {
     // Subscribe to location changes
     if (THE_WINDOW.GG_LOCATION_TRACKER) {
@@ -328,15 +320,12 @@ const waitForReactHydration = () => {
 };
 
 // Activate mods that were loaded from localStorage
-const activateLoadedMods = () => {
-    console.debug('activateLoadedMods: Starting activation of saved mods...');
-    
+const activateLoadedMods = () => {    
     try {
         for (const [mod, callback] of getBindings()) {
             if (mod.show && mod.active) {
-                console.debug(`activateLoadedMods: Activating mod ${mod.name} (was active in localStorage)`);
                 try {
-                    callback(true); // Pass true to indicate this is state restoration, not user click
+                    callback(true); // True because it was loaded from state.
                 } catch (err) {
                     console.error(`activateLoadedMods: Error activating mod ${mod.name}:`, err);
                 }

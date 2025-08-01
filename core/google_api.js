@@ -6,7 +6,7 @@
 // Intercept google maps API files so we can add custom map behavior. Configure GeoGuessr framework.
 // ===============================================================================================================================
 
-// Script injection, extracted from unityscript extracted from extenssr:
+// Script injection, extracted from extenssr:
 // https://gitlab.com/nonreviad/extenssr/-/blob/main/src/injected_scripts/maps_api_injecter.ts
 const overrideOnLoad = (googleScript, observer, overrider) => {
     const oldOnload = googleScript.onload;
@@ -43,22 +43,6 @@ const injecter = (overrider) => {
     }).observe(document.documentElement, { childList: true, subtree: true });
 };
 
-const initMods = () => { // Enable mods that were already enabled via localStorage.
-    if (!getBindings) {
-        setTimeout(initMods, 500);
-        return;
-    }
-    for (const [mod, callback] of getBindings()) {
-        if (mod.show && isModActive(mod)) {
-            try {
-                callback(true);
-            } catch (err) {
-                console.error(err);
-            }
-        }
-    }
-};
-
 const onMapClick = (evt) => {
     const lat = evt.latLng.lat();
     const lng = evt.latLng.lng();
@@ -82,8 +66,7 @@ const initGoogle = () => {
     });
 };
 
-// Initialize Google Maps API interception and setup
-const initializeGoogleMapsIntegration = () => {
+const initGmapsIntegration = () => {
     document.addEventListener('ggCoordinates', (evt) => { // Used for duels.
         GG_LOC = evt.detail;
     });
@@ -173,7 +156,6 @@ const initializeGoogleMapsIntegration = () => {
                 super(...args);
                 GOOGLE_STREETVIEW = this;
 
-                // Add event listeners for Street View readiness
                 google.maps.event.addListener(this, 'position_changed', () => {
                     console.debug('Google Maps: Street View position changed');
                     THE_WINDOW.dispatchEvent(new CustomEvent('gg_streetview_position_changed', { detail: this }));
@@ -193,7 +175,7 @@ const initializeGoogleMapsIntegration = () => {
                 });
 
                 // Trigger immediate mod reapplication when this new street view instance is created
-                console.debug('Google Maps: New Street View instance created, scheduling mod reapplication');
+                console.debug('Google Maps: New Street View instance created');
                 setTimeout(() => {
                     THE_WINDOW.dispatchEvent(new CustomEvent('gg_new_map_instance', {
                         detail: { type: '3d', streetView: this }
@@ -230,7 +212,7 @@ const initializeGoogleMapsIntegration = () => {
                 const map3dReady = GOOGLE_STREETVIEW && isMapReady(GOOGLE_STREETVIEW);
                 if (map2dReady && map3dReady) {
                     clearInterval(checkInterval);
-                    callback(true); // Pass true to indicate this is automatic activation
+                    callback(true);
                     return;
                 }
                 if (Date.now() - startTime > timeout) {
@@ -240,17 +222,15 @@ const initializeGoogleMapsIntegration = () => {
             }, intervalMs);
         };
 
-        waitForMapsToLoad(initMods);
+        waitForMapsToLoad(loadState);
         waitForMapsToLoad(() => {
             fixFormatting();
             if (DEBUG) {
                 addDebugger();
             }
-            // Call clickGarbage as part of cheat protection - this should be called after maps are loaded
-            // This messes up replay files as an anti-cheat measure
             if (_CHEAT_DETECTION) {
                 setTimeout(() => {
-                    clickGarbage(900); // Give maps a moment to fully settle before clicking garbage
+                    clickGarbage(900);
                 }, 500);
             }
         });
@@ -260,7 +240,7 @@ const initializeGoogleMapsIntegration = () => {
 
 // Start the Google Maps integration when DOM is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeGoogleMapsIntegration);
+    document.addEventListener('DOMContentLoaded', initGmapsIntegration);
 } else {
-    initializeGoogleMapsIntegration();
+    initGmapsIntegration();
 }
