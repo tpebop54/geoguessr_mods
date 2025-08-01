@@ -400,28 +400,16 @@ const initializeMods = async () => {
     }
 };
 
-document.addEventListener('gg_maps_ready', () => { 
-    debugger
+document.addEventListener('gg_maps_ready', () => {
+initializeMods().catch(err => {
+    console.error('Mod initialization failed:', err);
 });
-
-// Start initialization when DOM is ready, but wait for React hydration
-if (document.readyState === 'loading') {
-    document.addEventListener('gg_maps_ready', () => {
-        initializeMods().catch(err => {
-            console.error('Mod nitialization failed:', err);
-        });
-    });
-} else {
-    initializeMods().catch(err => {
-        console.error('Mod nitialization failed:', err);
-    });
-}
 
 // Global variables and functions for round detection
 let handleRoundStart, fetchMapDataWithRetry, mapDataCheckInterval;
 
 const simulateRoundStart = () => {
-    // Try to get game data from various sources
+    // Try to get game data from various sources.
     let gameData = null;
 
     // Method 1: Check if GEF has current game data
@@ -447,7 +435,6 @@ const simulateRoundStart = () => {
     }
 };
 
-// Enhanced map data fetching with retry logic
 fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) => {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
