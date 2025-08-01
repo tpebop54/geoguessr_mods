@@ -401,9 +401,7 @@ const initializeMods = async () => {
 };
 
 document.addEventListener('gg_maps_ready', () => {
-    initializeMods().catch(err => {
-        console.error('Mod initialization failed:', err);
-    });
+    initializeMods();
 });
 
 // Global variables and functions for round detection
