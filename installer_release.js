@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Tpebop's GeoGuessr Mods (RELEASE 1.0.12)
+// @name         Tpebop's GeoGuessr Mods (RELEASE 1.0.13)
 // @description  Various mods to make the game interesting in various ways
-// @version      1.0.12
+// @version      1.0.13
 // @author       tpebop
 // @match        *://*.geoguessr.com/*
 // @icon         https://www.google.com/s2/favicons?domain=geoguessr.com
@@ -12,34 +12,34 @@
 // @updateURL    https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/installer_release.js
 // @downloadURL  https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/installer_release.js
 
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/_version.js?v=1.0.12
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/evt_framework.js?v=1.0.12
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/location_tracker.js?v=1.0.12
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/quotes.js?v=1.0.12
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/coordinate_extractor.js?v=1.0.12
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/debug_utils.js?v=1.0.12
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/dom_utils.js?v=1.0.12
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/mod_config.js?v=1.0.12
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/global_state.js?v=1.0.12
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/mod_utils.js?v=1.0.12
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/google_api.js?v=1.0.12
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/styling.js?v=1.0.12
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/cheat_protection.js?v=1.0.12
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/_version.js?v=1.0.13
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/evt_framework.js?v=1.0.13
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/location_tracker.js?v=1.0.13
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/quotes.js?v=1.0.13
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/coordinate_extractor.js?v=1.0.13
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/debug_utils.js?v=1.0.13
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/dom_utils.js?v=1.0.13
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/mod_config.js?v=1.0.13
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/global_state.js?v=1.0.13
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/mod_utils.js?v=1.0.13
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/google_api.js?v=1.0.13
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/styling.js?v=1.0.13
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/cheat_protection.js?v=1.0.13
 
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/satellite.js?v=1.0.12
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/rotate.js?v=1.0.12
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/zoom.js?v=1.0.12
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/score.js?v=1.0.12
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/flashlight.js?v=1.0.12
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/bopit.js?v=1.0.12
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/inframe.js?v=1.0.12
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/lottery.js?v=1.0.12
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/puzzle.js?v=1.0.12
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/tilereveal.js?v=1.0.12
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/display.js?v=1.0.12
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/scratch.js?v=1.0.12
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/satellite.js?v=1.0.13
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/rotate.js?v=1.0.13
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/zoom.js?v=1.0.13
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/score.js?v=1.0.13
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/flashlight.js?v=1.0.13
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/bopit.js?v=1.0.13
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/inframe.js?v=1.0.13
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/lottery.js?v=1.0.13
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/puzzle.js?v=1.0.13
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/tilereveal.js?v=1.0.13
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/display.js?v=1.0.13
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/scratch.js?v=1.0.13
 
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/script_bindings.js?v=1.0.12
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/script_bindings.js?v=1.0.13
 
 // ==/UserScript==
 
