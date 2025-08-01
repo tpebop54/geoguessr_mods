@@ -3,26 +3,13 @@
 
 // ==/UserScript==
 
-// Browser detection for conditional mod disabling.
-// This is required because Opera has issues with vector rendering of the 2D map, so they are totally unworkable in Opera.
-// ===============================================================================================================================
-
-const _isOpera = () => {
-    return (!!THE_WINDOW.opr && !!opr.addons) || !!THE_WINDOW.opera || navigator.userAgent.indexOf(' OPR/') >= 0;
-};
-
-const IS_OPERA = _isOpera();
-
-const valueUnlessOpera = (value = true) => {
-    if (IS_OPERA) {
-        return false;
-    }
-    return !!value;
-};
-
-
 // Mods available in this script.
 // ===============================================================================================================================
+
+const _isOpera = () => { // Opera can't render the 2D map as vector, so disable mods that require that.
+    return (!!THE_WINDOW.opr && !!opr.addons) || !!THE_WINDOW.opera || navigator.userAgent.indexOf(' OPR/') >= 0;
+};
+const IS_OPERA = _isOpera();
 
 const MODS = {
 
@@ -36,11 +23,10 @@ const MODS = {
     },
 
     rotateMap: {
-        show: valueUnlessOpera(true),
+        show: !IS_OPERA,
         key: 'rotate-map',
         name: 'Map Rotation',
         tooltip: 'Makes the guess map rotate while you are trying to click.',
-        disableInOpera: true, // Disable in Opera due to WebGL/Vector rendering issues
         options: {
             every: {
                 label: 'Run Every (s)',
@@ -262,25 +248,8 @@ const MODS = {
 
 };
 
-// Apply Opera-specific mod disabling
-// ===============================================================================================================================
-
-if (IS_OPERA) {
-    let disabledCount = 0;
-
-    for (const [modKey, mod] of Object.entries(MODS)) {
-        if (mod.disableInOpera) {
-            const wasEnabled = mod.enabled;
-            mod.show = false;
-            mod.enabled = false;
-            mod.tooltip = `${mod.tooltip} [DISABLED IN OPERA]`;
-            disabledCount++;
-        }
-    }
-}
-
 // Default configuration for options restoration
-const GG_DEFAULT = {} // Used for default options and restoring options.
+const GG_DEFAULT = {}
 for (const mod of Object.values(MODS)) {
     GG_DEFAULT[mod.key] = JSON.parse(JSON.stringify(mod));
 }
