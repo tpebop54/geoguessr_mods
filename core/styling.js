@@ -23,7 +23,7 @@ const modContainerStyles = `
     #gg-mods-container {
         position: absolute;
         width: 200px;
-        top: 54px;
+        top: 34px;
         left: 20px;
         z-index: 9;
         display: flex;

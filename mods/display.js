@@ -305,11 +305,10 @@ THE_WINDOW.addEventListener('gg_round_start', (evt) => {
 });
 
 THE_WINDOW.addEventListener('gg_mods_reactivate', (evt) => {
-    console.debug('Display mod: Mod reactivation event detected');
     const mod = MODS.displayOptions;
     if (isModActive(mod)) {
         setTimeout(() => {
-            updateDisplayOptions(true); // Force reapplication
+            updateDisplayOptions(true);
         }, 500);
     }
 });

@@ -523,7 +523,7 @@ const initCheatProtection = () => {
 };
 
 // Cheat protection enforcement
-const enforceCheatProtection = () => {
+const addCheatProtection = () => {
     _CHEAT_DETECTION = true; // I freaking dare you.
     
     if (!_CHEAT_DETECTION) {

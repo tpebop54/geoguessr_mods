@@ -296,7 +296,7 @@ const startTileRevealLocationTracking = () => {
                 console.debug('TileReveal: Mod reactivation event received - resetting tiles');
                 setTimeout(() => {
                     resetTileReveal();
-                }, 100); // Very short delay
+                }, 100);
             } else {
                 console.debug('TileReveal: TileReveal mod is not active - skipping reset');
             }

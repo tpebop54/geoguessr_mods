@@ -108,7 +108,7 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
         modsContainer.appendChild(headerContainer);
         modsContainer.appendChild(buttonContainer);
 
-        const addContainerSafely = () => {
+        const addButtonContainer = () => {
             if (!document.getElementById('gg-mods-container')) {
                 bigMapContainer.appendChild(modsContainer);
                 const verifyContainer = document.getElementById('gg-mods-container');
@@ -122,9 +122,6 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
             }
         };
 
-        // Add container with a small delay to avoid React hydration conflicts
-        setTimeout(addContainerSafely, 100);
-
         modMenuToggle.addEventListener('click', function () {
             if (buttonContainer.classList.contains('hidden')) {
                 buttonContainer.classList.remove('hidden');
@@ -134,6 +131,8 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
                 modMenuToggle.textContent = '▶';
             }
         });
+
+        setTimeout(addButtonContainer, 100);
 
         return true;
     } catch (err) {
@@ -227,26 +226,6 @@ const setUpMapEventListeners = () => {
     });
 };
 
-const bothMapsReady = MAP_STATE.map2d && MAP_STATE.map3d;
-if (bothMapsReady) {
-
-    setTimeout(() => {
-        if (!getModDiv()) {
-            addButtons();
-            bindButtons();
-        }
-        for (const [mod, callback] of getBindings()) {
-            if (mod.active && mod.show) {
-                try {
-                    callback(true);
-                } catch (err) {
-                    console.error(`Error in event-triggered reactivation of mod ${mod.name}:`, err);
-                }
-            }
-        }
-    }, 1000);
-};
-
 const reapplyActiveModsToNewMaps = () => {
     const activeMods = getBindings().filter(([mod]) => mod.active && mod.show);
     if (activeMods.length === 0) {
@@ -254,7 +233,6 @@ const reapplyActiveModsToNewMaps = () => {
     }
     if (!getModDiv()) {
         addButtons();
-        bindButtons();
     }
     activeMods.forEach(([mod, callback]) => {
         try {
@@ -265,88 +243,34 @@ const reapplyActiveModsToNewMaps = () => {
     });
 };
 
-// Monitor URL changes and handle game page logic
-const setUpHomepageMonitoring = () => {
-    // Subscribe to location changes
-    if (THE_WINDOW.GG_LOCATION_TRACKER) {
-        THE_WINDOW.GG_LOCATION_TRACKER.subscribe('game-page-monitor', (newUrl, oldUrl) => {
 
-            if (!areModsAvailable()) {
-                removeModMenu();
-
-                // Disable all mods temporarily
-                const allMods = Object.values(MODS);
-                disableMods(allMods, false);
-            } else if (oldUrl) {
-                const oldPath = new URL(oldUrl).pathname;
-                const wasGamePage = areModsAvailable(oldPath);
-                if (!wasGamePage) {
-                    // Navigated to game page from non-game page - mods can be active again
-                    // The normal initialization process will handle re-creating the menu
-                }
-            }
-        }, 1000); // Check every second
-    }
-};
-
-// Wait for React hydration to complete before initializing
-const waitForReactHydration = () => {
-    return new Promise((resolve) => {
-        // Check if React has finished hydrating
-        const checkHydration = () => {
-            // Look for signs that React has finished hydrating
-            const reactRoot = document.querySelector('#__next');
-            if (!reactRoot) {
-                // React root not found yet, wait longer
-                setTimeout(checkHydration, 100);
-                return;
-            }
-
-            // Check if React has added its event listeners (sign of hydration completion)
-            const hasReactListeners = reactRoot._reactInternalFiber ||
-                reactRoot._reactInternalInstance ||
-                reactRoot._reactInternals ||
-                reactRoot.__reactInternalInstance;
-
-            if (hasReactListeners) {
-                resolve();
-            } else {
-                setTimeout(checkHydration, 100);
-            }
-        };
-        setTimeout(checkHydration, 500);
-    });
-};
-
-// Activate mods that were loaded from localStorage
+// Refresh state from localStorage and activate mods.
 const activateLoadedMods = () => {
-    try {
-        for (const [mod, callback] of getBindings()) {
-            if (mod.show && mod.active) {
-                try {
-                    callback(true); // True because it was loaded from state.
-                } catch (err) {
-                    console.error(`activateLoadedMods: Error activating mod ${mod.name}:`, err);
-                }
+    for (const [mod, callback] of getBindings()) {
+        if (mod.show && mod.active) {
+            try {
+                callback(true); // True because it was loaded from state.
+            } catch (err) {
+                console.error(`activateLoadedMods: Error activating mod ${mod.name}:`, err);
             }
         }
-        console.debug('activateLoadedMods: Completed mod activation');
-    } catch (err) {
-        console.error('activateLoadedMods: Error during mod activation:', err);
     }
 };
 
-// Initialize when DOM is ready and React has hydrated
 const initializeMods = async () => {
+    const mapsReady = MAP_STATE.map2d && MAP_STATE.map3d;
+    if (!mapsReady) {
+        console.debug(`Maps not loaded yet; can't activate mods.`);
+        setTimeout(initializeMods, 300);
+    }
+
     try {
-        await waitForReactHydration();
-        addButtons();
-        setUpMapEventListeners();
-        setUpHomepageMonitoring();
-        enforceCheatProtection();
-        loadState(); // From localStorage, if available.
+        loadState(); // From localStorage, if available
         disableModsAsNeeded();
         activateLoadedMods();
+        setUpMapEventListeners();
+        addCheatProtection();
+        addButtons();
         fixFormatting();
 
         if (_CHEAT_DETECTION) {
@@ -363,7 +287,6 @@ const initializeMods = async () => {
         const observer = new MutationObserver(() => {
             try {
                 addButtons();
-                bindButtons();
             } catch (err) {
                 console.error(err);
             }
@@ -374,7 +297,6 @@ const initializeMods = async () => {
         if (nextElement) {
             observer.observe(nextElement, { subtree: true, childList: true });
             addButtons();
-            bindButtons();
         } else {
             const alternatives = ['#root', 'body', 'main'];
             let foundElement = null;
@@ -390,7 +312,6 @@ const initializeMods = async () => {
             if (foundElement) {
                 observer.observe(foundElement, { subtree: true, childList: true });
                 addButtons();
-                bindButtons();
             } else {
                 setTimeout(initializeMods, 1000);
             }
@@ -413,14 +334,14 @@ let handleRoundStart, fetchMapDataWithRetry, mapDataCheckInterval;
 
 const simulateRoundStart = () => {
     // Try to get game data from various sources.
-    let gameData = null;
+    let gameData;
 
     // Method 1: Check if GEF has current game data
     if (typeof GeoGuessrEventFramework !== 'undefined' && GeoGuessrEventFramework.game) {
         gameData = GeoGuessrEventFramework.game;
     }
 
-    // Method 2: Try to extract from window objects
+    // Method 2: Try to extract from window objects - TODO: can this be removed?
     if (!gameData && THE_WINDOW.__NEXT_DATA__) {
         try {
             const nextData = THE_WINDOW.__NEXT_DATA__;
@@ -439,37 +360,30 @@ const simulateRoundStart = () => {
 };
 
 fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) => {
-
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
             const response = await fetch(`https://www.geoguessr.com/api/maps/${mapId}`, {
-                signal: controller.signal
+                signal: controller.signal,
             });
             clearTimeout(timeoutId);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-
             const data = await response.json();
-
-            // Validate that we got the expected data structure
-            if (!data || typeof data.maxErrorDistance === 'undefined') {
+            if (!data) {
                 throw new Error(`Invalid map data structure received. Data: ${JSON.stringify(data)}`);
             }
-
             GG_MAP = data;
             return data;
 
         } catch (err) {
             console.warn(`GeoGuessr MultiMod: Map data fetch attempt ${attempt} failed:`, err);
-
             if (attempt === maxRetries) {
                 console.error('GeoGuessr MultiMod: Failed to fetch map data after all retries:', err);
-                // Set a fallback GG_MAP with reasonable defaults
+                // Set a fallback GG_MAP
                 GG_MAP = {
                     id: mapId,
                     maxErrorDistance: 20015086, // Default world map max distance in meters
@@ -479,14 +393,17 @@ fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) => {
                 console.warn('GeoGuessr MultiMod: Using fallback GG_MAP:', GG_MAP);
                 throw err;
             }
-
-            // Wait before retrying
             if (attempt < maxRetries) {
                 await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
             }
         }
     }
 };
+
+
+// TODO: reduce bloat below this point -----------------------------------------------------------------------------------
+
+
 
 // Periodic check to ensure GG_MAP is loaded properly
 const ensureGGMapLoaded = () => {
@@ -501,7 +418,7 @@ const ensureGGMapLoaded = () => {
     }
 };
 
-// Function to reactivate all currently active mods
+
 const reactivateActiveMods = () => {
 
     // Dispatch a custom event that mods can listen for
@@ -510,42 +427,14 @@ const reactivateActiveMods = () => {
     });
     THE_WINDOW.dispatchEvent(reactivationEvent);
 
-    // Log which mods are active and should be reactivated
-    const activeMods = getBindings().filter(([mod]) => mod.active && mod.show).map(([mod]) => mod.name);
-
-    // Enhanced map readiness detection
-    const checkAdvancedMapReadiness = () => {
+    const isMapReady = () => {
         try {
-            // Check for Google API availability
             const google = getGoogle();
             if (!google || !google.maps) {
                 return false;
             }
-
-            // Check for 2D map readiness with enhanced detection
-            const map2dReady = (
-                GOOGLE_MAP &&
-                GOOGLE_MAP.getBounds &&
-                typeof GOOGLE_MAP.getBounds === 'function' &&
-                GOOGLE_MAP.getBounds() &&
-                GOOGLE_MAP.getCenter &&
-                typeof GOOGLE_MAP.getCenter === 'function' &&
-                // Also check DOM elements
-                document.querySelector('.gm-style') &&
-                document.querySelector('div[class^="guess-map_canvas__"]')
-            );
-
-            // Check for 3D map readiness with enhanced detection
-            const map3dReady = (
-                GOOGLE_STREETVIEW &&
-                GOOGLE_STREETVIEW.getPosition &&
-                typeof GOOGLE_STREETVIEW.getPosition === 'function' &&
-                // Check for street view canvas
-                document.querySelector('.widget-scene-canvas') &&
-                // Check that the panorama is actually loaded
-                document.querySelector('[data-qa="panorama"]')
-            );
-
+            const map2dReady = OOGLE_MAP && GOOGLE_MAP.getBounds && getSmallMap();
+            const map3dReady = GOOGLE_STREETVIEW && GOOGLE_STREETVIEW.getPosition && getBigMapCanvas();
             return map2dReady && map3dReady;
         } catch (err) {
             console.error('Error checking map readiness:', err);
@@ -553,9 +442,7 @@ const reactivateActiveMods = () => {
         }
     };
 
-    // Ensure buttons are available before reactivation
     const ensureButtonsAndReactivate = () => {
-        // First try to add buttons if they don't exist
         if (!getModDiv()) {
             const buttonsAdded = addButtons();
             if (buttonsAdded) {
@@ -563,9 +450,8 @@ const reactivateActiveMods = () => {
             }
         }
 
-        // Use enhanced map readiness checking
         const attemptReactivation = (attempt = 1, maxAttempts = 40) => {
-            if (checkAdvancedMapReadiness()) {
+            if (isMapReady()) {
 
                 // Add a small additional delay to ensure everything is stable
                 setTimeout(() => {
@@ -579,7 +465,7 @@ const reactivateActiveMods = () => {
                             }
                         }
                     }
-                }, 500); // Small additional delay for stability
+                }, 500);
 
                 return;
             }
@@ -644,7 +530,6 @@ handleRoundStart = (evt) => {
 
     try {
         let round, mapID;
-
 
         // Extract round and map data from event
         if (evt.detail && evt.detail.rounds) {
@@ -794,7 +679,7 @@ function initializeEventFramework() {
         setupEventListeners();
 
         // Set up DOM observer for fallback detection
-        setupDOMObserver();
+        setUpDOMObserver();
 
         // Alternative: Monitor for round changes using URL and DOM changes
         let currentUrl = THE_WINDOW.location.href;
@@ -1020,7 +905,7 @@ function initializeEventFramework() {
 }
 
 // Additional DOM-based round detection as fallback
-const setupDOMObserver = () => {
+const setUpDOMObserver = () => {
     const gameObserver = new MutationObserver((mutations) => {
         for (const mutation of mutations) {
             // Look for game-related elements being added

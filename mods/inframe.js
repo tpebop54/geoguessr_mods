@@ -106,7 +106,7 @@ const updateInFrame = (forceState = undefined) => {
         }
     });
     
-    // Listen for mod reactivation events
+  
     THE_WINDOW.addEventListener('gg_mods_reactivate', (evt) => {
         if (MODS.inFrame.active) {
             console.debug('InFrame: Mod reactivation event detected, re-initializing');
