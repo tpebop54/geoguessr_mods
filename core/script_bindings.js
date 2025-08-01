@@ -94,7 +94,6 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
             if (!mod.show) {
                 continue;
             }
-
             try {
                 const modButton = document.createElement('div');
                 modButton.id = getModButtonId(mod);
@@ -147,9 +146,6 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
     }
 };
 
-/**
- * Remove the mod menu completely from the page
- */
 const removeModMenu = () => {
     const modContainer = getModDiv();
     if (modContainer) {
@@ -181,7 +177,7 @@ let mapReadinessState = {
 };
 
 // Enhanced map event listeners for more reliable mod activation
-const setupMapEventListeners = () => {
+const setUpMapEventListeners = () => {
     // Listen for new map instances being created (most important for immediate mod reapplication)
     window.addEventListener('gg_new_map_instance', (evt) => {
         const { type, map, streetView } = evt.detail;
@@ -192,7 +188,6 @@ const setupMapEventListeners = () => {
         }, 200); // Short delay to ensure map is fully initialized
     });
 
-    // Listen for map tiles being fully loaded (important for satellite view)
     window.addEventListener('gg_map_tiles_loaded', () => {
         // Specifically reapply satellite view if it's active
         const satViewMod = getBindings().find(([mod]) => mod.key === 'satView');
@@ -203,7 +198,6 @@ const setupMapEventListeners = () => {
         }
     });
 
-    // Listen for map being fully ready (backup for all mods)
     window.addEventListener('gg_map_fully_ready', () => {
         setTimeout(() => {
             // Final reapplication of all active mods
@@ -211,7 +205,6 @@ const setupMapEventListeners = () => {
         }, 500);
     });
 
-    // Listen for 2D map events
     window.addEventListener('gg_map_2d_ready', () => {
         mapReadinessState.map2d = true;
         mapReadinessState.tilesLoaded = true;
@@ -223,7 +216,6 @@ const setupMapEventListeners = () => {
         checkAndActivateModsIfReady();
     });
 
-    // Listen for Street View events
     window.addEventListener('gg_streetview_ready', () => {
         mapReadinessState.map3d = true;
         mapReadinessState.streetViewReady = true;
@@ -321,7 +313,7 @@ const reapplyActiveModsToNewMaps = () => {
 /**
  * Monitor URL changes and handle game page logic
  */
-const setupHomepageMonitoring = () => {
+const setUpHomepageMonitoring = () => {
     // Subscribe to location changes
     if (window.GG_LOCATION_TRACKER) {
         window.GG_LOCATION_TRACKER.subscribe('game-page-monitor', (newUrl, oldUrl) => {
@@ -379,7 +371,6 @@ const waitForReactHydration = () => {
 // Initialize when DOM is ready and React has hydrated
 const initializeMods = async () => {
     try {
-        // Try immediate initialization first, then wait for React hydration as backup
 
         // Try to add buttons immediately
         const immediateResult = addButtons();
@@ -387,23 +378,11 @@ const initializeMods = async () => {
             return;
         }
 
-        // If immediate attempt failed, wait for React hydration
-        await waitForReactHydration();
-
-
-        // Setup enhanced map event listeners first
-        setupMapEventListeners();
-
-        // Setup game page monitoring for URL changes
-        setupHomepageMonitoring();
-
-        // Enforce cheat protection
+        await waitForReactHydration(); // If initial load fails.
+        setUpMapEventListeners();
+        setUpHomepageMonitoring();
         enforceCheatProtection();
-
-        // Load configuration from localStorage
-        loadState();
-
-        // Disable mods as needed based on current page
+        loadState(); // From localStorage, if available.
         disableModsAsNeeded();
 
         // Create observer to monitor DOM changes and add buttons when the game interface loads
@@ -431,12 +410,8 @@ const initializeMods = async () => {
         const nextElement = document.querySelector('#__next');
         if (nextElement) {
             observer.observe(nextElement, { subtree: true, childList: true });
-
-            // Also try to add buttons immediately in case the page is already loaded
             addButtons();
         } else {
-
-            // Try alternative selectors
             const alternatives = ['#root', 'body', 'main'];
             let foundElement = null;
 
@@ -452,21 +427,9 @@ const initializeMods = async () => {
                 observer.observe(foundElement, { subtree: true, childList: true });
                 addButtons();
             } else {
-                // Retry after a short delay
                 setTimeout(initializeMods, 1000);
             }
         }
-
-        // Set up periodic button binding check to ensure buttons remain clickable
-        setInterval(() => {
-            try {
-                bindButtons();
-            } catch (err) {
-            }
-        }, 5000); // Check every 5 seconds
-
-        // Global keyboard shortcuts are now handled in dom_utils.js
-
     } catch (err) {
         console.error(err);
     }
@@ -1238,15 +1201,12 @@ window.forceSatelliteView = () => {
 
 window.forceRecreateModMenu = () => {
 
-    // Remove existing mod container
     const existing = document.getElementById('gg-mods-container');
     if (existing) {
         existing.remove();
     }
 
-    // Try to add buttons
     const result = addButtons();
-
     if (result) {
         bindButtons();
     } else {
