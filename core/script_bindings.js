@@ -75,18 +75,7 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
     try {
         console.debug('GeoGuessr MultiMod: addButtons() called');
         
-        // Only show mods menu on game and live-challenge pages
-        const currentUrl = window.location.href;
-        const currentPath = window.location.pathname;
-        
-        console.debug('GeoGuessr MultiMod: Current URL:', currentUrl);
-        console.debug('GeoGuessr MultiMod: Current path:', currentPath);
-        
-        // Check if we're on a supported game page
-        const isGameUrl = currentPath.includes('/game/') || currentPath.includes('/live-challenge/');
-        
-        if (!isGameUrl) {
-            console.debug('GeoGuessr MultiMod: Not on a game page, not showing mods menu. Path:', currentPath);
+        if (!areModsAvailable()) {
             return false;
         }
         
@@ -221,31 +210,13 @@ const removeModMenu = () => {
     return false;
 };
 
-/**
- Some mods currently don't work with competitive games.
- Disable those conditionally. This will be fixed in the future.
- */
 const disableModsAsNeeded = () => {
-    const pathname = window.location.pathname;
-    const currentUrl = window.location.href;
-    
-    // Only enable mods on game and live-challenge pages
-    const isGameUrl = pathname.includes('/game/') || pathname.includes('/live-challenge/');
-    
-    if (!isGameUrl) {
-        console.debug('GeoGuessr MultiMod: Not on a game page, disabling all mods and hiding menu. Path:', pathname);
-        
-        // Remove any existing mod menu
+    if (!areModsAvailable()) {
         removeModMenu();
-        
-        // Disable all mods temporarily for this session
         const allMods = Object.values(MODS);
         disableMods(allMods, false); // false = don't save to localStorage
         return;
     }
-    
-    // Additional specific mod restrictions for live challenges can be added here if needed
-    // (Currently no specific restrictions for live challenges)
 };
 
 // Initialize the mod system
@@ -418,11 +389,8 @@ const setupHomepageMonitoring = () => {
     // Subscribe to location changes
     if (window.GG_LOCATION_TRACKER) {
         window.GG_LOCATION_TRACKER.subscribe('game-page-monitor', (newUrl, oldUrl) => {
-            const newPath = new URL(newUrl).pathname;
-            const isGamePage = newPath.includes('/game/') || newPath.includes('/live-challenge/');
             
-            if (!isGamePage) {
-                console.debug('GeoGuessr MultiMod: Navigated away from game page, removing mod menu');
+            if (!areModsAvailable()) {
                 removeModMenu();
                 
                 // Disable all mods temporarily
@@ -430,8 +398,7 @@ const setupHomepageMonitoring = () => {
                 disableMods(allMods, false);
             } else if (oldUrl) {
                 const oldPath = new URL(oldUrl).pathname;
-                const wasGamePage = oldPath.includes('/game/') || oldPath.includes('/live-challenge/');
-                
+                const wasGamePage = areModsAvailable(oldPath);                
                 if (!wasGamePage) {
                     // Navigated to game page from non-game page - mods can be active again
                     console.debug('GeoGuessr MultiMod: Navigated to game page, mods can be active again');
@@ -1448,57 +1415,3 @@ window.forceModsInit = () => {
         }
     }, 2000);
 };
-
-// Add a comprehensive debugging function
-window.debugModsDetailed = () => {
-    console.log('=== DETAILED MODS DEBUG ===');
-    
-    // Check current page
-    console.log('Current URL:', window.location.href);
-    console.log('Current path:', window.location.pathname);
-    
-    // Check if on game page
-    const currentPath = window.location.pathname;
-    const isGameUrl = currentPath.includes('/game/') || currentPath.includes('/live-challenge/');
-    console.log('Is game URL:', isGameUrl);
-    
-    // Check MODS object
-    console.log('MODS object exists:', typeof MODS !== 'undefined');
-    if (typeof MODS !== 'undefined') {
-        console.log('MODS keys:', Object.keys(MODS));
-        console.log('MODS count:', Object.keys(MODS).length);
-        
-        // Check which mods are set to show
-        const showingMods = Object.entries(MODS).filter(([key, mod]) => mod.show);
-        console.log('Mods set to show:', showingMods.map(([key, mod]) => `${key}: ${mod.name}`));
-    }
-    
-    // Check containers
-    const bigMapContainer = getBigMapContainer();
-    console.log('bigMapContainer found:', !!bigMapContainer);
-    if (bigMapContainer) {
-        console.log('bigMapContainer tagName:', bigMapContainer.tagName);
-        console.log('bigMapContainer className:', bigMapContainer.className);
-        console.log('bigMapContainer id:', bigMapContainer.id);
-    }
-    
-    const modContainer = getModDiv();
-    console.log('modContainer found:', !!modContainer);
-    
-    // Check React root
-    const reactRoot = document.querySelector('#__next');
-    console.log('React root found:', !!reactRoot);
-    
-    // Try to call addButtons manually
-    console.log('Attempting manual addButtons call...');
-    try {
-        const result = addButtons();
-        console.log('addButtons result:', result);
-    } catch (err) {
-        console.error('addButtons error:', err);
-    }
-    
-    console.log('=== DEBUG COMPLETE ===');
-};
-
-// ...existing code...

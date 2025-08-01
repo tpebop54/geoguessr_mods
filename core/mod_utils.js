@@ -14,9 +14,12 @@ const _MERCATOR_LNG_MIN = -180;
 const _MERCATOR_LNG_MAX = 180;
 
 // True if solo game or live challenge. 
-const areModsAvailable = () => {
-    const currentPath = window.location.pathname;
-    return currentPath.includes('/game/') || currentPath.includes('/live-challenge/');
+const areModsAvailable = (path) => {
+    path = path || window.location.pathname;
+    if (path.includes('/multiplayer') && ON_MY_HONOR.toLowerCase() !== 'on my honor') {
+        return false;
+    }
+    return path.includes('/game/') || path.includes('/live-challenge/') || path.includes('/multiplayer');
 };
 
 const getActualLoc = () => {

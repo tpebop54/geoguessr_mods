@@ -216,9 +216,8 @@ const clearCheatOverlay = () => {
 const createQuoteOverlay = () => {
     // Only show overlay on game pages
     const currentPath = window.location.pathname;
-    const isGamePage = currentPath.includes('/game/') || currentPath.includes('/live-challenge/');
     
-    if (!isGamePage) {
+    if (!areModsAvailable()) {
         console.debug('Cheat protection: Not on a game page, skipping overlay. Path:', currentPath);
         return;
     }
@@ -504,9 +503,8 @@ const initCheatProtection = () => {
     
     // Only show loading screen on game pages
     const currentPath = window.location.pathname;
-    const isGamePage = currentPath.includes('/game/') || currentPath.includes('/live-challenge/');
     
-    if (!isGamePage) {
+    if (!areModsAvailable()) {
         console.debug('Cheat protection: Not on a game page, skipping overlay. Path:', currentPath);
         return;
     }
@@ -567,9 +565,8 @@ const enforceCheatProtection = () => {
     
     // Check if we're on a game page before showing overlay
     const currentPath = window.location.pathname;
-    const isGamePage = currentPath.includes('/game/') || currentPath.includes('/live-challenge/');
     
-    if (!isGamePage) {
+    if (!areModsAvailable()) {
         console.debug('Cheat protection: Not on a game page, skipping overlay initialization. Path:', currentPath);
         return;
     }
