@@ -153,11 +153,9 @@ const initGmapsIntegration = () => {
                 });
                 this.addListener('status_changed', () => {
                     if (this.getStatus() === google.maps.StreetViewStatus.OK) {
-                        console.debug('Google Maps: Street View panorama loaded successfully');
                         THE_WINDOW.dispatchEvent(new CustomEvent('gg_streetview_ready', { detail: this }));
                     }
                 });
-                console.debug('Google Maps: New Street View instance created');
                 setTimeout(() => {
                     THE_WINDOW.dispatchEvent(new CustomEvent('gg_new_map_instance', {
                         detail: { type: '3d', streetView: this }
@@ -182,7 +180,7 @@ const initGmapsIntegration = () => {
                     return loc && visible;
                 }
             } catch (err) {
-                console.debug('Error checking map readiness:', err);
+                console.error(err);
                 return false;
             }
         };

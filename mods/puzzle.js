@@ -414,7 +414,6 @@ const updatePuzzleLogic = async (forceState = undefined) => {
     clearCanvas2d();
 
     if (!active) {
-        console.debug('Puzzle: Deactivated');
         return;
     }
 
@@ -451,7 +450,6 @@ const updatePuzzleLogic = async (forceState = undefined) => {
     }
 
     CANVAS_2D.onpointerdown = onPuzzleClick;
-    console.debug('Puzzle: Successfully activated');
 };
 
 const updatePuzzle = (forceState = undefined) => {

@@ -22,7 +22,6 @@ const THE_WINDOW = unsafeWindow || window;
             this.initFetchEvents();
             this.overrideFetch();
             this.init();
-            console.debug('GeoGuessr MultiMod: GEF constructor completed, setting up load event...');
             THE_WINDOW.addEventListener('load', () => {
                 var _a, _b, _c;
                 if (location.pathname.startsWith("/challenge/")) {

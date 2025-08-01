@@ -59,7 +59,6 @@ const updateZoomInOnlyLogic = (forceState = undefined) => {
                 }
                 PREV_ZOOM = newZoom;
             });
-            console.debug('Zoom mod: Enabled zoom-in only mode');
         } else {
             if (ZOOM_LISTENER) {
                 const google = getGoogle();
@@ -69,7 +68,6 @@ const updateZoomInOnlyLogic = (forceState = undefined) => {
             HAS_ZOOMED_IN = false;
             PREV_ZOOM = undefined;
             setRestriction(INITIAL_BOUNDS, 1); // The maps API seems to only allow zooming back out the level when mod was disabled.
-            console.debug('Zoom mod: Disabled zoom-in only mode');
         }
     } catch (err) {
         console.error('Zoom mod: Error in update logic:', err);

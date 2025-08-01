@@ -64,11 +64,9 @@ const updateRotateMapLogic = (forceState = undefined) => {
                 doRotation(nDegrees);
             }, nMilliseconds);
         }
-        console.debug('Rotate map: Started with', startDegrees, 'degrees initial rotation');
     } else {
         if (ROTATION_INTERVAL) {
             clearInterval(ROTATION_INTERVAL);
-            console.debug('Rotate map: Stopped rotation interval');
         }
     }
 };

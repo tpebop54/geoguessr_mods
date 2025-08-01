@@ -48,12 +48,10 @@ const updateInFrameLogic = (forceState = undefined) => {
                 };
                 Object.assign(smallMapContainer.style, smallMapStyle);
             } catch (err) {
-                console.debug('InFrame: Error in showInFrame:', err);
             }
         };
         
         IN_FRAME_INTERVAL = setInterval(showInFrame, 100);
-        console.debug('InFrame: Interval started');
     } else {
         // Clean up styling when disabled
         if (smallMapContainer) {
@@ -63,7 +61,6 @@ const updateInFrameLogic = (forceState = undefined) => {
             };
             Object.assign(smallMapContainer.style, smallMapStyle);
         }
-        console.debug('InFrame: Disabled and cleaned up');
     }
 };
 
@@ -71,7 +68,6 @@ const updateInFrame = (forceState = undefined) => {
     // Add round start listener if not already added and mod is being activated
     if (!IN_FRAME_ROUND_START_LISTENER_ADDED && typeof GEF !== 'undefined' && GEF.events) {
         GEF.events.addEventListener('round_start', () => {
-            console.debug('InFrame: Round start detected, re-initializing');
             if (MODS.inFrame.active) {
                 setTimeout(() => {
                     waitForMapsReady(() => {
@@ -86,12 +82,10 @@ const updateInFrame = (forceState = undefined) => {
             }
         });
         IN_FRAME_ROUND_START_LISTENER_ADDED = true;
-        console.debug('InFrame: Round start listener added');
     }
     
     // Add custom round start event listener
     THE_WINDOW.addEventListener('gg_round_start', (evt) => {
-        console.debug('InFrame: Custom round start event detected, re-initializing');
         if (MODS.inFrame.active) {
             setTimeout(() => {
                 waitForMapsReady(() => {
@@ -109,7 +103,6 @@ const updateInFrame = (forceState = undefined) => {
   
     THE_WINDOW.addEventListener('gg_mods_reactivate', (evt) => {
         if (MODS.inFrame.active) {
-            console.debug('InFrame: Mod reactivation event detected, re-initializing');
             setTimeout(() => {
                 waitForMapsReady(() => {
                     updateInFrameLogic();

@@ -1,5 +1,4 @@
 /**
- * Centralized location tracking utility for GeoGuessr mods
  * Provides shared functionality for detecting page/location changes
  */
 
@@ -34,8 +33,6 @@ class LocationTracker {
         }, pollInterval);
 
         this.intervals.set(trackerId, intervalId);
-        
-        console.debug(`Location tracker '${trackerId}' registered`);
     }
 
     /**
@@ -47,10 +44,9 @@ class LocationTracker {
             clearInterval(this.intervals.get(trackerId));
             this.intervals.delete(trackerId);
         }
-        
+
         if (this.subscribers.has(trackerId)) {
             this.subscribers.delete(trackerId);
-            console.debug(`Location tracker '${trackerId}' unregistered`);
         }
     }
 
@@ -64,9 +60,8 @@ class LocationTracker {
 
         const currentUrl = THE_WINDOW.location.href;
         if (currentUrl !== subscriber.lastUrl) {
-            console.debug(`Location change detected for '${trackerId}': ${subscriber.lastUrl} -> ${currentUrl}`);
             subscriber.lastUrl = currentUrl;
-            
+
             try {
                 subscriber.callback(currentUrl, subscriber.lastUrl);
             } catch (error) {
@@ -88,7 +83,7 @@ class LocationTracker {
             if (currentUrl !== this.lastKnownUrl) {
                 const previousUrl = this.lastKnownUrl;
                 this.lastKnownUrl = currentUrl;
-                
+
                 // Notify all subscribers
                 for (const [trackerId, subscriber] of this.subscribers) {
                     if (currentUrl !== subscriber.lastUrl) {
@@ -103,7 +98,6 @@ class LocationTracker {
             }
         }, pollInterval);
 
-        console.debug('Global location tracking started');
     }
 
     /**
@@ -115,7 +109,6 @@ class LocationTracker {
             this.globalInterval = null;
         }
         this.isGlobalTracking = false;
-        console.debug('Global location tracking stopped');
     }
 
     /**
@@ -133,22 +126,22 @@ class LocationTracker {
         try {
             const oldParsed = new URL(oldUrl);
             const newParsed = new URL(newUrl);
-            
+
             // Check if pathname changed (different page/round)
             if (oldParsed.pathname !== newParsed.pathname) {
                 return true;
             }
-            
+
             // Check if key parameters that indicate round changes have changed
             const oldParams = oldParsed.searchParams;
             const newParams = newParsed.searchParams;
-            
+
             // Round ID or game ID changes are significant
             if (oldParams.get('round') !== newParams.get('round') ||
                 oldParams.get('game') !== newParams.get('game')) {
                 return true;
             }
-            
+
             return false;
         } catch (error) {
             // If URL parsing fails, assume it's significant
@@ -166,21 +159,19 @@ class LocationTracker {
             clearInterval(intervalId);
         }
         this.intervals.clear();
-        
+
         // Clear global tracking
         this.stopGlobalTracking();
-        
+
         // Clear all subscribers
         this.subscribers.clear();
-        
-        console.debug('Location tracker destroyed');
+
     }
 }
 
 // Create global instance
 if (typeof THE_WINDOW.GG_LOCATION_TRACKER === 'undefined') {
     THE_WINDOW.GG_LOCATION_TRACKER = new LocationTracker();
-    console.debug('Global location tracker initialized');
 }
 
 // Export for module usage if needed

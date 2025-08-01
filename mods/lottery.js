@@ -35,7 +35,6 @@ const removeLotteryDisplay = () => {
 const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     // Only show lottery display on game pages
     if (!areModsAvailable()) {
-        console.debug('Lottery: Not on a game page, skipping lottery display creation. Path:', THE_WINDOW.location.pathname);
         return;
     }
     
@@ -126,15 +125,7 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         const nDegLng = getOption(mod, 'nDegLng');
         const onlyStreetView = getOption(mod, 'onlyStreetView');
         const onlyLand = getOption(mod, 'onlyLand');
-        
-        // Debug the location detection
-        console.debug('Lottery: Location detection debug:', {
-            GG_ROUND: typeof GG_ROUND !== 'undefined' ? GG_ROUND : 'undefined',
-            GG_LOC: typeof GG_LOC !== 'undefined' ? GG_LOC : 'undefined', 
-            GG_CLICK: typeof GG_CLICK !== 'undefined' ? GG_CLICK : 'undefined',
-            hasGoogleApiKey: THE_WINDOW.GOOGLE_MAPS_API_KEY ? 'yes' : 'no'
-        });
-        
+
         const actual = getActualLoc();
         
         // Validate that we have a valid actual location
@@ -162,7 +153,6 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
                     return;
                 } else {
                     // Continue with the retry actual location
-                    console.debug('Lottery: Location now available, continuing...');
                     continueWithLocation(retryActual);
                 }
             }, 1000);
@@ -192,7 +182,6 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
 
         // Ensure we have valid latitude bounds
         if (minLat >= maxLat) {
-            console.debug('Lottery: Invalid latitude bounds, using fallback');
             minLat = Math.max(_MERCATOR_LAT_MIN, actual.lat - 10);
             maxLat = Math.min(_MERCATOR_LAT_MAX, actual.lat + 10);
         }
@@ -222,11 +211,6 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
             // Check if API key is available for these features
             if (!hasGoogleApiKey()) {
                 console.warn('Lottery mod: API-dependent features (Only Street View/Only Land) attempted without Google Maps API key');
-                console.debug('Lottery: API key state:', {
-                    exists: !!THE_WINDOW.GOOGLE_MAPS_API_KEY,
-                    length: THE_WINDOW.GOOGLE_MAPS_API_KEY ? THE_WINDOW.GOOGLE_MAPS_API_KEY.length : 0,
-                    firstChars: THE_WINDOW.GOOGLE_MAPS_API_KEY ? THE_WINDOW.GOOGLE_MAPS_API_KEY.substring(0, 10) + '...' : 'none'
-                });
                 button.textContent = 'API key required';
                 button.disabled = true;
                 setTimeout(() => {
@@ -278,11 +262,9 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
             }
         } else {
             // Use simple random location generation
-            console.debug('Lottery: Using simple location generation with bounds:', { minLat, maxLat, minLng, maxLng });
             location = getRandomLocSinusoidal(minLat, maxLat, minLng, maxLng);
         }
         
-        console.debug('Lottery: Generated location:', location);
         const { lat, lng } = location;
         
         // Must be within Mercator bounds.
@@ -298,7 +280,6 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
             return;
         }
         
-        console.debug('Lottery: Using coordinates:', { finalLat, finalLng });
         
         _LOTTERY_COUNT -= 1;
         counter.innerText = _LOTTERY_COUNT;
@@ -327,7 +308,6 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
 
 // Remove all lottery click blockers from the map
 const removeAllLotteryClickBlockers = () => {
-    console.debug('Lottery: Removing all click blockers');
     
     // Clear the programmatic click flag
     THE_WINDOW._LOTTERY_ALLOWING_CLICK = false;
@@ -378,7 +358,6 @@ const removeAllLotteryClickBlockers = () => {
 const setLotteryMapMode = (enabled = true) => {
     // Only create lottery overlays on game pages
     if (enabled && !areModsAvailable()) {
-        console.debug('Lottery: Not on a game page, skipping lottery map mode. Path:', THE_WINDOW.location.pathname);
         return;
     }
     
@@ -510,11 +489,9 @@ const resetLotteryCount = () => {
     
     // Only reset on game pages
     if (!areModsAvailable()) {
-        console.debug('Lottery: Not on a game page, skipping reset. Path:', THE_WINDOW.location.pathname);
         return;
     }
     
-    console.debug('Lottery: Resetting counter');
     
     // Reset the counter
     _LOTTERY_COUNT = getOption(mod, 'nGuesses');
@@ -605,7 +582,6 @@ const updateLottery = (forceState = undefined) => {
         });
     } else if (active && !isGamePage) {
         // Mod is active but not on a game page - clean up any existing overlays
-        console.debug('Lottery: Mod active but not on game page, cleaning up overlays');
         removeLotteryDisplay();
         removeAllLotteryClickBlockers();
         setLotteryMapMode(false);

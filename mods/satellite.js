@@ -7,7 +7,6 @@
 // ===============================================================================================================================
 
 const updateSatViewLogic = (forceState = undefined) => {
-    console.debug(`updateSatViewLogic called with forceState: ${forceState}`);
     const mod = MODS.satView;
     const active = updateMod(mod, forceState);
     
@@ -21,20 +20,17 @@ const updateSatViewLogic = (forceState = undefined) => {
         try {
             // Check if map has bounds and center (indicating it's fully loaded)
             if (!GOOGLE_MAP.getBounds || !GOOGLE_MAP.getCenter || !GOOGLE_MAP.getBounds() || !GOOGLE_MAP.getCenter()) {
-                console.debug('Satellite view: Map not fully ready, waiting...');
                 return false;
             }
             
             // Additional check: ensure map has rendered tiles
             const mapDiv = GOOGLE_MAP.getDiv();
             if (!mapDiv || !mapDiv.querySelector('.gm-style img')) {
-                console.debug('Satellite view: Map tiles not loaded yet, waiting...');
                 return false;
             }
             
             return true;
         } catch (err) {
-            console.debug('Satellite view: Error checking map readiness:', err);
             return false;
         }
     };
@@ -43,7 +39,6 @@ const updateSatViewLogic = (forceState = undefined) => {
         try {
             const targetMapType = active ? 'satellite' : 'roadmap';
             GOOGLE_MAP.setMapTypeId(targetMapType);
-            console.debug(`Satellite view: Successfully set to ${targetMapType}`);
             
             // Verify the change took effect
             setTimeout(() => {
@@ -60,7 +55,6 @@ const updateSatViewLogic = (forceState = undefined) => {
             setTimeout(() => {
                 try {
                     GOOGLE_MAP.setMapTypeId(active ? 'satellite' : 'roadmap');
-                    console.debug('Satellite view: Retry successful');
                 } catch (retryErr) {
                     console.error('Satellite view: Retry also failed:', retryErr);
                 }

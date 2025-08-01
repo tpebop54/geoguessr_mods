@@ -15,19 +15,16 @@ const saveState = () => {
     try {
         const stateToSave = JSON.stringify(MODS);
         THE_WINDOW.localStorage.setItem(STATE_KEY, stateToSave);
-        console.debug('Saved state to localStorage with mods:', Object.keys(MODS));
         
         // Add detailed logging for active states
         const activeStates = {};
         for (const [key, mod] of Object.entries(MODS)) {
             activeStates[key] = mod.active;
         }
-        console.debug('Active mod states saved:', activeStates);
         
         // Verify the save worked by reading it back
         const verification = THE_WINDOW.localStorage.getItem(STATE_KEY);
         if (verification === stateToSave) {
-            console.debug('State save verification: SUCCESS');
         } else {
             console.error('State save verification: FAILED - data mismatch');
         }
@@ -38,7 +35,6 @@ const saveState = () => {
 
 const clearState = () => {
     THE_WINDOW.localStorage.removeItem(STATE_KEY);
-    console.debug('Cleared state from localStorage');
 };
 
 const loadState = () => { // Load state from local storage if it exists, else use default.
@@ -47,14 +43,12 @@ const loadState = () => { // Load state from local storage if it exists, else us
     let storedState;
     try {
         storedState = JSON.parse(stateStr);
-        console.debug('Loaded state from localStorage:', Object.keys(storedState || {}));
     } catch (err) {
         console.error('Error parsing stored state:', err);
     }
     if (!storedState || typeof storedState !== 'object') {
         clearState();
         storedState = {};
-        console.debug('No valid stored state found, using defaults');
     }
 
     // Create a clean starting state, with the previous state if it existed.
@@ -65,38 +59,23 @@ const loadState = () => { // Load state from local storage if it exists, else us
         }
         const storedMod = storedState[key];
         if (!storedMod) {
-            console.debug(`No stored state found for mod '${key}', keeping default (active: ${mod.active})`);
             continue;
         }
         
         const wasActive = mod.active;
         mod.active = !!storedMod.active;
-        console.debug(`Restored mod '${key}' active state: ${wasActive} -> ${mod.active}`);
         
         if (typeof storedMod.options !== 'object') {
             storedMod.options = {};
         }
         const validKeys = new Set(Object.keys(mod.options));
-        console.debug(`Restoring options for mod '${key}', valid keys:`, [...validKeys]);
         for (const [optKey, storedOption] of Object.entries(storedMod.options)) {
             if (validKeys.has(optKey) && storedOption.value != null) {
                 mod.options[optKey].value = storedOption.value;
-                console.debug(`Restored option '${optKey}' for mod '${key}' with value:`, storedOption.value);
             } else if (!validKeys.has(optKey)) {
-                console.debug(`Skipped invalid option '${optKey}' for mod '${key}'`);
             }
         }
     }
-
-    console.debug('loadState() completed. Final active states:');
-    for (const [key, mod] of Object.entries(MODS)) {
-        console.debug(`  ${key}: ${mod.active}`);
-    }
-    
-    // Also log which mods should be activated
-    const activeMods = Object.entries(MODS).filter(([key, mod]) => mod.active && mod.show);
-    console.debug(`loadState: Found ${activeMods.length} mods that should be active:`, activeMods.map(([key, mod]) => mod.name));
-
     return MODS;
 };
 
@@ -126,18 +105,6 @@ const verifyDisplayOptions = () => {
         console.warn("Display options mod not found!");
         return;
     }
-    
-    console.debug("Display options mod state:", {
-        active: displayMod.active,
-        options: displayMod.options
-    });
-    
-    // Check if the options have values
-    if (displayMod.options) {
-        for (const [key, option] of Object.entries(displayMod.options)) {
-            console.debug(`Display option '${key}':`, option.value !== undefined ? option.value : "(using default)");
-        }
-    }
 };
 
 // Call verification after state is loaded
@@ -147,7 +114,6 @@ THE_WINDOW.loadState = function() {
     
     // Verify display options specifically
     setTimeout(() => {
-        console.debug("Verifying display options after load...");
         verifyDisplayOptions();
     }, 500);
     

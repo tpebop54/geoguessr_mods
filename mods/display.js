@@ -170,7 +170,6 @@ const getFilterStr = (mod) => { // Get string that can be applied to streetview 
                 delete activeFilter[key];
             }
         }
-        console.debug('Opera: Using performance-optimized filters:', activeFilter);
     }
     
     let filterStr = '';
@@ -196,20 +195,17 @@ const setupDisplayLocationTracking = () => {
     }
     
     THE_WINDOW.GG_LOCATION_TRACKER.subscribe('display-options', (newUrl, oldUrl) => {
-        console.debug('Display mod: Location change detected, restoring display options');
         
         // Small delay to allow the page to settle
         setTimeout(() => {
             const mod = MODS.displayOptions;
             if (isModActive(mod)) {
-                console.debug('Display mod: Reapplying display options after location change');
                 updateDisplayOptions(true); // Force reapplication
             }
         }, 500);
     }, 1000);
     
     displayLocationTrackingActive = true;
-    console.debug('Display mod: Location tracking enabled for options persistence');
 };
 
 const updateDisplayOptions = (forceState = undefined) => {
@@ -258,7 +254,6 @@ const updateDisplayOptions = (forceState = undefined) => {
         if (displayLocationTrackingActive && THE_WINDOW.GG_LOCATION_TRACKER) {
             THE_WINDOW.GG_LOCATION_TRACKER.unsubscribe('display-options');
             displayLocationTrackingActive = false;
-            console.debug('Display mod: Location tracking disabled');
         }
     }
     
@@ -269,7 +264,6 @@ const updateDisplayOptions = (forceState = undefined) => {
 const applyDisplayFilters = (filterStr, transformStr) => {
     const canvas3d = getBigMapCanvas();
     if (!canvas3d) {
-        console.debug('Display mod: Canvas not available yet, retrying...');
         // Retry after a short delay if canvas is not available
         setTimeout(() => applyDisplayFilters(filterStr, transformStr), 200);
         return;
@@ -280,7 +274,6 @@ const applyDisplayFilters = (filterStr, transformStr) => {
         // Add Opera-friendly CSS class for better performance
         canvas3d.classList.add('opera-friendly-filter');
         
-        console.debug('Opera: Applying filters with optimization:', filterStr, transformStr);
         
         // Use requestAnimationFrame to avoid blocking the main thread
         requestAnimationFrame(() => {
@@ -295,7 +288,6 @@ const applyDisplayFilters = (filterStr, transformStr) => {
 
 // Add round start and reactivation event listeners
 THE_WINDOW.addEventListener('gg_round_start', (evt) => {
-    console.debug('Display mod: Custom round start event detected');
     const mod = MODS.displayOptions;
     if (isModActive(mod)) {
         setTimeout(() => {

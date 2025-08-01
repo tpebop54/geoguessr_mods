@@ -191,12 +191,9 @@ const clearCheatOverlay = () => {
                 try {
                     _CHEAT_OVERLAY.parentElement.removeChild(_CHEAT_OVERLAY);
                 } catch (err) {
-                    console.error('Cheat protection: Error removing overlay:', err);
-                    // Fallback removal if parent element reference fails
                     try {
                         document.body.removeChild(_CHEAT_OVERLAY);
                     } catch (err2) {
-                        console.error('Cheat protection: Fallback removal also failed:', err2);
                         _CHEAT_OVERLAY.style.display = 'none';
                         _CHEAT_OVERLAY.style.visibility = 'hidden';
                     }
@@ -211,7 +208,6 @@ const createQuoteOverlay = () => {
     const currentPath = THE_WINDOW.location.pathname;
     
     if (!areModsAvailable()) {
-        console.debug('Cheat protection: Not on a game page, skipping overlay. Path:', currentPath);
         return;
     }
 
@@ -235,9 +231,7 @@ const createQuoteOverlay = () => {
             if (typeof initQuotesFlat === 'function') {
                 initQuotesFlat();
             }
-        } catch (err) {
-            console.warn('Cheat protection: Error initializing quotes:', err);
-        }
+        } catch (err) {}
         if (_QUOTES_FLAT.length === 0) {
             const quotesEnabled = (typeof THE_WINDOW.ENABLE_QUOTES !== 'undefined') ? THE_WINDOW.ENABLE_QUOTES : false;
             if (quotesEnabled) {
@@ -264,7 +258,6 @@ const createQuoteOverlayNow = () => {
             try {
                 overlayToRemove.remove();
             } catch (err) {
-                console.error('Cheat protection: Global failsafe removal failed:', err);
                 // Force hide as absolute last resort
                 overlayToRemove.style.display = 'none';
                 overlayToRemove.style.visibility = 'hidden';
@@ -303,7 +296,6 @@ const createQuoteOverlayNow = () => {
     try {
         parts = splitQuote(quote);
     } catch (err) {
-        console.error(err);
         parts = [quote];
     }
     
@@ -350,7 +342,6 @@ const createQuoteOverlayNow = () => {
         _CHEAT_OVERLAY = document.body.insertBefore(cheatOverlay, document.body.firstChild);
     } else {
         // If body is not available yet, wait for it
-        console.debug('Cheat protection: Document body not available, waiting...');
         const bodyCheckInterval = setInterval(() => {
             if (document.body) {
                 clearInterval(bodyCheckInterval);
@@ -375,7 +366,6 @@ const createQuoteOverlayNow = () => {
             
             if (strategy1 || strategy2) {
                 setTimeout(() => {
-                    console.debug('Cheat protection: Removing overlay after map detection');
                     clearCheatOverlay();
                 }, 1000); // Wait 1 second after map is detected
                 return true;
@@ -383,7 +373,6 @@ const createQuoteOverlayNow = () => {
             
             return false;
         } catch (err) {
-            console.error('Cheat protection: Error checking map readiness:', err);
             return false;
         }
     };
@@ -404,11 +393,9 @@ const createQuoteOverlayNow = () => {
     const maxOverlayTime = 5000; // 5 seconds max - hard limit to prevent permanent overlay
     setTimeout(() => {
         clearInterval(mapCheckInterval);
-        console.debug('Cheat protection: Mandatory 5-second timeout reached, removing overlay');
         try {
             clearCheatOverlay();
         } catch (err) {
-            console.error('Cheat protection: Error in clearCheatOverlay, using fallback removal:', err);
         }
         
         // Fallback removal strategies if clearCheatOverlay fails
@@ -417,26 +404,21 @@ const createQuoteOverlayNow = () => {
                 try {
                     if (document.body.contains(_CHEAT_OVERLAY)) {
                         document.body.removeChild(_CHEAT_OVERLAY);
-                        console.debug('Cheat protection: Overlay removed via fallback method 1');
                     }
                     _CHEAT_OVERLAY = undefined;
                 } catch (err) {
-                    console.error('Cheat protection: Fallback method 1 failed:', err);
                     // Last resort - try to find and remove by ID
                     try {
                         const overlayById = document.getElementById('on-your-honor');
                         if (overlayById) {
                             overlayById.remove();
-                            console.debug('Cheat protection: Overlay removed via fallback method 2 (by ID)');
                         }
                         _CHEAT_OVERLAY = undefined;
                     } catch (err2) {
-                        console.error('Cheat protection: All fallback methods failed:', err2);
                         // Set overlay to hidden as absolute last resort
                         if (_CHEAT_OVERLAY && _CHEAT_OVERLAY.style) {
                             _CHEAT_OVERLAY.style.display = 'none';
                             _CHEAT_OVERLAY.style.visibility = 'hidden';
-                            console.debug('Cheat protection: Overlay hidden as last resort');
                         }
                     }
                 }
@@ -456,7 +438,6 @@ const clickGarbage = (nMilliseconds = 900) => {
     // Check if clickGarbage is disabled via ON_MY_HONOR setting
     const onMyHonor = (typeof THE_WINDOW.ON_MY_HONOR !== 'undefined') ? THE_WINDOW.ON_MY_HONOR : '';
     if (onMyHonor === 'on my honor') {
-        console.debug('clickGarbage disabled via ON_MY_HONOR setting');
         return; // Skip clickGarbage but keep rest of cheat protection active
     }
     
@@ -486,7 +467,6 @@ const initCheatProtection = () => {
     const currentPath = THE_WINDOW.location.pathname;
     
     if (!areModsAvailable()) {
-        console.debug('Cheat protection: Not on a game page, skipping overlay. Path:', currentPath);
         return;
     }
     
@@ -503,7 +483,6 @@ const initCheatProtection = () => {
                         (node.classList && 
                          (node.classList.contains('gm-style') || 
                           node.classList.contains('widget-scene-canvas')))) {
-                        console.debug('Cheat protection: Map element detected by observer');
                     }
                 });
             }
@@ -542,13 +521,11 @@ const addCheatProtection = () => {
 // Initialize cheat protection as early as possible
 (() => {
     // Try to initialize immediately for the fastest possible overlay creation
-    console.debug(`Cheat protection: Initializing (document.readyState=${document.readyState})`);
     
     // Check if we're on a game page before showing overlay
     const currentPath = THE_WINDOW.location.pathname;
     
     if (!areModsAvailable()) {
-        console.debug('Cheat protection: Not on a game page, skipping overlay initialization. Path:', currentPath);
         return;
     }
     
@@ -561,28 +538,23 @@ const addCheatProtection = () => {
     if (document.readyState === 'loading') {
         // Add both DOMContentLoaded and load handlers to ensure overlay appears as early as possible
         document.addEventListener('DOMContentLoaded', () => {
-            console.debug('Cheat protection: DOMContentLoaded event, creating overlay');
             initCheatProtection();
         });
         
         THE_WINDOW.addEventListener('load', () => {
             // Make sure overlay is still active after full page load
-            console.debug('Cheat protection: Window load event, checking overlay');
             if (!_CHEAT_OVERLAY || !document.body.contains(_CHEAT_OVERLAY)) {
-                console.debug('Cheat protection: Overlay not found after load, recreating');
                 initCheatProtection();
             }
         });
     } else {
         // Document already loaded, initialize immediately
-        console.debug('Cheat protection: Document already loaded, creating overlay immediately');
         initCheatProtection();
     }
     
     // Extra insurance - also check after a small delay in case the other methods fail
     setTimeout(() => {
         if (!_CHEAT_OVERLAY || !document.body.contains(_CHEAT_OVERLAY)) {
-            console.debug('Cheat protection: Overlay not found after timeout, recreating');
             initCheatProtection();
         }
     }, 100);

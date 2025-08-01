@@ -74,7 +74,6 @@ const getBigMapContainer = () => {
         try {
             const element = document.querySelector(selector);
             if (element) {
-                console.debug(`Found game container with selector: ${selector}`);
                 return element;
             }
         } catch (err) {
@@ -87,7 +86,6 @@ const getBigMapContainer = () => {
     const canvasContainers = document.querySelectorAll('div');
     for (const container of canvasContainers) {
         if (container.querySelector('canvas') && container.offsetWidth > 400 && container.offsetHeight > 300) {
-            console.debug('Found game container via canvas fallback');
             return container;
         }
     }
@@ -224,7 +222,6 @@ let _OPTION_MENU_DRAGGING_OFFSET_X; // Needed for offsetting the drag element fr
 let _OPTION_MENU_DRAGGING_OFFSET_Y;
 
 const makeOptionMenu = (mod) => {
-    console.debug(`makeOptionMenu called for mod: ${mod.name}`);
     
     // Close any existing option menu first
     closeOptionMenu();
@@ -232,7 +229,6 @@ const makeOptionMenu = (mod) => {
     _OPTION_MENU = document.createElement('div');
     _OPTION_MENU.id = 'gg-option-menu';
     
-    console.debug(`Created option menu element with ID: ${_OPTION_MENU.id}`);
 
     // Add title div to match legacy formatting
     const titleDiv = document.createElement('div');
@@ -266,7 +262,6 @@ const makeOptionMenu = (mod) => {
         const hasApiKey = THE_WINDOW.GOOGLE_MAPS_API_KEY && THE_WINDOW.GOOGLE_MAPS_API_KEY.trim().length > 0;
         
         if (isApiDependentOption && !hasApiKey) {
-            console.debug(`Skipping API-dependent option '${key}' for lottery mod - no API key configured`);
             continue;
         }
 
@@ -392,7 +387,6 @@ const makeOptionMenu = (mod) => {
         const existingMenu = document.getElementById('gg-option-menu');
         if (!existingMenu) {
             document.body.appendChild(_OPTION_MENU);
-            console.debug(`Option menu created and added to DOM for mod: ${mod.name}`);
         }
     };
     
@@ -403,20 +397,11 @@ const makeOptionMenu = (mod) => {
     _OPTION_MENU.style.display = 'block';
     _OPTION_MENU.style.visibility = 'visible';
     
-    console.debug(`Option menu created and added to DOM for mod: ${mod.name}`);
-    console.debug('Option menu element:', _OPTION_MENU);
-    console.debug('Option menu position:', {
-        top: _OPTION_MENU.style.top || 'default',
-        left: _OPTION_MENU.style.left || 'default',
-        display: _OPTION_MENU.style.display,
-        visibility: _OPTION_MENU.style.visibility
-    });
     
     // Verify it's in the DOM after a short delay
     setTimeout(() => {
         const menuInDOM = document.getElementById('gg-option-menu');
         if (menuInDOM) {
-            console.debug('✓ Option menu confirmed in DOM');
         } else {
             console.error('✗ Option menu NOT found in DOM after creation');
         }
@@ -427,7 +412,6 @@ const updateMod = (mod, forceState = undefined) => {
     // If mods aren't loaded, log a warning but continue with the update
     // This allows mods to be activated during round transitions
     if (!_MODS_LOADED) {
-        console.debug(`Warning: Updating mod ${mod.name} while _MODS_LOADED is false. This may indicate a round transition.`);
     }
 
     const previousState = isModActive(mod);
@@ -438,19 +422,7 @@ const updateMod = (mod, forceState = undefined) => {
         // Mod is being enabled (going from inactive to active)
         if (forceState === undefined) {
             // This is a user-initiated activation (button click)
-            console.debug(`Opening options menu for ${mod.name} (user-initiated activation)`);
             const options = mod.options;
-            
-            // Debug options for all mods to help troubleshoot option menu issues
-            console.debug(`OPTIONS DEBUG for ${mod.name}:`, {
-                modKey: mod.key,
-                modName: mod.name,
-                hasOptions: !!options,
-                optionsType: typeof options,
-                optionKeys: options ? Object.keys(options) : 'none',
-                optionCount: options ? Object.keys(options).length : 0,
-                fullOptions: options
-            });
             
             if (options && typeof options === 'object' && Object.keys(options).length) {
                 // Check if mod container exists before creating option menu
@@ -467,16 +439,12 @@ const updateMod = (mod, forceState = undefined) => {
             }
         } else {
             // This is a programmatic activation (reactivation, force state, etc.)
-            console.debug(`Skipping options menu for ${mod.name} (programmatic activation)`);
         }
     } else if (!newState && previousState) {
         // Mod is being disabled (going from active to inactive)
-        console.debug(`Closing options menu for ${mod.name} (mod disabled)`);
         closeOptionMenu();
     } else if (newState && previousState) {
-        console.debug(`Mod ${mod.name} was already active, no options menu change needed`);
     } else {
-        console.debug(`Mod ${mod.name} was already inactive, no options menu change needed`);
     }
 
     mod.active = newState;
@@ -486,13 +454,10 @@ const updateMod = (mod, forceState = undefined) => {
     if (button) {
         const newText = getButtonText(mod);
         button.textContent = newText;
-        console.debug(`Updated button text for ${mod.name}: "${newText}" (active: ${newState})`);
     } else {
-        console.debug(`Button for mod ${mod.name} not found, may be during round transition`);
     }
 
     saveState();
-    console.debug(`Mod ${mod.name} state changed to ${newState ? 'active' : 'inactive'}`);
     return newState;
 };
 
@@ -507,11 +472,9 @@ const mapClickListener = (func, enable = true) => {
         }
         document.addEventListener('map_click', func);
         _MAP_CLICK_LISTENERS.add(func);
-        console.debug('Added map click listener:', func.name || 'anonymous');
     } else {
         document.removeEventListener('map_click', func, false);
         _MAP_CLICK_LISTENERS.delete(func);
-        console.debug('Removed map click listener:', func.name || 'anonymous');
     }
 };
 
@@ -519,7 +482,6 @@ const mapClickListener = (func, enable = true) => {
 const clearAllMapClickListeners = () => {
     for (const func of _MAP_CLICK_LISTENERS) {
         document.removeEventListener('map_click', func, false);
-        console.debug('Cleared map click listener:', func.name || 'anonymous');
     }
     _MAP_CLICK_LISTENERS.clear();
 };
@@ -549,14 +511,12 @@ const isScoringMod = (mod) => {
 
 const disableOtherScoreMods = (mod) => { // This function needs to be called prior to defining SCORE_FUNC when a scoring mod is enabled.
     SCORE_FUNC = undefined;
-    console.debug('Disabling other scoring mods, keeping active:', mod?.name || 'none');
     
     for (const other of Object.values(MODS)) {
         if (mod === other) {
             continue;
         }
         if (isScoringMod(other)) {
-            console.debug('Disabling scoring mod:', other.name);
             disableMods(other);
         }
     }
@@ -565,10 +525,8 @@ const disableOtherScoreMods = (mod) => { // This function needs to be called pri
 const closeOptionMenu = () => {
     const menu = document.querySelector('#gg-option-menu');
     if (menu) {
-        console.debug('Closing option menu');
         menu.parentElement.removeChild(menu);
     } else {
-        console.debug('No option menu found to close');
     }
     
     // Clear the global reference
@@ -579,7 +537,6 @@ const closeOptionMenu = () => {
  * Removes overlays for specific mods that have draggable displays/overlays
  */
 const removeModOverlays = (mod) => {
-    console.debug('Attempting to remove overlays for mod:', mod.name);
     
     try {
         // Handle lottery mod overlays
@@ -587,12 +544,10 @@ const removeModOverlays = (mod) => {
             // Remove lottery display
             if (typeof removeLotteryDisplay === 'function') {
                 removeLotteryDisplay();
-                console.debug('Removed lottery display overlay');
             }
             // Remove lottery map overlays
             if (typeof removeAllLotteryClickBlockers === 'function') {
                 removeAllLotteryClickBlockers();
-                console.debug('Removed lottery map overlays');
             }
         }
         
@@ -601,12 +556,10 @@ const removeModOverlays = (mod) => {
             // Remove tile counter
             if (typeof removeTileCounter === 'function') {
                 removeTileCounter();
-                console.debug('Removed tile counter overlay');
             }
             // Remove tiles
             if (typeof removeTiles === 'function') {
                 removeTiles();
-                console.debug('Removed tile overlays');
             }
         }
         
@@ -614,7 +567,6 @@ const removeModOverlays = (mod) => {
         if (mod.key === 'flashlight') {
             if (typeof updateFlashlight === 'function') {
                 updateFlashlight(false);
-                console.debug('Removed flashlight overlay');
             }
         }
         
@@ -622,7 +574,6 @@ const removeModOverlays = (mod) => {
         if (mod.key === 'display-preferences') {
             if (typeof removeColorOverlay === 'function') {
                 removeColorOverlay();
-                console.debug('Removed color overlay');
             }
         }
         
@@ -630,7 +581,6 @@ const removeModOverlays = (mod) => {
         if (mod.key === 'puzzle') {
             if (typeof updatePuzzle === 'function') {
                 updatePuzzle(false);
-                console.debug('Removed puzzle overlay');
             }
         }
         
@@ -650,7 +600,6 @@ const removeModOverlays = (mod) => {
                 const elements = document.querySelectorAll(selector);
                 elements.forEach(element => {
                     element.remove();
-                    console.debug(`Removed element with selector: ${selector}`);
                 });
             });
         }
@@ -665,29 +614,24 @@ const removeModOverlays = (mod) => {
  * This prevents conflicts between lottery and scoring functionality
  */
 const disableConflictingMods = (activatingMod) => {
-    console.debug('Checking for conflicting mods with:', activatingMod?.name || 'none');
     
     const isLottery = activatingMod?.key === 'lottery';
     const isScoring = isScoringMod(activatingMod);
     
     if (isLottery) {
         // Lottery is being enabled - disable all scoring mods
-        console.debug('Lottery enabled: disabling all scoring mods');
         for (const other of Object.values(MODS)) {
             if (other === activatingMod) continue;
             if (isScoringMod(other)) {
-                console.debug('Disabling scoring mod due to lottery:', other.name);
                 disableMods(other);
                 removeModOverlays(other);
             }
         }
     } else if (isScoring) {
         // Scoring mod is being enabled - disable lottery and other scoring mods, remove all incompatible overlays
-        console.debug('Scoring mod enabled: disabling lottery and other scoring mods, removing overlays');
         for (const other of Object.values(MODS)) {
             if (other === activatingMod) continue;
             if (isScoringMod(other) || other.key === 'lottery') {
-                console.debug('Disabling conflicting mod:', other.name);
                 disableMods(other);
                 removeModOverlays(other);
             }
@@ -698,7 +642,6 @@ const disableConflictingMods = (activatingMod) => {
         for (const other of Object.values(MODS)) {
             if (other === activatingMod) continue;
             if (modsWithOverlays.includes(other.key)) {
-                console.debug('Removing overlays from mod:', other.name);
                 removeModOverlays(other);
             }
         }
@@ -783,7 +726,6 @@ const setupGlobalKeyBindings = () => {
 const handleGoogleMapsShortcut = (key) => {
     const lotteryMod = MODS.lottery;
     if (!lotteryMod || !isModActive(lotteryMod)) {
-        console.debug('Google Maps shortcuts require lottery mod to be active');
         return;
     }
 
@@ -792,7 +734,6 @@ const handleGoogleMapsShortcut = (key) => {
     
     // Check if either special option is enabled
     if (!onlyLand && !onlyStreetView) {
-        console.debug('Google Maps shortcuts require "Only Land" or "Only Street View" options to be enabled');
         return;
     }
 
@@ -810,7 +751,6 @@ const handleGoogleMapsShortcut = (key) => {
         // Ctrl+[ - Open actual location in Google Maps (standard view)
         const mapsUrl = `https://www.google.com/maps/@${lat},${lng},15z`;
         GM_openInTab(mapsUrl, false);
-        console.debug(`Opened actual location in Google Maps: ${lat}, ${lng}`);
     } else if (key === ']') {
         // Ctrl+] - Open aerial view of nearest land location OR street view if both are enabled
         let mapsUrl;
@@ -818,15 +758,12 @@ const handleGoogleMapsShortcut = (key) => {
         if (onlyStreetView && onlyLand) {
             // Both enabled - open Street View location (as per user requirement)
             mapsUrl = `https://www.google.com/maps/@${lat},${lng},3a,75y,90t/data=!3m1!1e1`;
-            console.debug(`Opened Street View location (both options enabled): ${lat}, ${lng}`);
         } else if (onlyStreetView) {
             // Only Street View enabled - open Street View
             mapsUrl = `https://www.google.com/maps/@${lat},${lng},3a,75y,90t/data=!3m1!1e1`;
-            console.debug(`Opened Street View location: ${lat}, ${lng}`);
         } else if (onlyLand) {
             // Only Land enabled - open aerial view of nearest land location
             mapsUrl = `https://www.google.com/maps/@${lat},${lng},15z/data=!3m1!1e3`;
-            console.debug(`Opened aerial view of nearest land location: ${lat}, ${lng}`);
         }
         
         if (mapsUrl) {
