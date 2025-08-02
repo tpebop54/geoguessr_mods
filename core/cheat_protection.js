@@ -204,54 +204,13 @@ const clearCheatOverlay = () => {
     }
 };
 
-const createQuoteOverlay = () => {
-    const currentPath = THE_WINDOW.location.pathname;
-    
-    if (!areModsAvailable()) {
-        return;
-    }
-
-    if (_CHEAT_OVERLAY && document.body.contains(_CHEAT_OVERLAY)) {
-        return;
-    }
-    if (!document.body) {
-        setTimeout(createQuoteOverlay, 100);
-        return;
-    }
-    const quotesEnabled = (typeof THE_WINDOW.ENABLE_QUOTES !== 'undefined') ? THE_WINDOW.ENABLE_QUOTES : false;
-    if (quotesEnabled && !THE_WINDOW._QUOTES) {
-        setTimeout(() => {
-            createQuoteOverlay();
-        }, 200);
-        return;
-    }
-    
-    if (_QUOTES_FLAT.length === 0 && quotesEnabled) {
-        try {
-            if (typeof initQuotesFlat === 'function') {
-                initQuotesFlat();
-            }
-        } catch (err) {}
-        if (_QUOTES_FLAT.length === 0) {
-            const quotesEnabled = (typeof THE_WINDOW.ENABLE_QUOTES !== 'undefined') ? THE_WINDOW.ENABLE_QUOTES : false;
-            if (quotesEnabled) {
-                setTimeout(() => {
-                    createQuoteOverlay();
-                }, 200);
-                return;
-            }
-        }
-    }
-    createQuoteOverlayNow();
-};
-
 const createQuoteOverlayNow = () => {
     // If there's already an overlay, don't create another one
     if (_CHEAT_OVERLAY && document.body.contains(_CHEAT_OVERLAY)) {
         return;
     }
     
-    // Add global failsafe timer that will remove any overlay after 5 seconds, regardless of any other logic
+    // Add global failsafe timer that will remove any overlay after 5 seconds, regardless of any other logic.
     const globalFailsafeTimer = setTimeout(() => {
         const overlayToRemove = document.getElementById('on-your-honor');
         if (overlayToRemove) {
@@ -425,6 +384,45 @@ const createQuoteOverlayNow = () => {
             }
         }, 100); // Small delay to let clearCheatOverlay finish
     }, maxOverlayTime);
+};
+
+const createQuoteOverlay = () => {
+    if (!areModsAvailable()) {
+        return;
+    }
+
+    if (_CHEAT_OVERLAY && document.body.contains(_CHEAT_OVERLAY)) {
+        return;
+    }
+    if (!document.body) {
+        setTimeout(createQuoteOverlay, 100);
+        return;
+    }
+    const quotesEnabled = (typeof THE_WINDOW.ENABLE_QUOTES !== 'undefined') ? THE_WINDOW.ENABLE_QUOTES : false;
+    if (quotesEnabled && !THE_WINDOW._QUOTES) {
+        setTimeout(() => {
+            createQuoteOverlay();
+        }, 200);
+        return;
+    }
+    
+    if (_QUOTES_FLAT.length === 0 && quotesEnabled) {
+        try {
+            if (typeof initQuotesFlat === 'function') {
+                initQuotesFlat();
+            }
+        } catch (err) {}
+        if (_QUOTES_FLAT.length === 0) {
+            const quotesEnabled = (typeof THE_WINDOW.ENABLE_QUOTES !== 'undefined') ? THE_WINDOW.ENABLE_QUOTES : false;
+            if (quotesEnabled) {
+                setTimeout(() => {
+                    createQuoteOverlay();
+                }, 200);
+                return;
+            }
+        }
+    }
+    createQuoteOverlayNow();
 };
 
 /**

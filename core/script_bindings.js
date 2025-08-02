@@ -400,6 +400,8 @@ const onRoundStart = (evt) => {
     _MODS_LOADED = false;
     THE_WINDOW.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
 
+    createQuoteOverlay();
+
     THE_WINDOW.dispatchEvent(new CustomEvent('gg_round_start', {
         detail: evt.detail || {}
     }));
