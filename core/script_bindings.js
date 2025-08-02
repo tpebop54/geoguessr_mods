@@ -298,13 +298,14 @@ document.addEventListener('gg_maps_ready', () => {
     initializeMods();
 });
 
-fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) => {
+const fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) => {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+
             const response = await fetch(`https://www.geoguessr.com/api/maps/${mapId}`, {
-                signal: controller.signal,
+                signal: controller.signal
             });
             clearTimeout(timeoutId);
 
@@ -312,23 +313,29 @@ fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) => {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             const data = await response.json();
-            if (!data) {
-                throw new Error(`Invalid map data structure received. Data: ${data}`);
+            if (!data || typeof data.maxErrorDistance === 'undefined') {
+                throw new Error('Invalid map data structure received');
             }
+
             GG_MAP = data;
             return data;
+
         } catch (err) {
             console.warn(`GeoGuessr MultiMod: Map data fetch attempt ${attempt} failed:`, err);
+
             if (attempt === maxRetries) {
-                console.error('Failed to fetch map data. Using backup.', err);
+                console.error('GeoGuessr MultiMod: Failed to fetch map data after all retries:', err);
+                // Set a fallback GG_MAP with reasonable defaults
                 GG_MAP = {
                     id: mapId,
                     maxErrorDistance: 20015086, // Default world map max distance in meters
                     name: 'Unknown Map (Fallback)',
                     description: 'Map data could not be loaded'
                 };
+                console.warn('GeoGuessr MultiMod: Using fallback GG_MAP:', GG_MAP);
                 throw err;
             }
+
             if (attempt < maxRetries) {
                 await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
             }
@@ -451,51 +458,6 @@ const onRoundEnd = (evt) => {
     GG_CLICK = undefined;
     GG_MAP = undefined;
 }
-
-const fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) => {
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-            const response = await fetch(`https://www.geoguessr.com/api/maps/${mapId}`, {
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            const data = await response.json();
-            if (!data || typeof data.maxErrorDistance === 'undefined') {
-                throw new Error('Invalid map data structure received');
-            }
-
-            GG_MAP = data;
-            return data;
-
-        } catch (err) {
-            console.warn(`GeoGuessr MultiMod: Map data fetch attempt ${attempt} failed:`, err);
-
-            if (attempt === maxRetries) {
-                console.error('GeoGuessr MultiMod: Failed to fetch map data after all retries:', err);
-                // Set a fallback GG_MAP with reasonable defaults
-                GG_MAP = {
-                    id: mapId,
-                    maxErrorDistance: 20015086, // Default world map max distance in meters
-                    name: 'Unknown Map (Fallback)',
-                    description: 'Map data could not be loaded'
-                };
-                console.warn('GeoGuessr MultiMod: Using fallback GG_MAP:', GG_MAP);
-                throw err;
-            }
-
-            if (attempt < maxRetries) {
-                await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
-            }
-        }
-    }
-};
 
 document.addEventListener('gg_round_start', (evt) => {
     debugger
