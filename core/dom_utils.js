@@ -572,7 +572,7 @@ const removeModOverlays = (mod) => {
         }
         
         // Handle display mod overlays
-        if (mod.key === 'display-preferences') {
+        if (mod.key === 'fun-filters') {
             if (typeof removeColorOverlay === 'function') {
                 removeColorOverlay();
             }
@@ -590,7 +590,7 @@ const removeModOverlays = (mod) => {
             lottery: ['.gg-lottery-display', '.gg-lottery-overlay', '[class*="lottery-click-block"]'],
             tilereveal: ['#gg-tile-counter', '#gg-tile-overlay', '.gg-tile'],
             flashlight: ['#gg-flashlight-div', '#gg-flashlight'],
-            'display-preferences': ['.gg-color-overlay'],
+            'fun-filters': ['.gg-color-overlay'],
             puzzle: ['#gg-canvas-2d', '.gg-puzzle-tile', '.gg-puzzle-dragging'],
             // Add more as needed
         };
@@ -639,7 +639,7 @@ const disableConflictingMods = (activatingMod) => {
         }
         
         // Remove overlays from other mods that might interfere with scoring
-        const modsWithOverlays = ['tilereveal', 'flashlight', 'display-preferences', 'puzzle'];
+        const modsWithOverlays = ['tilereveal', 'flashlight', 'fun-filters', 'puzzle'];
         for (const other of Object.values(MODS)) {
             if (other === activatingMod) continue;
             if (modsWithOverlays.includes(other.key)) {

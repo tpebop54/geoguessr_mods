@@ -192,8 +192,8 @@ const MODS = {
 
     displayOptions: { // Miscellaneous display options that don't deserve a full button.
         show: true, // Broken in duels.
-        key: 'display-preferences',
-        name: 'Display Preferences',
+        key: 'fun-filters',
+        name: 'Fun Filters',
         tooltip: 'Various display options for page elements, colors, etc. Does not mess with gameplay.',
         // Note: CSS filters may have issues in Opera, but transforms work fine
         options: {
