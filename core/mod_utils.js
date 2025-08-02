@@ -14,7 +14,7 @@ const _MERCATOR_LNG_MAX = 180;
 
 const areModsAvailable = (path) => {
     path = path || THE_WINDOW.location.pathname;
-    if (path.includes('/multiplayer') && ON_MY_HONOR.toLowerCase() !== 'on my honor') {
+    if (path.includes('/multiplayer') && !THE_WINDOW.DISABLE_CHEAT_PROTECTION) {
         return false;
     }
     return path.includes('/game/') || path.includes('/live-challenge/') || path.includes('/multiplayer');

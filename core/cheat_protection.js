@@ -437,7 +437,7 @@ const createQuoteOverlayNow = () => {
 const clickGarbage = (nMilliseconds = 900) => {
     // Check if clickGarbage is disabled via ON_MY_HONOR setting
     const onMyHonor = (typeof THE_WINDOW.ON_MY_HONOR !== 'undefined') ? THE_WINDOW.ON_MY_HONOR : '';
-    if (onMyHonor === 'on my honor') {
+    if (THE_WINDOW.DISABLE_CHEAT_PROTECTION) {
         return; // Skip clickGarbage but keep rest of cheat protection active
     }
     
