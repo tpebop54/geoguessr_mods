@@ -547,8 +547,8 @@ const removeModOverlays = (mod) => {
                 removeLotteryDisplay();
             }
             // Remove lottery map overlays
-            if (typeof removeAllLotteryClickBlockers === 'function') {
-                removeAllLotteryClickBlockers();
+            if (typeof removeClickBlock === 'function') {
+                removeClickBlock();
             }
         }
         
