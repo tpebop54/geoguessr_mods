@@ -24,7 +24,7 @@
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/core/mod_utils.js?v=1.2.2
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/core/google_api.js?v=1.2.2
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/core/styling.js?v=1.2.2
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/core/cheat_protection.js?v=1.2.2
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/core/loading_screen.js?v=1.2.2
 
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/mods/satellite.js?v=1.2.2
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/dev/mods/rotate.js?v=1.2.2

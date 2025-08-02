@@ -14,11 +14,8 @@ const initQuotesFlat = () => {
     if (_QUOTES_FLAT) {
         return;
     }
-    const quotesEnabled = (typeof THE_WINDOW.ENABLE_QUOTES !== 'undefined') ? THE_WINDOW.ENABLE_QUOTES : false;
-    if (!quotesEnabled) {
-        return;
-    }
-    for (const value of Object.values(THE_WINDOW._QUOTES || {})) {
+    _QUOTES_FLAT = [];
+    for (const quotesThisCategory of Object.values(THE_WINDOW._QUOTES || {})) {
         _QUOTES_FLAT.push(...quotesThisCategory);
     }
 };
@@ -33,8 +30,7 @@ const getOverlayText = () => {
     return 'Loading...';
 };
 
-/** Split the quote and the author into a String[]. Must include the dash character — to split it. (not a hyphen) */
-const splitQuote = (quote) => {
+const splitQuote = (quote) => {  // Split the quote and the author by the dash character.
     const parts = quote.split('—').map(part => part.trim());
     return parts;
 };
@@ -62,7 +58,7 @@ const clearQuoteOverlay = () => {
     }
 };
 
-const createQuoteOverlaySync = () => {
+const createLoadOverlaySync = () => {
     if (_LOAD_OVERLAY && document.body.contains(_LOAD_OVERLAY)) {
         return;
     }
@@ -255,7 +251,7 @@ const createQuoteOverlay = () => {
             }
         }
     }
-    createQuoteOverlaySync();
+    createLoadOverlaySync();
 };
 
 /**
