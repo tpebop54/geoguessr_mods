@@ -349,3 +349,30 @@ const resetLotteryCount = () => {
         counter.innerText = _LOTTERY_COUNT;
     }
 };
+
+const updateLottery = (forceState = undefined) => {
+    const mod = MODS.lottery;
+    const active = updateMod(mod, forceState);
+
+    if (!active || !areModsAvailable()) {
+        removeLotteryDisplay();
+        removeClickBlock();
+        return;
+    }
+
+    disableConflictingMods(mod);
+
+    waitForMapsReady(() => {
+        if (!_LOTTERY_DISPLAY) {
+            _LOTTERY_COUNT = getOption(mod, 'nGuesses');
+            makeLotteryDisplay();
+        }
+        const counter = document.getElementById('gg-lottery-counter');
+        counter.innerText = _LOTTERY_COUNT
+    }, {
+        require2D: true,
+        require3D: true,
+        timeout: 5000,
+    });
+    saveState();
+};
