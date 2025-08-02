@@ -500,17 +500,13 @@ fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) => {
 };
 
 const initGEF = () => {
-    startGlobalMapLoading();
     const GEF = THE_WINDOW.GeoGuessrEventFramework;
     if (!GEF) {
         console.error('GEF not loaded.');
         return;
     }
-
     GEF.events.addEventListener('round_start', onRoundStart);
     GEF.events.addEventListener('round_end', onRoundEnd);
-
-    setUpDOMObserver();
 };
 initGEF();
 
