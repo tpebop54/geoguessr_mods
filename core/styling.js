@@ -268,7 +268,7 @@ const flashlightStyles = `
 `;
 
 // Display Options mod styles
-const displayOptionsStyles = `
+const funFiltersStyles = `
     #gg-color-overlay {
         position: absolute;
         width: 100vw;
@@ -471,7 +471,7 @@ const applyModStyles = () => {
         optionMenuStyles +
         showScoreStyles +
         flashlightStyles +
-        displayOptionsStyles +
+        funFiltersStyles +
         (IS_OPERA ? operaOptimizationStyles : '') +
         tileRevealStyles +
         lotteryStyles +

@@ -100,7 +100,7 @@ let _MODS_LOADED = false;
 
 // Add a verification function to check if display options were properly restored
 const verifyDisplayOptions = () => {
-    const displayMod = MODS.displayOptions;
+    const displayMod = MODS.funFilters;
     if (!displayMod) {
         console.warn("Display options mod not found!");
         return;

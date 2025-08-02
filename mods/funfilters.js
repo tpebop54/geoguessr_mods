@@ -198,7 +198,7 @@ const setupDisplayLocationTracking = () => {
         
         // Small delay to allow the page to settle
         setTimeout(() => {
-            const mod = MODS.displayOptions;
+            const mod = MODS.funFilters;
             if (isModActive(mod)) {
                 updateDisplayOptions(true); // Force reapplication
             }
@@ -209,7 +209,7 @@ const setupDisplayLocationTracking = () => {
 };
 
 const updateDisplayOptions = (forceState = undefined) => {
-    const mod = MODS.displayOptions;
+    const mod = MODS.funFilters;
     const active = updateMod(mod, forceState);
 
     // Setup location tracking if not already active and mod is being enabled
@@ -288,7 +288,7 @@ const applyDisplayFilters = (filterStr, transformStr) => {
 
 // Add round start and reactivation event listeners
 THE_WINDOW.addEventListener('gg_round_start', (evt) => {
-    const mod = MODS.displayOptions;
+    const mod = MODS.funFilters;
     if (isModActive(mod)) {
         setTimeout(() => {
             updateDisplayOptions(true); // Force reapplication
@@ -297,7 +297,7 @@ THE_WINDOW.addEventListener('gg_round_start', (evt) => {
 });
 
 THE_WINDOW.addEventListener('gg_mods_reactivate', (evt) => {
-    const mod = MODS.displayOptions;
+    const mod = MODS.funFilters;
     if (isModActive(mod)) {
         setTimeout(() => {
             updateDisplayOptions(true);

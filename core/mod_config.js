@@ -190,7 +190,7 @@ const MODS = {
         },
     },
 
-    displayOptions: { // Miscellaneous display options that don't deserve a full button.
+    funFilters: { // Miscellaneous display options that don't deserve a full button.
         show: true, // Broken in duels.
         key: 'fun-filters',
         name: 'Fun Filters',
