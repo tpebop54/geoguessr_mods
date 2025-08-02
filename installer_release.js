@@ -36,7 +36,7 @@
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/lottery.js?v=1.1.0
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/puzzle.js?v=1.1.0
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/tilereveal.js?v=1.1.0
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/display.js?v=1.1.0
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/funfilters.js?v=1.1.0
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/scratch.js?v=1.1.0
 
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/script_bindings.js?v=1.1.0
