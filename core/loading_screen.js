@@ -58,7 +58,7 @@ const clearQuoteOverlay = () => {
     }
 };
 
-const createLoadOverlaySync = () => {
+const createLoadOverlayDiv = () => {
     if (_LOAD_OVERLAY && document.body.contains(_LOAD_OVERLAY)) {
         return;
     }
@@ -251,7 +251,7 @@ const createQuoteOverlay = () => {
             }
         }
     }
-    createLoadOverlaySync();
+    createLoadOverlayDiv();
 };
 
 /**
@@ -262,9 +262,8 @@ const createQuoteOverlay = () => {
   This function is sloppy, but it doesn't really matter as long as we screw up the replay.
 */
 const clickGarbage = (nMilliseconds = 900) => {
-    const onMyHonor = (typeof THE_WINDOW.ON_MY_HONOR !== 'undefined') ? THE_WINDOW.ON_MY_HONOR : '';
     if (THE_WINDOW.DISABLE_CHEAT_PROTECTION) {
-        return; // Skip clickGarbage but keep rest of cheat protection active
+        return;
     }
 
     const nClicks = 20; // Approximately...
@@ -280,21 +279,14 @@ const clickGarbage = (nMilliseconds = 900) => {
     clickAt(0, 0); // Race condition, but whatever.
 };
 
-const initCheatProtection = () => {
-    if (!_CHEAT_DETECTION) {
-        return; // Get outta 'ere
-    }
-    if (_YOURE_LOOKING_AT_MY_CODE()) {
-        return; // Get outta 'ere
-    }
+const initLoadOverlay = () => {
     if (!areModsAvailable()) {
         return;
     }
 
-    createQuoteOverlay();
+    createLoadOverlayDiv();
 
-    // Add a MutationObserver to watch for the Google Maps canvas insertion
-    // This provides an additional method to detect map loading
+    // Add a MutationObserver to watch for the Google Maps canvas insertion.
     const observer = new MutationObserver((mutations) => {
         mutations.forEach(mutation => {
             if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
@@ -309,12 +301,7 @@ const initCheatProtection = () => {
             }
         });
     });
-
-    // Start observing the document with the configured parameters
-    observer.observe(document.documentElement, {
-        childList: true,
-        subtree: true
-    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
 
     // Safety - stop observing after 5 seconds to match overlay timeout
     setTimeout(() => {
@@ -322,61 +309,23 @@ const initCheatProtection = () => {
     }, 5000);
 };
 
-
-const addCheatProtection = () => {
-    _CHEAT_DETECTION = true; // I freaking dare you.
-
-    if (!_CHEAT_DETECTION) {
-        return; // Get outta 'ere
-    }
-    if (_YOURE_LOOKING_AT_MY_CODE()) {
-        return; // Get outta 'ere
-    }
-
-    // Add coordinate event listener for duels
-    document.addEventListener('ggCoordinates', (evt) => { // Used for duels.
-        GG_LOC = evt.detail;
-    });
-};
-
-// Initialize cheat protection as early as possible
+// Initialize loading screen as early as possible.
 (() => {
-    // Try to initialize immediately for the fastest possible overlay creation
-
-    // Check if we're on a game page before showing overlay
-    const currentPath = THE_WINDOW.location.pathname;
-
     if (!areModsAvailable()) {
         return;
     }
 
-    // Create overlay immediately for the fastest path
-    if (_CHEAT_DETECTION && !_YOURE_LOOKING_AT_MY_CODE()) {
-        createQuoteOverlay();
-    }
-
     // Add multiple initialization paths to ensure the overlay appears as early as possible
     if (document.readyState === 'loading') {
-        // Add both DOMContentLoaded and load handlers to ensure overlay appears as early as possible
         document.addEventListener('DOMContentLoaded', () => {
-            initCheatProtection();
+            initLoadOverlay();
         });
-
         THE_WINDOW.addEventListener('load', () => {
-            // Make sure overlay is still active after full page load
             if (!_LOAD_OVERLAY || !document.body.contains(_LOAD_OVERLAY)) {
-                initCheatProtection();
+                initLoadOverlay();
             }
         });
-    } else {
-        // Document already loaded, initialize immediately
-        initCheatProtection();
+    } else { // document already loaded.
+        initLoadOverlay();
     }
-
-    // Extra insurance - also check after a small delay in case the other methods fail
-    setTimeout(() => {
-        if (!_LOAD_OVERLAY || !document.body.contains(_LOAD_OVERLAY)) {
-            initCheatProtection();
-        }
-    }, 100);
 })();

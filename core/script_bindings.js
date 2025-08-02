@@ -243,7 +243,6 @@ const initializeMods = async () => {
         loadState();
         activateLoadedMods();
         setUpMapEventListeners();
-        addCheatProtection();
         addButtons();
         fixFormatting();
 
