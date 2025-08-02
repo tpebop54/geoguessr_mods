@@ -246,7 +246,7 @@ const initializeMods = async () => {
         addButtons();
         fixFormatting();
 
-        if (_CHEAT_DETECTION) {
+        if (!THE_WINDOW.DISABLE_CHEAT_PROTECTION) {
             setTimeout(() => {
                 clickGarbage(900);
             }, 500);
@@ -297,9 +297,6 @@ const initializeMods = async () => {
 document.addEventListener('gg_maps_ready', () => {
     initializeMods();
 });
-
-// Global variables and functions for round detection
-// let onRoundStart, fetchMapDataWithRetry, mapDataCheckInterval;
 
 fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) => {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -455,7 +452,7 @@ const onRoundEnd = (evt) => {
     GG_MAP = undefined;
 }
 
-fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) => {
+const fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) => {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             const controller = new AbortController();
@@ -500,14 +497,18 @@ fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) => {
     }
 };
 
+document.addEventListener('gg_round_start', (evt) => {
+    debugger
+});
+
 const initGEF = () => {
     const GEF = THE_WINDOW.GeoGuessrEventFramework;
     if (!GEF) {
         console.error('GEF not loaded.');
         return;
     }
-    GEF.events.addEventListener('round_start', onRoundStart);
-    GEF.events.addEventListener('round_end', onRoundEnd);
+    GEF.events.addEventListener('gg_round_start', onRoundStart);
+    GEF.events.addEventListener('gg_round_end', onRoundEnd);
 };
 initGEF();
 
