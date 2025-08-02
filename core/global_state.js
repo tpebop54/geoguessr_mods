@@ -79,6 +79,8 @@ const loadState = () => { // Load state from local storage if it exists, else us
     return MODS;
 };
 
+THE_WINDOW.loadState = loadState; // debugging convenience.
+
 let GG_ROUND; // Current round information. This gets set on round start, and deleted on round end.
 let GG_LOC; // This is intercepted from Google Maps API. It contains the lat, lng, and countryCode.
 let GG_MAP; // Current map info.
@@ -97,25 +99,3 @@ let _IS_DRAGGING_SMALL_MAP = false; // true when user is actively dragging the g
 let SCORE_FUNC;
 
 let _MODS_LOADED = false;
-
-// Add a verification function to check if display options were properly restored
-const verifyDisplayOptions = () => {
-    const displayMod = MODS.funFilters;
-    if (!displayMod) {
-        console.warn("Display options mod not found!");
-        return;
-    }
-};
-
-// Call verification after state is loaded
-const originalLoadState = loadState;
-THE_WINDOW.loadState = function() {
-    const result = originalLoadState.apply(this, arguments);
-    
-    // Verify display options specifically
-    setTimeout(() => {
-        verifyDisplayOptions();
-    }, 500);
-    
-    return result;
-};

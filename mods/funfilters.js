@@ -200,7 +200,7 @@ const setupDisplayLocationTracking = () => {
         setTimeout(() => {
             const mod = MODS.funFilters;
             if (isModActive(mod)) {
-                updateDisplayOptions(true); // Force reapplication
+                updateFunFilters(true); // Force reapplication
             }
         }, 500);
     }, 1000);
@@ -208,7 +208,7 @@ const setupDisplayLocationTracking = () => {
     displayLocationTrackingActive = true;
 };
 
-const updateDisplayOptions = (forceState = undefined) => {
+const updateFunFilters = (forceState = undefined) => {
     const mod = MODS.funFilters;
     const active = updateMod(mod, forceState);
 
@@ -291,7 +291,7 @@ THE_WINDOW.addEventListener('gg_round_start', (evt) => {
     const mod = MODS.funFilters;
     if (isModActive(mod)) {
         setTimeout(() => {
-            updateDisplayOptions(true); // Force reapplication
+            updateFunFilters(true); // Force reapplication
         }, 500);
     }
 });
@@ -300,7 +300,7 @@ THE_WINDOW.addEventListener('gg_mods_reactivate', (evt) => {
     const mod = MODS.funFilters;
     if (isModActive(mod)) {
         setTimeout(() => {
-            updateDisplayOptions(true);
+            updateFunFilters(true);
         }, 500);
     }
 });

@@ -24,7 +24,7 @@ const getBindings = () => {
                 [MODS.lottery, updateLottery],
                 [MODS.puzzle, updatePuzzle],
                 [MODS.tileReveal, updateTileReveal],
-                [MODS.funFilters, updateDisplayOptions],
+                [MODS.funFilters, updateFunFilters],
                 [MODS.scratch, updateScratch],
             ];
         } catch (err) {
