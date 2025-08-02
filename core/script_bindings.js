@@ -396,7 +396,6 @@ const reactivateMods = () => {
     THE_WINDOW.dispatchEvent(new CustomEvent('gg_mods_reactivate', { detail: { timestamp: Date.now() } }));
 };
 
-// Round start event handler
 const onRoundStart = (evt) => {
     _MODS_LOADED = false;
     THE_WINDOW.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
@@ -450,25 +449,16 @@ const onRoundStart = (evt) => {
 };
 
 const onRoundEnd = (evt) => {
-    // Clear the periodic check interval
-    if (mapDataCheckInterval) {
-        clearInterval(mapDataCheckInterval);
-        mapDataCheckInterval = null;
-    }
-
-    // Reset global map loading state
-    lastAttemptedMapId = null;
-
     GG_ROUND = undefined;
     GG_CLICK = undefined;
+    GG_MAP = undefined;
 }
 
-// Enhanced map data fetching with retry logic (moved outside event handler)
 fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) => {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
 
             const response = await fetch(`https://www.geoguessr.com/api/maps/${mapId}`, {
                 signal: controller.signal
@@ -478,10 +468,7 @@ fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) => {
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-
             const data = await response.json();
-
-            // Validate that we got the expected data structure
             if (!data || typeof data.maxErrorDistance === 'undefined') {
                 throw new Error('Invalid map data structure received');
             }
@@ -505,162 +492,56 @@ fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) => {
                 throw err;
             }
 
-            // Wait before retrying
             if (attempt < maxRetries) {
                 await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
             }
         }
     }
 };
+
+const initGEF = () => {
+    startGlobalMapLoading();
+    const GEF = THE_WINDOW.GeoGuessrEventFramework;
+    if (!GEF) {
+        console.error('GEF not loaded.');
+        return;
+    }
+
+    GEF.events.addEventListener('round_start', onRoundStart);
+    GEF.events.addEventListener('round_end', onRoundEnd);
+
+    setUpDOMObserver();
 };
+initGEF();
 
-// Initialize GeoGuessrEventFramework after a small delay to ensure all modules are loaded
-let initRetryCount = 0;
-const maxRetries = 10;
+const addKeyBindings = () => {
+    document.addEventListener('keydown', (evt) => { // Custom hotkeys.
+        // Check if user is interacting with form elements or options menu
+        const activeElement = document.activeElement;
+        const isInOptionsMenu = activeElement && activeElement.closest('#gg-option-menu');
+        const isFormElement = activeElement && (
+            activeElement.tagName === 'INPUT' ||
+            activeElement.tagName === 'SELECT' ||
+            activeElement.tagName === 'TEXTAREA' ||
+            activeElement.tagName === 'BUTTON' ||
+            activeElement.contentEditable === 'true' ||
+            activeElement.classList.contains('gg-option-input')
+        );
 
-setTimeout(() => {
-    initializeEventFramework();
-}, 1000); // Increased delay for better compatibility
-
-function initializeEventFramework() {
-    try {
-        startGlobalMapLoading();
-
-        const GEF = THE_WINDOW.GeoGuessrEventFramework;
-        if (!GEF) {
-            console.error('GEF not loaded.');
+        // Don't process hotkeys if user is in a form element or options menu
+        if (isFormElement || isInOptionsMenu) {
             return;
         }
 
-        const addListeners = () => {
-            GEF.events.addEventListener('round_start', onRoundStart);
-
-            GEF.events.addEventListener('round_end', (evt) => {
-                if (mapDataCheckInterval) {
-                    clearInterval(mapDataCheckInterval);
-                    mapDataCheckInterval = null;
-                }
-                lastAttemptedMapId = null;
-                GG_ROUND = undefined;
-                GG_CLICK = undefined;
-            });
-        };
-        addListeners();
-
-        // Set up DOM observer for fallback detection
-        setUpDOMObserver();
-
-        // Alternative: Monitor for round changes using URL and DOM changes
-        let currentUrl = THE_WINDOW.location.href;
-        let roundChangeDetected = false;
-
-
-
-        GEF.events.addEventListener('round_start', onRoundStart);
-
-        GEF.events.addEventListener('round_end', (evt) => {
-
-        });
-
-        document.addEventListener('keydown', (evt) => { // Custom hotkeys.
-            // Check if user is interacting with form elements or options menu
-            const activeElement = document.activeElement;
-            const isInOptionsMenu = activeElement && activeElement.closest('#gg-option-menu');
-            const isFormElement = activeElement && (
-                activeElement.tagName === 'INPUT' ||
-                activeElement.tagName === 'SELECT' ||
-                activeElement.tagName === 'TEXTAREA' ||
-                activeElement.tagName === 'BUTTON' ||
-                activeElement.contentEditable === 'true' ||
-                activeElement.classList.contains('gg-option-input')
-            );
-
-            // Don't process hotkeys if user is in a form element or options menu
-            if (isFormElement || isInOptionsMenu) {
-                return;
-            }
-
-            // Handle hotkeys for mods
-            for (const [mod, callback] of getBindings()) {
-                if (mod.hotkey && evt.code === mod.hotkey) {
-                    evt.preventDefault();
-                    closeOptionMenu();
-                    callback();
-                    break;
-                }
-            }
-        });
-    } catch (err) {
-        console.error('GeoGuessr MultiMod: Exception during GeoGuessrEventFramework setup:', err);
-        initRetryCount++;
-        if (initRetryCount < maxRetries) {
-            // Retry if there was an exception
-            setTimeout(initializeEventFramework, 2000);
-        } else {
-            console.error('GeoGuessr MultiMod: Failed to initialize GeoGuessrEventFramework after maximum retries');
-        }
-    }
-    /* eslint-enable no-undef */
-}
-
-// TODO: needed?
-// Additional DOM-based round detection as fallback
-const setUpDOMObserver = () => {
-    const gameObserver = new MutationObserver((mutations) => {
-        for (const mutation of mutations) {
-            // Look for game-related elements being added
-            for (const node of mutation.addedNodes) {
-                if (node.nodeType === Node.ELEMENT_NODE) {
-                    // Check for street view container or game canvas
-                    if (node.querySelector && (
-                        node.querySelector('[data-qa="panorama"]') ||
-                        node.querySelector('[data-qa="guess-map"]') ||
-                        node.querySelector('.widget-scene-canvas') ||
-                        node.id === 'street-view-container'
-                    )) {
-                        // Delay to let the game fully initialize
-                        setTimeout(() => {
-                            if (!GG_ROUND) {
-                                simulateRoundStart();
-                            }
-                        }, 3000);
-                    }
-                }
+        // Handle hotkeys for mods
+        for (const [mod, callback] of getBindings()) {
+            if (mod.hotkey && evt.code === mod.hotkey) {
+                evt.preventDefault();
+                closeOptionMenu();
+                callback();
+                break;
             }
         }
     });
-
-    // Observe the main container for changes
-    const container = document.querySelector('#__next') || document.body;
-    gameObserver.observe(container, {
-        childList: true,
-        subtree: true
-    });
 };
-
-// TODO: needed?
-// Global GG_MAP loading with background retries
-let globalMapLoadInterval;
-let lastAttemptedMapId = null;
-
-const startGlobalMapLoading = () => {
-    if (globalMapLoadInterval) {
-        clearInterval(globalMapLoadInterval);
-    }
-
-    globalMapLoadInterval = setInterval(() => {
-        // Only attempt if we have round data but no map data
-        if (GG_ROUND && (!GG_MAP || !GG_MAP.maxErrorDistance)) {
-            const mapId = GG_ROUND.map?.id || GG_ROUND.mapId;
-
-            // Don't keep retrying the same failed map
-            if (mapId && mapId !== lastAttemptedMapId) {
-                lastAttemptedMapId = mapId;
-
-                fetchMapDataWithRetry(mapId, 2, 2000).catch(err => {
-                    console.warn('GeoGuessr MultiMod: Background map load failed:', err);
-                });
-            }
-        }
-    }, 5000); // Check every 5 seconds
-};
+addKeyBindings();
