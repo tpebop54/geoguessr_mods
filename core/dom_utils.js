@@ -380,15 +380,10 @@ const makeOptionMenu = (mod) => {
         
         // Wrap the callback to add click animation
         const animatedCallback = (evt) => {
-            // Add animation class
             button.classList.add('click-animation');
-            
-            // Remove animation class after animation completes
             setTimeout(() => {
                 button.classList.remove('click-animation');
-            }, 300); // Match animation duration
-            
-            // Call the original callback
+            }, 300);
             callback(evt);
         };
         
