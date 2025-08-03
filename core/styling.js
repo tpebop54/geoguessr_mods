@@ -394,7 +394,7 @@ const lotteryStyles = `
         width: 330px;
         align-items: center;
         position: absolute;
-        top: 13%;
+        top: 7%;
         left: calc(50% - 165px);
         font-size: 30px;
         color: white;
