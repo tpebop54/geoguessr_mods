@@ -185,6 +185,8 @@ const updateTileReveal = (forceState = undefined) => {
         return;
     }
 
+    const nRows = getOption(mod, 'nRows');
+    const nCols = getOption(mod, 'nCols');
     makeTiles(nRows, nCols);
     makeTileCounter();
     resetTileCount();
