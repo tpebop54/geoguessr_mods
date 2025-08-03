@@ -469,8 +469,8 @@ const initGEF = () => {
         console.error('GEF not loaded.');
         return;
     }
-    GEF.events.addEventListener('gg_round_start', onRoundStart);
-    GEF.events.addEventListener('gg_round_end', onRoundEnd);
+    GEF.events.addEventListener('round_start', onRoundStart);
+    GEF.events.addEventListener('round_end', onRoundEnd);
 };
 initGEF();
 
