@@ -218,7 +218,7 @@ const getOptionInput = (key) => { // Will only check actively open option menu.
     if (!_OPTION_MENU) {
         return null;
     }
-    return _OPTION_MENU.querySelector(`[data-key="${key}"] input`);
+    return _OPTION_MENU.querySelector(`[data-key="${key}"]`);
 };
 
 const isArrayOption = (mod, key) => {
@@ -332,9 +332,13 @@ const makeOptionMenu = (mod) => {
             const input = getOptionInput(key);
             if (!input) {
                 console.warn(`No input found for option: ${key}`);
+                continue;
             }
-            // TODO: different for chceckbox
-            input.value = defaultValue;
+            if (input.type === 'checkbox') {
+                input.checked = defaultValue;
+            } else {
+                input.value = defaultValue;
+            }
         }
     };
 
