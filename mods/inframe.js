@@ -62,12 +62,3 @@ const updateInFrame = (forceState = undefined) => {
         return;
     }
 };
-
-THE_WINDOW.addEventListener('gg_round_start', () => {
-    const mod = MODS.inFrame;
-    if (isModActive(mod)) {
-        waitForMapsReady(() => {
-            updateInFrame();
-        });
-    }
-});
