@@ -11,28 +11,31 @@ const _isOpera = () => { // Opera can't render the 2D map as vector, so disable 
 };
 const IS_OPERA = _isOpera();
 
+    /** 
+     * COMMON CONFIGURATION FOR MODS
+     
+    show: true, // false to hide this mod from the panel. Mostly used for dev, but you can change it to disable stuff.
+    key: 'some-key', // Used for global state and document elements.
+    name: 'Name in Menu', // Used for menus.
+    tooltip: 'Brief explanation of the mod for the menu tooltip', // Shows when hovering over menu button.
+    isScoring: false, // Says whether or not this is a scoring mod (only one scoring mod can be used at a time). Can be null.
+    options: {}, // Used when mod requires or allows configurable values. Can be null.
+
+    */
+
 const MODS = {
 
-    satView: {
-        show: true, // false to hide this mod from the panel. Mostly used for dev, but you can change it to disable stuff.
-        key: 'sat-view', // Used for global state and document elements.
-        name: 'Satellite View', // Used for menus.
-        tooltip: 'Uses satellite view on the guess map, with no labels.', // Shows when hovering over menu button.
-        isScoring: false, // Says whether or not this is a scoring mod (only one scoring mod can be used at a time). Can be null.
-        options: {}, // Used when mod requires or allows configurable values. Can be null.
-    },
-
     funFilters: {
-        show: true, // Broken in duels.
+        show: true,
         key: 'fun-filters',
         name: 'Fun Filters',
         tooltip: 'Various display options for page elements, colors, etc. Does not mess with gameplay.',
         // Note: CSS filters may have issues in Opera, but transforms work fine
         options: {
-            tidy: {
-                label: 'Tidy mode',
+            satView: {
+                label: 'Satellite View',
                 default: false,
-                tooltip: 'Hides annoying page elements.',
+                tooltip: 'Use satellite view instead of roadmap view.',
             },
             blur: {
                 label: 'Blur (px)',
@@ -70,6 +73,11 @@ const MODS = {
                 label: 'Streetview Size (%)',
                 default: 100,
                 tooltip: 'How big the streetview appears on your screen.',
+            },
+            tidy: {
+                label: 'Tidy mode',
+                default: false,
+                tooltip: 'Hides annoying page elements.',
             },
         },
     },

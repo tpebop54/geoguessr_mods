@@ -238,7 +238,11 @@ const updateFunFilters = (forceState = undefined) => {
     let transformStr = '';
     
     if (active) {
-        makeColorOverlay(); // TODO: depends on mode.
+
+        const satView = getOption(mod, 'satView');
+        GOOGLE_MAP.setMapTypeId(satView ? 'satellite' : 'roadmap');
+
+        makeColorOverlay();
         filterStr = getFilterStr(mod);
         
         // Handle flip transforms (these go on the canvas, not the container)
@@ -315,6 +319,9 @@ const applyDisplayFilters = (filterStr, transformStr) => {
     }
 };
 
+// TODO: can these be removed?
+
+/**
 // Add round start and reactivation event listeners
 THE_WINDOW.addEventListener('gg_round_start', (evt) => {
     const mod = MODS.funFilters;
@@ -333,3 +340,4 @@ THE_WINDOW.addEventListener('gg_mods_reactivate', (evt) => {
         }, 500);
     }
 });
+*/

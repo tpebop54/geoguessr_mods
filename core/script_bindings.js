@@ -14,7 +14,6 @@ const getBindings = () => {
     if (_BINDINGS == null || _BINDINGS.length === 0) {
         try {
             _BINDINGS = [
-                [MODS.satView, updateSatView],
                 [MODS.rotateMap, updateRotateMap],
                 [MODS.zoomInOnly, updateZoomInOnly],
                 [MODS.showScore, updateShowScore],
