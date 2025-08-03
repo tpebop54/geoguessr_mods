@@ -187,6 +187,11 @@ const MODS = {
                 default: 4,
                 tooltip: 'How many tiles you are allowed to reveal for a given round.',
             },
+            resetEachRound: {
+                label: 'Reset each round',
+                default: true,
+                tooltip: 'Reset the number of clicks allowed for each round.',
+            },
         },
     },
 

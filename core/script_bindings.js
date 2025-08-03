@@ -110,7 +110,7 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
                 if (verifyContainer) {
                     bindButtons();
                 } else {
-                    console.error('GeoGuessr MultiMod: Container was not found after append - something went wrong');
+                    console.error('Container was not found after append - something went wrong');
                 }
             } else {
                 bindButtons();
@@ -153,40 +153,25 @@ let MAP_STATE = {
     map2d: false,
     map3d: false,
     tilesLoaded: false,
-    lastRoundStart: 0,
+    roundStart: 0,
 };
 
 const setUpMapEventListeners = () => {
-    THE_WINDOW.addEventListener('gg_new_map_instance', (evt) => {
-        console.debug('New map instance event: ', evt);
-        setTimeout(() => {
-            reapplyActiveModsToNewMaps();
-        }, 500);
-    });
-
-    THE_WINDOW.addEventListener('gg_map_tiles_loaded', () => { // TODO: this is for satView in Opera. Check if it's still needed.
-        const satViewMod = getBindings().find(([mod]) => mod.key === 'satView');
-        if (satViewMod && satViewMod[0].active) {
-            setTimeout(() => {
-                satViewMod[1](true);
-            }, 300);
-        }
-    });
-
     THE_WINDOW.addEventListener('gg_map_2d_ready', () => {
         MAP_STATE.map2d = true;
         MAP_STATE.tilesLoaded = true;
-        reapplyActiveModsToNewMaps();
     });
 
     THE_WINDOW.addEventListener('gg_streetview_ready', () => {
         MAP_STATE.map3d = true;
-        reapplyActiveModsToNewMaps();
     });
 
     THE_WINDOW.addEventListener('gg_streetview_position_changed', () => {
         MAP_STATE.map3d = true;
-        reapplyActiveModsToNewMaps();
+    });
+
+    THE_WINDOW.addEventListener('gg_map_tiles_loaded', () => {
+        MAP_STATE.tilesLoaded = true;
     });
 
     THE_WINDOW.addEventListener('gg_round_start', (evt) => {
@@ -194,25 +179,8 @@ const setUpMapEventListeners = () => {
             map2d: false,
             map3d: false,
             tilesLoaded: false,
-            lastRoundStart: Date.now()
+            roundStart: Date.now()
         };
-    });
-};
-
-const reapplyActiveModsToNewMaps = () => {
-    const activeMods = getBindings().filter(([mod]) => mod.active && mod.show);
-    if (activeMods.length === 0) {
-        return;
-    }
-    if (!getModDiv()) {
-        addButtons();
-    }
-    activeMods.forEach(([mod, callback]) => {
-        try {
-            callback(true);
-        } catch (err) {
-            console.error(`Error reapplying mod ${mod.name}:`, err);
-        }
     });
 };
 
@@ -321,10 +289,10 @@ const fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) =
             return data;
 
         } catch (err) {
-            console.warn(`GeoGuessr MultiMod: Map data fetch attempt ${attempt} failed:`, err);
+            console.warn(`Map data fetch attempt ${attempt} failed:`, err);
 
             if (attempt === maxRetries) {
-                console.error('GeoGuessr MultiMod: Failed to fetch map data after all retries:', err);
+                console.error('Failed to fetch map data after all retries:', err);
                 // Set a fallback GG_MAP with reasonable defaults
                 GG_MAP = {
                     id: mapId,
@@ -332,7 +300,7 @@ const fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) =
                     name: 'Unknown Map (Fallback)',
                     description: 'Map data could not be loaded'
                 };
-                console.warn('GeoGuessr MultiMod: Using fallback GG_MAP:', GG_MAP);
+                console.warn('Using fallback GG_MAP:', GG_MAP);
                 throw err;
             }
 
@@ -349,11 +317,11 @@ const fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) =
 // Periodic check to ensure GG_MAP is loaded properly
 const ensureGGMapLoaded = () => {
     if (GG_ROUND && (!GG_MAP || !GG_MAP.maxErrorDistance)) {
-        console.warn('GeoGuessr MultiMod: GG_MAP not loaded properly, attempting reload...');
+        console.warn('GG_MAP not loaded properly, attempting reload...');
         const mapID = GG_ROUND.map?.id || (GG_ROUND.mapId);
         if (mapID) {
             fetchMapDataWithRetry(mapID).catch(err => {
-                console.error('GeoGuessr MultiMod: Retry map data fetch failed:', err);
+                console.error('Retry map data fetch failed:', err);
             });
         }
     }
@@ -413,7 +381,7 @@ const onRoundStart = (evt) => {
     // Use multiple attempts with increasing delays
     setTimeout(() => {
         reactivateMods();
-    }, 3000); // Increased initial delay to 3 seconds
+    }, 3000);
 
     try {
         let round, mapID;
@@ -433,23 +401,23 @@ const onRoundStart = (evt) => {
         }
 
         if (!round) {
-            console.warn('GeoGuessr MultiMod: Could not extract round data from event');
+            console.warn('Could not extract round data from event');
             return;
         }
 
         if (!mapID) {
-            console.warn('GeoGuessr MultiMod: Could not extract map ID from event');
+            console.warn('Could not extract map ID from event');
             return;
         }
 
         GG_ROUND = round;
 
         fetchMapDataWithRetry(mapID).catch(err => {
-            console.error('GeoGuessr MultiMod: Final map data fetch failed:', err);
+            console.error('Final map data fetch failed:', err);
         });
 
     } catch (err) {
-        console.error('GeoGuessr MultiMod: Error in round_start handler:', err);
+        console.error('Error in round_start handler:', err);
     }
 };
 

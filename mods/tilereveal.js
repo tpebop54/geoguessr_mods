@@ -11,7 +11,6 @@ let _TILE_COUNT; // How many remaining tiles the user has.
 let _TILE_COUNT_DRAGGING = false;
 let _TILE_COUNT_OFFSET_X = 0;
 let _TILE_COUNT_OFFSET_Y = 0;
-let _ROUND_START_LISTENER_ADDED = false; // Track if round start listener is added
 
 const getTileCount = () => {
     if (_TILE_COUNT == null) {
