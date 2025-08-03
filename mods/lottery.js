@@ -73,6 +73,7 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
 
     const button = document.createElement('button');
     button.id = 'gg-lottery-button';
+    button.classList.add('gg-interactive-button');
     button.textContent = 'Insert token';
 
     // Prevent dragging when clicking the button
@@ -83,6 +84,7 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     // Reset button with circular arrow symbol
     const resetButton = document.createElement('button');
     resetButton.id = 'gg-lottery-reset-button';
+    resetButton.classList.add('gg-interactive-button');
     resetButton.innerHTML = '↻'; // Circular arrow reset symbol
     resetButton.title = 'Reset token count'; // Tooltip
 

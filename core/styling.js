@@ -141,30 +141,26 @@ const optionMenuStyles = `
         margin-top: 20px;
     }
 
-    .gg-option-form-button {
-        width: 80px;
-        height: 25px;
-        border-radius: 15px;
-        color: white;
-        shadow: ${bodyShadow};
-        padding: 0;
+    /* Common interactive button styles for hover, active, and click animations */
+    .gg-interactive-button {
         cursor: pointer;
-        transition: transform 0.1s ease, box-shadow 0.1s ease;
+        transition: transform 0.1s ease, box-shadow 0.1s ease, opacity 0.2s ease;
         border: none;
         outline: none;
     }
 
-    .gg-option-form-button:hover {
+    .gg-interactive-button:hover {
         transform: translateY(-1px);
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        opacity: 90% !important;
     }
 
-    .gg-option-form-button:active {
+    .gg-interactive-button:active {
         transform: translateY(1px);
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
     }
 
-    .gg-option-form-button.click-animation {
+    .gg-interactive-button.click-animation {
         animation: buttonClickPulse 0.3s ease;
     }
 
@@ -181,6 +177,15 @@ const optionMenuStyles = `
             transform: scale(1);
             box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
         }
+    }
+
+    .gg-option-form-button {
+        width: 80px;
+        height: 25px;
+        border-radius: 15px;
+        color: white;
+        shadow: ${bodyShadow};
+        padding: 0;
     }
 
     #gg-option-close {
@@ -350,13 +355,6 @@ const tileRevealStyles = `
         color: white;
         background: #c41e3a;
         opacity: 75%;
-        cursor: pointer;
-        border: none;
-        transition: opacity 0.2s ease;
-    }
-
-    #gg-tile-reset-button:hover {
-        opacity: 90%;
     }
 
     #gg-tile-overlay {
@@ -424,8 +422,6 @@ const lotteryStyles = `
         color: white;
         background: black;
         opacity: 75%;
-        cursor: pointer;
-        border: none;
     }
 
     #gg-lottery-button-container {
@@ -442,13 +438,6 @@ const lotteryStyles = `
         color: white;
         background: #c41e3a;
         opacity: 75%;
-        cursor: pointer;
-        border: none;
-        transition: opacity 0.2s ease;
-    }
-
-    #gg-lottery-reset-button:hover {
-        opacity: 90%;
     }
 `;
 

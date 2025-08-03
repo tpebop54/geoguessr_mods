@@ -357,6 +357,7 @@ const makeOptionMenu = (mod) => {
         button.id = `gg-option-${label.toLowerCase()}`;
         button.classList.add('gg-option-label');
         button.classList.add('gg-option-form-button');
+        button.classList.add('gg-interactive-button');
         button.innerHTML = label;
         
         // Wrap the callback to add click animation

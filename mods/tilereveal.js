@@ -92,6 +92,7 @@ const makeTileCounter = () => {
     // Create the reset button
     const resetButton = document.createElement('button');
     resetButton.id = 'gg-tile-reset-button';
+    resetButton.classList.add('gg-interactive-button');
     resetButton.textContent = '↺';
     resetButton.title = 'Reset all tiles';
 
