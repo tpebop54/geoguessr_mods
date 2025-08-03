@@ -215,7 +215,9 @@ const setOption = (mod, key, value, save = true) => {
 };
 
 const getOptionInput = (key) => { // Will only check actively open option menu.
-    if (!_OPTION_MENU) return null;
+    if (!_OPTION_MENU) {
+        return null;
+    }
     return _OPTION_MENU.querySelector(`[data-key="${key}"] input`);
 };
 
@@ -326,8 +328,9 @@ const makeOptionMenu = (mod) => {
     const onReset = () => {
         for (const key of Object.entries(mod.options)) {
             setOption(mod, key, getDefaultOption(mod, key));
+            const input = getOptionInput(key);
+            input.value = getDefaultOption(mod, key);
         }
-        input.value = getDefaultOption(mod, key);
     };
 
     const onClose = () => {
