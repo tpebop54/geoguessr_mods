@@ -423,12 +423,6 @@ const makeOptionMenu = (mod) => {
 };
 
 const updateMod = (mod, forceState = undefined) => {
-    // If mods aren't loaded, log a warning but continue with the update
-    // This allows mods to be activated during round transitions
-    if (!_MODS_LOADED) {
-        console.warn(`Mods not loaded yet, but trying to update ${mod.name}. This may cause issues.`);
-    }
-
     const previousState = isModActive(mod);
     const newState = forceState !== undefined ? forceState : !previousState;
 
@@ -458,18 +452,14 @@ const updateMod = (mod, forceState = undefined) => {
     } else if (!newState && previousState) {
         // Mod is being disabled (going from active to inactive)
         closeOptionMenu();
-    } else if (newState && previousState) {
-    } else {
     }
 
     mod.active = newState;
     
-    // Safety check: only try to update button text if the button exists
     const button = getModButton(mod);
     if (button) {
         const newText = getButtonText(mod);
         button.textContent = newText;
-    } else {
     }
 
     saveState();

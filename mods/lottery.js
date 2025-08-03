@@ -384,23 +384,26 @@ const onLotteryNewRound = () => {
     if (!isModActive(mod) || !areModsAvailable()) {
         return;
     }
-    const refreshTiles = () => {
-        try {
-            if (getOption(mod, 'resetEachRound')) {
-                resetTokens();
-            }
-        } catch (err) {
-            setTimeout(() => {
-                if (isModActive(mod)) {
-                    onLotteryNewRound();
+    const resetEachRound = getOption(mod, 'resetEachRound');
+    if (resetEachRound) {
+        const refreshTokens = () => {
+            try {
+                if (getOption(mod, 'resetEachRound')) {
+                    resetTokens();
                 }
-            }, 500);
-        }
-    };
-    waitForMapsReady(refreshTiles, {
-        timeout: 5000,
-        interval: 100,
-    });
+            } catch (err) {
+                setTimeout(() => {
+                    if (isModActive(mod)) {
+                        onLotteryNewRound();
+                    }
+                }, 500);
+            }
+        };
+        waitForMapsReady(refreshTokens, {
+            timeout: 5000,
+            interval: 100,
+        });
+    }
 };
 
 THE_WINDOW.addEventListener('gg_round_start', onLotteryNewRound);
