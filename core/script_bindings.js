@@ -262,91 +262,9 @@ const initializeMods = async () => {
     }
 };
 
-document.addEventListener('gg_maps_ready', () => {
+document.addEventListener('gg_maps_ready', () => { // After additional GEF setup has been done.
     initializeMods();
 });
-
-// Avoid trying multiple fetches for map data, but allow retries.
-let _currentMapFetch;
-
-const fetchMap = async (mapId, maxRetries = 5, retryDelay = 1000) => {
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-            const response = await fetch(`https://www.geoguessr.com/api/maps/${mapId}`, {
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                throw new Error(response);
-            }
-            const data = await response.json();
-            if (!data || !data.id) {
-                throw new Error('Invalid map data structure received');
-            }
-            GG_MAP = data;
-            return data;
-        } catch (err) {
-            console.error(err);
-            if (attempt === maxRetries) {
-                console.error('Failed to fetch map data after all retries:', err);
-                GG_MAP = { // Set a fallback GG_MAP with reasonable defaults
-                    id: mapId,
-                    maxErrorDistance: 20015086, // Default world map max distance in meters
-                    name: 'Unknown Map (Fallback)',
-                    description: 'Map data could not be loaded'
-                };
-                console.warn('Using fallback GG_MAP:', GG_MAP);
-                throw err;
-            }
-            await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
-        }
-    }
-};
-
-const fetchMapWithRetry = async (mapId, maxRetries = 5, retryDelay = 1000) => {
-    if (GG_MAP && GG_MAP.id) {
-        return GG_MAP;
-    }
-    if (!mapId) {
-        return;
-    }
-    if (_currentMapFetch && _currentMapId === mapId) { // No concurrent fetches.
-        try {
-            return await _currentMapFetch;
-        } catch (err) {
-            console.error(err);
-        }
-    }
-    _currentMapFetch = fetchMap(mapId, maxRetries, retryDelay);
-    try {
-        const result = await _currentMapFetch;
-        return result;
-    } finally {
-        _currentMapFetch = null;
-    }
-};
-
-const startMapDataMonitoring = () => {
-    if (_mapCheckInterval) {
-        clearInterval(_mapCheckInterval);
-    }
-    
-    // Check every 2 seconds, but only if needed
-    _mapCheckInterval = setInterval(() => {
-        ensureGGMapLoaded();
-    }, 2000);
-};
-
-const stopMapDataMonitoring = () => {
-    if (_mapCheckInterval) {
-        clearInterval(_mapCheckInterval);
-        _mapCheckInterval = null;
-    }
-};
 
 const isGoogleReady = () => {
     try {
@@ -389,91 +307,41 @@ const onRoundStart = (evt) => {
     _MODS_LOADED = false;
     THE_WINDOW.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
 
-    createQuoteOverlay();
+    createLoadOverlay();
 
     try {
-        let round, mapID;
-
-        // Extract round and map data from event
-        if (evt.detail && evt.detail.rounds) {
-            round = evt.detail.rounds[evt.detail.rounds.length - 1];
-            mapID = evt.detail.map?.id;
-        } else if (evt.detail && evt.detail.game) {
-            // Alternative structure
-            round = evt.detail.game.round || evt.detail.game;
-            mapID = evt.detail.game.map?.id || evt.detail.game.mapId;
-        } else if (evt.detail) {
-            // Direct structure
-            round = evt.detail;
-            mapID = evt.detail.map?.id || evt.detail.mapId;
-        }
-
-        if (!round) {
-            console.warn('Could not extract round data from event', evt.detail);
-            return;
-        }
-
-        if (!mapID) {
-            console.warn('Could not extract map ID from event', evt.detail);
-            return;
-        }
-
-        // Set round data first
+        const round = evt.detail.rounds[evt.detail.rounds.length - 1];
         GG_ROUND = round;
-
-        // Initiate map data fetch with proper error handling
-        fetchMapWithRetry(mapID)
-            .then(mapData => {
-                console.debug('Map data loaded successfully for round start:', mapData.id);
-            })
-            .catch(err => {
-                console.error('onRoundStart: Map data fetch failed:', err);
-                // Even if map data fails, we continue with the round
-            });
-
+        const mapID = evt.detail.map.id;
+        fetch(`https://www.geoguessr.com/api/maps/${mapID}`).then(data => data.json()).then(data => GG_MAP = data);
     } catch (err) {
-        console.error('Error in round_start handler:', err);
+        console.err(err);
     }
-
-    THE_WINDOW.dispatchEvent(new CustomEvent('gg_round_start', {
-        detail: evt.detail || {}
-    }));
-
-    // Start monitoring map data after round start
-    startMapDataMonitoring();
 
     waitForMapsReady(() => {
         reactivateMods();
     });
+
+    THE_WINDOW.dispatchEvent(new CustomEvent('gg_round_start', {
+        detail: evt.detail || {}
+    }));
 };
 
 const onRoundEnd = (evt) => {
-    // Stop monitoring map data
-    stopMapDataMonitoring();
-    
     GG_ROUND = undefined;
     GG_CLICK = undefined;
     GG_MAP = undefined;
-    
-    // Clear any ongoing map fetch
-    _currentMapFetch = null;
-    _currentMapId = null;
 }
 
-document.addEventListener('gg_round_start', (evt) => {
-    debugger
-});
-
-const initGEF = () => {
-    const GEF = THE_WINDOW.GeoGuessrEventFramework;
-    if (!GEF) {
-        console.error('GEF not loaded.');
-        return;
-    }
+GeoGuessrEventFramework.init().then(GEF => { // Note: GG_MAP is the min-map, GOOGLE_MAP is used for pulling funtionality from Google's map functions.
     GEF.events.addEventListener('round_start', onRoundStart);
     GEF.events.addEventListener('round_end', onRoundEnd);
-};
-initGEF();
+}).catch(err => {
+    console.error(err);
+});
+
+
+
 
 const addKeyBindings = () => {
     document.addEventListener('keydown', (evt) => { // Custom hotkeys.

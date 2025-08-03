@@ -215,7 +215,7 @@ const createLoadOverlayDiv = () => {
     }, maxOverlayTime);
 };
 
-const createQuoteOverlay = () => {
+const createLoadOverlay = () => {
     if (!areModsAvailable()) {
         return;
     }
@@ -224,13 +224,13 @@ const createQuoteOverlay = () => {
         return;
     }
     if (!document.body) {
-        setTimeout(createQuoteOverlay, 100);
+        setTimeout(createLoadOverlay, 100);
         return;
     }
     const quotesEnabled = (typeof THE_WINDOW.ENABLE_QUOTES !== 'undefined') ? THE_WINDOW.ENABLE_QUOTES : false;
     if (quotesEnabled && !THE_WINDOW._QUOTES) {
         setTimeout(() => {
-            createQuoteOverlay();
+            createLoadOverlay();
         }, 200);
         return;
     }
@@ -245,7 +245,7 @@ const createQuoteOverlay = () => {
             const quotesEnabled = (typeof THE_WINDOW.ENABLE_QUOTES !== 'undefined') ? THE_WINDOW.ENABLE_QUOTES : false;
             if (quotesEnabled) {
                 setTimeout(() => {
-                    createQuoteOverlay();
+                    createLoadOverlay();
                 }, 200);
                 return;
             }
