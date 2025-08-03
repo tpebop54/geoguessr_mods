@@ -177,6 +177,14 @@ const getDefaultMod = (mod) => {
     return undefined;
 };
 
+let _OPTION_MENU;
+let _OPTION_MENU_DRAGGING = false;
+let _OPTION_MENU_DRAGGING_MOUSEDOWN;
+let _OPTION_MENU_DRAGGING_MOUSEMOVE;
+let _OPTION_MENU_DRAGGING_MOUSEUP;
+let _OPTION_MENU_DRAGGING_OFFSET_X; // Needed for offsetting the drag element from the client.
+let _OPTION_MENU_DRAGGING_OFFSET_Y;
+
 const getDefaultOption = (mod, key) => {
     const defMod = getDefaultMod(mod);
     if (!defMod) {
@@ -206,20 +214,17 @@ const setOption = (mod, key, value, save = true) => {
     }
 };
 
+const getOptionInput = (key) => { // Will only check actively open option menu.
+    if (!_OPTION_MENU) return null;
+    return _OPTION_MENU.querySelector(`[data-key="${key}"] input`);
+};
+
 const isArrayOption = (mod, key) => {
     if (!mod.options || !mod.options[key]) {
         return false;
     }
     return Array.isArray(mod.options[key].options);
 };
-
-let _OPTION_MENU;
-let _OPTION_MENU_DRAGGING = false;
-let _OPTION_MENU_DRAGGING_MOUSEDOWN;
-let _OPTION_MENU_DRAGGING_MOUSEMOVE;
-let _OPTION_MENU_DRAGGING_MOUSEUP;
-let _OPTION_MENU_DRAGGING_OFFSET_X; // Needed for offsetting the drag element from the client.
-let _OPTION_MENU_DRAGGING_OFFSET_Y;
 
 const makeOptionMenu = (mod) => {
     
@@ -306,6 +311,7 @@ const makeOptionMenu = (mod) => {
         } else {
             throw new Error(`Invalid option specification: ${key} is of type ${typeof defaultVal}`);
         }
+        label.setAttribute(`data-key`, key);
         lineDiv.appendChild(input);
         inputs.push([key, type, input]);
 

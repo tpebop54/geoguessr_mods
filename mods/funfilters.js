@@ -184,47 +184,43 @@ const getFilterStr = (mod) => { // Get string that can be applied to streetview 
 };
 
 const applyScreenScaling = (percentage) => {
-    const bigMapContainer = getBigMapContainer();
-    if (!bigMapContainer) {
+    const bigMapCanvas = getBigMapCanvas();
+    if (!bigMapCanvas) {
         return;
     }
     
-    if (percentage === 100 || !percentage) {
-        // Reset to normal size and position
-        bigMapContainer.style.width = '';
-        bigMapContainer.style.height = '';
-        bigMapContainer.style.position = '';
-        bigMapContainer.style.top = '';
-        bigMapContainer.style.left = '';
-        bigMapContainer.style.zIndex = '';
+    if (percentage === 100 || !percentage || percentage <= 0) {
+        bigMapCanvas.style.width = '';
+        bigMapCanvas.style.height = '';
+        bigMapCanvas.style.position = '';
+        bigMapCanvas.style.top = '';
+        bigMapCanvas.style.left = '';
+        bigMapCanvas.style.zIndex = '';
         
-        // Remove any scaling transform we added, but preserve other transforms
-        const currentTransform = bigMapContainer.style.transform || '';
+        // Remove any scaling transform we added, but preserve other transforms.
+        const currentTransform = bigMapCanvas.style.transform || '';
         const transformWithoutScale = currentTransform.replace(/scale\([^)]*\)/g, '').replace(/translate\([^)]*\)/g, '').trim();
-        bigMapContainer.style.transform = transformWithoutScale;
+        bigMapCanvas.style.transform = transformWithoutScale;
     } else {
-        // Calculate scale factor
         const scale = percentage / 100;
-        
-        // Apply scaling and centering via CSS transforms
-        // This preserves aspect ratio and centers the container
+    
         const transforms = [];
         transforms.push('translate(-50%, -50%)');
         transforms.push(`scale(${scale})`);
         
-        // Preserve any existing transforms that aren't scale or translate
-        const currentTransform = bigMapContainer.style.transform || '';
+        // Preserve any existing transforms that aren't scale or translate.
+        const currentTransform = bigMapCanvas.style.transform || '';
         const existingTransforms = currentTransform.replace(/scale\([^)]*\)/g, '').replace(/translate\([^)]*\)/g, '').trim();
         if (existingTransforms) {
             transforms.push(existingTransforms);
         }
         
-        // Apply the positioning and scaling
-        bigMapContainer.style.position = 'fixed';
-        bigMapContainer.style.top = '50%';
-        bigMapContainer.style.left = '50%';
-        bigMapContainer.style.transform = transforms.join(' ');
-        bigMapContainer.style.zIndex = '1000';
+        // Apply the positioning and scaling.
+        bigMapCanvas.style.position = 'fixed';
+        bigMapCanvas.style.top = '50%';
+        bigMapCanvas.style.left = '50%';
+        bigMapCanvas.style.transform = transforms.join(' ');
+        bigMapCanvas.style.zIndex = '1000';
     }
 };
 
@@ -259,15 +255,12 @@ const updateFunFilters = (forceState = undefined) => {
         }
         applyScreenScaling(streetviewSize);
     } else {
-        // When mod is disabled, clear overlays and classes
         removeColorOverlay();
-        
         const canvas3d = getBigMapCanvas();
         if (canvas3d && IS_OPERA) {
             canvas3d.classList.remove('opera-friendly-filter');
         }
         applyScreenScaling(100);
-
     }
     
     // Apply the filters and transforms (these go on the canvas)
