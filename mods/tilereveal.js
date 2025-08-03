@@ -13,19 +13,14 @@ let _TILE_COUNT_OFFSET_X = 0;
 let _TILE_COUNT_OFFSET_Y = 0;
 
 const getTileCount = () => {
-    if (_TILE_COUNT == null) {
+    if (isNaN(_TILE_COUNT) || _TILE_COUNT < 0) {
         _TILE_COUNT = getOption(MODS.tileReveal, 'nClicks');
-    }
-    _TILE_COUNT = Math.round(Number(_TILE_COUNT));
-    if (isNaN(_TILE_COUNT)) {
-        _TILE_COUNT = 0;
     }
     return _TILE_COUNT;
 };
 
 const resetTileCount = () => {
     _TILE_COUNT = getOption(MODS.tileReveal, 'nClicks');
-    _TILE_COUNT = getTileCount();
     
     const counter = document.getElementById('gg-tile-count-value');
     if (counter) {
