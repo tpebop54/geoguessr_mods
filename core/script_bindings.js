@@ -266,7 +266,10 @@ document.addEventListener('gg_maps_ready', () => {
     initializeMods();
 });
 
-const fetchMapDataWithRetry = async (mapId, maxRetries = 5, retryDelay = 1000) => {
+// Avoid trying multiple fetches for map data, but allow retries.
+let _currentMapFetch;
+
+const fetchMap = async (mapId, maxRetries = 5, retryDelay = 1000) => {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             const controller = new AbortController();
@@ -278,23 +281,19 @@ const fetchMapDataWithRetry = async (mapId, maxRetries = 5, retryDelay = 1000) =
             clearTimeout(timeoutId);
 
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                throw new Error(response);
             }
             const data = await response.json();
-            if (!data || typeof data.maxErrorDistance === 'undefined') {
+            if (!data || !data.id) {
                 throw new Error('Invalid map data structure received');
             }
-
             GG_MAP = data;
             return data;
-
         } catch (err) {
-            console.warn(`Map data fetch attempt ${attempt} failed:`, err);
-
+            console.error(err);
             if (attempt === maxRetries) {
                 console.error('Failed to fetch map data after all retries:', err);
-                // Set a fallback GG_MAP with reasonable defaults
-                GG_MAP = {
+                GG_MAP = { // Set a fallback GG_MAP with reasonable defaults
                     id: mapId,
                     maxErrorDistance: 20015086, // Default world map max distance in meters
                     name: 'Unknown Map (Fallback)',
@@ -303,27 +302,49 @@ const fetchMapDataWithRetry = async (mapId, maxRetries = 5, retryDelay = 1000) =
                 console.warn('Using fallback GG_MAP:', GG_MAP);
                 throw err;
             }
-
-            if (attempt < maxRetries) {
-                await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
-            }
+            await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
         }
     }
 };
 
-
-// TODO: reduce bloat below this point -----------------------------------------------------------------------------------
-
-// Periodic check to ensure GG_MAP is loaded properly
-const ensureGGMapLoaded = () => {
-    if (GG_ROUND && (!GG_MAP || !GG_MAP.maxErrorDistance)) {
-        console.warn('GG_MAP not loaded properly, attempting reload...');
-        const mapID = GG_ROUND.map?.id || (GG_ROUND.mapId);
-        if (mapID) {
-            fetchMapDataWithRetry(mapID).catch(err => {
-                console.error('Retry map data fetch failed:', err);
-            });
+const fetchMapWithRetry = async (mapId, maxRetries = 5, retryDelay = 1000) => {
+    if (GG_MAP && GG_MAP.id) {
+        return GG_MAP;
+    }
+    if (!mapId) {
+        return;
+    }
+    if (_currentMapFetch && _currentMapId === mapId) { // No concurrent fetches.
+        try {
+            return await _currentMapFetch;
+        } catch (err) {
+            console.error(err);
         }
+    }
+    _currentMapFetch = fetchMap(mapId, maxRetries, retryDelay);
+    try {
+        const result = await _currentMapFetch;
+        return result;
+    } finally {
+        _currentMapFetch = null;
+    }
+};
+
+const startMapDataMonitoring = () => {
+    if (_mapCheckInterval) {
+        clearInterval(_mapCheckInterval);
+    }
+    
+    // Check every 2 seconds, but only if needed
+    _mapCheckInterval = setInterval(() => {
+        ensureGGMapLoaded();
+    }, 2000);
+};
+
+const stopMapDataMonitoring = () => {
+    if (_mapCheckInterval) {
+        clearInterval(_mapCheckInterval);
+        _mapCheckInterval = null;
     }
 };
 
@@ -388,20 +409,27 @@ const onRoundStart = (evt) => {
         }
 
         if (!round) {
-            console.warn('Could not extract round data from event');
+            console.warn('Could not extract round data from event', evt.detail);
             return;
         }
 
         if (!mapID) {
-            console.warn('Could not extract map ID from event');
+            console.warn('Could not extract map ID from event', evt.detail);
             return;
         }
 
+        // Set round data first
         GG_ROUND = round;
 
-        fetchMapDataWithRetry(mapID).catch(err => {
-            console.error('Final map data fetch failed:', err);
-        });
+        // Initiate map data fetch with proper error handling
+        fetchMapWithRetry(mapID)
+            .then(mapData => {
+                console.debug('Map data loaded successfully for round start:', mapData.id);
+            })
+            .catch(err => {
+                console.error('onRoundStart: Map data fetch failed:', err);
+                // Even if map data fails, we continue with the round
+            });
 
     } catch (err) {
         console.error('Error in round_start handler:', err);
@@ -411,15 +439,25 @@ const onRoundStart = (evt) => {
         detail: evt.detail || {}
     }));
 
+    // Start monitoring map data after round start
+    startMapDataMonitoring();
+
     waitForMapsReady(() => {
         reactivateMods();
     });
 };
 
 const onRoundEnd = (evt) => {
+    // Stop monitoring map data
+    stopMapDataMonitoring();
+    
     GG_ROUND = undefined;
     GG_CLICK = undefined;
     GG_MAP = undefined;
+    
+    // Clear any ongoing map fetch
+    _currentMapFetch = null;
+    _currentMapId = null;
 }
 
 document.addEventListener('gg_round_start', (evt) => {
