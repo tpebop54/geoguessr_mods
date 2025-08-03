@@ -313,7 +313,7 @@ const makeOptionMenu = (mod) => {
         } else {
             throw new Error(`Invalid option specification: ${key} is of type ${typeof defaultVal}`);
         }
-        label.setAttribute(`data-key`, key);
+        input.setAttribute(`data-key`, key);
         lineDiv.appendChild(input);
         inputs.push([key, type, input]);
 
@@ -326,10 +326,15 @@ const makeOptionMenu = (mod) => {
     };
 
     const onReset = () => {
-        for (const key of Object.entries(mod.options)) {
-            setOption(mod, key, getDefaultOption(mod, key));
+        for (const key of Object.keys(mod.options)) {
+            const defaultValue = getDefaultOption(mod, key);
+            setOption(mod, key, defaultValue);
             const input = getOptionInput(key);
-            input.value = getDefaultOption(mod, key);
+            if (!input) {
+                console.warn(`No input found for option: ${key}`);
+            }
+            // TODO: different for chceckbox
+            input.value = defaultValue;
         }
     };
 
