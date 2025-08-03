@@ -30,7 +30,7 @@ const resetTileCount = () => {
     
     const counter = document.getElementById('gg-tile-count-value');
     if (counter) {
-        counter.innerText = _TILE_COUNT;
+        counter.innerText = getTileCount();
     }
 };
 
@@ -131,7 +131,7 @@ const onClickTile = (evt) => {
     if (_TILE_COUNT > 0) {
         _TILE_COUNT -= 1;
         const counter = document.getElementById('gg-tile-count-value');
-        counter.innerText = _TILE_COUNT;
+        counter.innerText = getTileCount();
         tile.classList.add('removed');
     }
 };
@@ -173,4 +173,19 @@ const makeTiles = (nRows, nCols) => {
     }
 
     bigMapCanvas.parentElement.insertBefore(tileOverlay, bigMapCanvas.parentElement.firstChild);
+};
+
+const updateTileReveal = (forceState = undefined) => {
+    const mod = MODS.tileReveal;
+    const active = updateMod(mod, forceState);
+
+    if (!active || !areModsAvailable()) {
+        removeTiles();
+        removeTileCounter();
+        return;
+    }
+
+    makeTiles(nRows, nCols);
+    makeTileCounter();
+    resetTileCount();
 };
