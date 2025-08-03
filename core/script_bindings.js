@@ -313,7 +313,11 @@ const onRoundStart = (evt) => {
         const round = evt.detail.rounds[evt.detail.rounds.length - 1];
         GG_ROUND = round;
         const mapID = evt.detail.map.id;
-        fetch(`https://www.geoguessr.com/api/maps/${mapID}`).then(data => data.json()).then(data => GG_MAP = data);
+        fetch(`https://www.geoguessr.com/api/maps/${mapID}`)
+            .then(data => data.json())
+            .then(data => {
+                GG_MAP = data;
+            });
     } catch (err) {
         console.err(err);
     }
@@ -333,15 +337,13 @@ const onRoundEnd = (evt) => {
     GG_MAP = undefined;
 }
 
-GeoGuessrEventFramework.init().then(GEF => { // Note: GG_MAP is the min-map, GOOGLE_MAP is used for pulling funtionality from Google's map functions.
+GEF = GeoGuessrEventFramework;
+GEF.init().then(GEF => { // Note: GG_MAP is the min-map, GOOGLE_MAP is used for pulling funtionality from Google's map functions.
     GEF.events.addEventListener('round_start', onRoundStart);
     GEF.events.addEventListener('round_end', onRoundEnd);
 }).catch(err => {
     console.error(err);
 });
-
-
-
 
 const addKeyBindings = () => {
     document.addEventListener('keydown', (evt) => { // Custom hotkeys.
