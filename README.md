@@ -8,28 +8,38 @@ Some of the mods are helpful, some make it much harder.
 
 ## Installation
 
-Install via Tampermonkey/Greasemonkey using one of these scripts:
-- **Main version**: [installer.js](installer.js) - Stable version. For public use.
-- **Release version**: [installer.js](installer.js) - Release candidate, used for inal testing before pushing to main.
-- **Development version**: [installer_dev.js](installer_dev.js) - Latest features; dev work and will be frequently broken. Versions may not match.
+Install via Tampermonkey/Greasemonkey using one of these scripts. Simply copy and paste the text file to a new TamperMonkey script.
+
+- **Main version**: [installer.js](https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/installer.js) - Stable version. For public use.
+- **Release version**: [installer.js](https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/installer_release.js) - Release candidate, used for inal testing before pushing to main.
+- **Development version**: [installer_dev.js](https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/installer_dev.js) - Latest features; dev work and will be frequently broken. Versions may not match.
+
+
+## Updates
+
+By default, auto-update should be enabled, but it may not run at a regular interval.
+
+To make sure that you have the latest version: open the script in TamperMonkey, go to the Settings menu (for the script, not the overall settings menu), then under "Updates" click "Check for userscript updates"
+
+When you refresh your GeoGuessr page, you can check that the new version is active by hovering over the "Tpebop's Mods" header in the upper left, and it will display the version. If the new version is not active, try deleting and recreating the TamperMonkey script.
 
 
 
 
 ## Configuration
 
-### GOOGLE_MAPS_API_KEY
+#### GOOGLE_MAPS_API_KEY
 
 - This is an optional value to enable a few additional features. Some mods use Google Maps API but most do not.
 - Mods requiring API key will be automatically disabled if no key is provided.
 - See documentation below for setup instructions.
 
-### DISABLE_CHEAT_PROTECTION
+#### DISABLE_CHEAT_PROTECTION
 
 - By default, the script will mess up the replay files so that it's obvious that a script is being used.
 - You can disable this by setting this value to true in the TamperMonkey file. Just promise to only use the script for good.
 
-### ENABLE_QUOTES
+#### ENABLE_QUOTES
 
 - The map has to be blacked out on loading so the mods can load properly.
 - By default, it just says "Loading...", but if you set this value to `true`, it will display a random quote/fact/joke/etc. instead.
