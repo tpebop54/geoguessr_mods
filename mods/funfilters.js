@@ -190,20 +190,29 @@ const applyScreenScaling = (percentage) => {
     }
     
     if (percentage === 100 || !percentage || percentage <= 0) {
+        // Reset canvas to original state
         streetviewCanvas.style.width = '';
         streetviewCanvas.style.height = '';
         streetviewCanvas.style.position = '';
         streetviewCanvas.style.top = '';
         streetviewCanvas.style.left = '';
         streetviewCanvas.style.zIndex = '';
+        streetviewCanvas.style.transformOrigin = '';
         
-        // Remove any scaling transform we added, but preserve other transforms.
+        // Remove any scaling transform we added, but preserve other transforms
         const currentTransform = streetviewCanvas.style.transform || '';
         const transformWithoutScale = currentTransform.replace(/scale\([^)]*\)/g, '').replace(/translate\([^)]*\)/g, '').trim();
         streetviewCanvas.style.transform = transformWithoutScale;
     } else {
         const scale = percentage / 100;
-    
+        
+        // Get the original canvas dimensions
+        const originalWidth = streetviewCanvas.width || streetviewCanvas.offsetWidth;
+        const originalHeight = streetviewCanvas.height || streetviewCanvas.offsetHeight;
+        
+        // Set transform origin to center for proper scaling
+        streetviewCanvas.style.transformOrigin = 'center center';
+        
         const transforms = [];
         transforms.push('translate(-50%, -50%)');
         transforms.push(`scale(${scale})`);
@@ -215,12 +224,18 @@ const applyScreenScaling = (percentage) => {
             transforms.push(existingTransforms);
         }
         
-        // Apply the positioning and scaling.
+        // Apply the positioning and scaling to the canvas.
         streetviewCanvas.style.position = 'fixed';
         streetviewCanvas.style.top = '50%';
         streetviewCanvas.style.left = '50%';
         streetviewCanvas.style.transform = transforms.join(' ');
         streetviewCanvas.style.zIndex = '1000';
+        
+        // Ensure the canvas maintains its aspect ratio.
+        if (originalWidth && originalHeight) {
+            streetviewCanvas.style.width = `${originalWidth}px`;
+            streetviewCanvas.style.height = `${originalHeight}px`;
+        }
     }
 };
 
