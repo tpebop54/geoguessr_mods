@@ -683,9 +683,9 @@ const fixFormatting = () => {
 };
 
 const addDebugger = () => {
-    const smallMapContainer = getGuessmapContainer();
-    if (smallMapContainer) {
-        smallMapContainer.addEventListener('contextmenu', (evt) => {
+    const guessmapContainer = getGuessmapContainer();
+    if (guessmapContainer) {
+        guessmapContainer.addEventListener('contextmenu', (evt) => {
             debugMap(this, evt);
         });
     }

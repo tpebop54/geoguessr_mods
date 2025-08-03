@@ -20,7 +20,7 @@ const setHeading = (nDegrees) => {
 };
 
 const doRotation = (nDegrees) => {
-    if (_IS_DRAGGING_SMALL_MAP) {
+    if (_IS_DRAGGING_GUESSMAP) {
         return; // Drag event gets cut by setHeading.
     }
     if (!GOOGLE_MAP) {

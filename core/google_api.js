@@ -109,10 +109,10 @@ const initGmapsIntegration = () => {
                 GOOGLE_MAP = this; // GG_MAP is used for the active round, this is used for the Google map event listeners.
 
                 google.maps.event.addListener(this, 'dragstart', () => {
-                    _IS_DRAGGING_SMALL_MAP = true;
+                    _IS_DRAGGING_GUESSMAP = true;
                 });
                 google.maps.event.addListener(this, 'dragend', () => {
-                    _IS_DRAGGING_SMALL_MAP = false;
+                    _IS_DRAGGING_GUESSMAP = false;
                 });
                 google.maps.event.addListener(this, 'click', (evt) => {
                     onMapClick(evt);
