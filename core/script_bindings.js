@@ -126,13 +126,11 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
 
         const setMenuVisible = (show) => {
             if (show) {
-                if (buttonContainer.classList.contains('hidden')) {
-                    buttonContainer.classList.remove('hidden');
-                    modMenuToggle.textContent = '▼';
-                } else {
-                    buttonContainer.classList.add('hidden');
-                    modMenuToggle.textContent = '▶';
-                }
+                buttonContainer.classList.remove('hidden');
+                modMenuToggle.textContent = '▼';
+            } else {
+                buttonContainer.classList.add('hidden');
+                modMenuToggle.textContent = '▶';
             }
             _storeMenuVisible(show);
         };
