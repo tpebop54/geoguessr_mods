@@ -190,3 +190,17 @@ const updateTileReveal = (forceState = undefined) => {
     makeTileCounter();
     resetTileCount();
 };
+
+THE_WINDOW.addEventListener('gg_round_start', () => {
+    const mod = MODS.tileReveal;
+    if (isModActive(mod)) {
+        waitForMapsReady(() => {
+            const nRows = getOption(mod, 'nRows');
+            const nCols = getOption(mod, 'nCols');
+            makeTiles(nRows, nCols);
+            if (getOption(mod, 'resetEachRound')) {
+                resetTileCount();
+            }
+        });
+    }
+});
