@@ -52,6 +52,14 @@ const bindButtons = () => {
     }
 };
 
+// Keep the button menu open or closed between page change or refresh.
+let _MENU_VISIBLE = true;
+const _menuVisibleKey = 'gg_mods_menu_visible';
+const _storeMenuVisible = (visible) => {
+    _MENU_VISIBLE = visible;
+    localStorage.setItem(_menuVisibleKey, JSON.stringify(!!visible));
+};
+
 const addButtons = () => { // Add mod buttons to the active round, with a little button to toggle them.
     try {
         if (!areModsAvailable()) {
@@ -75,14 +83,14 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
         headerText.title = `Version: ${version}\nPress "Ctrl Shift ." to disable all and refresh.`;
         const modMenuToggle = document.createElement('button');
         modMenuToggle.id = 'gg-mods-container-toggle';
-        modMenuToggle.textContent = '▼'; // TODO: load from localStorage.
+        modMenuToggle.textContent = '▼';
         headerContainer.appendChild(headerText);
         headerContainer.appendChild(modMenuToggle);
 
         const buttonContainer = document.createElement('div'); // Mod buttons.
         buttonContainer.id = 'gg-mods-button-container';
 
-        for (const [key, mod] of Object.entries(MODS)) {
+        for (const mod of Object.values(MODS)) {
             if (!mod.show) {
                 continue;
             }
@@ -116,15 +124,24 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
             }
         };
 
-        modMenuToggle.addEventListener('click', function () {
-            if (buttonContainer.classList.contains('hidden')) {
-                buttonContainer.classList.remove('hidden');
-                modMenuToggle.textContent = '▼';
-            } else {
-                buttonContainer.classList.add('hidden');
-                modMenuToggle.textContent = '▶';
+        const setMenuVisible = (show) => {
+            if (show) {
+                if (buttonContainer.classList.contains('hidden')) {
+                    buttonContainer.classList.remove('hidden');
+                    modMenuToggle.textContent = '▼';
+                } else {
+                    buttonContainer.classList.add('hidden');
+                    modMenuToggle.textContent = '▶';
+                }
             }
+            _storeMenuVisible(show);
+        };
+
+        modMenuToggle.addEventListener('click', function () {
+            _MENU_VISIBLE = !_MENU_VISIBLE;
+            setMenuVisible(_MENU_VISIBLE);
         });
+        setMenuVisible(window.localStorage.getItem(_menuVisibleKey) === 'true' || _MENU_VISIBLE);
 
         setTimeout(addButtonContainer, 100);
         _MODS_LOADED = true;
