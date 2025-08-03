@@ -142,7 +142,7 @@ const makeTiles = (nRows, nCols) => {
     
     removeTiles();
 
-    const bigMapCanvas = getBigMapCanvas();
+    const bigMapCanvas = getStreetviewCanvas();
     if (!bigMapCanvas) {
         return;
     }

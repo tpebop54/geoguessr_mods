@@ -131,7 +131,7 @@ const removeColorOverlay = () => {
 const makeColorOverlay = () => {
     removeColorOverlay();
 
-    const bigMapContainer = getBigMapContainer();
+    const bigMapContainer = getStreetviewContainer();
     if (!bigMapContainer) {
         return;
     }
@@ -184,23 +184,23 @@ const getFilterStr = (mod) => { // Get string that can be applied to streetview 
 };
 
 const applyScreenScaling = (percentage) => {
-    const bigMapCanvas = getBigMapCanvas();
-    if (!bigMapCanvas) {
+    const streetviewCanvas = getStreetviewCanvas();
+    if (!streetviewCanvas) {
         return;
     }
     
     if (percentage === 100 || !percentage || percentage <= 0) {
-        bigMapCanvas.style.width = '';
-        bigMapCanvas.style.height = '';
-        bigMapCanvas.style.position = '';
-        bigMapCanvas.style.top = '';
-        bigMapCanvas.style.left = '';
-        bigMapCanvas.style.zIndex = '';
+        streetviewCanvas.style.width = '';
+        streetviewCanvas.style.height = '';
+        streetviewCanvas.style.position = '';
+        streetviewCanvas.style.top = '';
+        streetviewCanvas.style.left = '';
+        streetviewCanvas.style.zIndex = '';
         
         // Remove any scaling transform we added, but preserve other transforms.
-        const currentTransform = bigMapCanvas.style.transform || '';
+        const currentTransform = streetviewCanvas.style.transform || '';
         const transformWithoutScale = currentTransform.replace(/scale\([^)]*\)/g, '').replace(/translate\([^)]*\)/g, '').trim();
-        bigMapCanvas.style.transform = transformWithoutScale;
+        streetviewCanvas.style.transform = transformWithoutScale;
     } else {
         const scale = percentage / 100;
     
@@ -209,18 +209,18 @@ const applyScreenScaling = (percentage) => {
         transforms.push(`scale(${scale})`);
         
         // Preserve any existing transforms that aren't scale or translate.
-        const currentTransform = bigMapCanvas.style.transform || '';
+        const currentTransform = streetviewCanvas.style.transform || '';
         const existingTransforms = currentTransform.replace(/scale\([^)]*\)/g, '').replace(/translate\([^)]*\)/g, '').trim();
         if (existingTransforms) {
             transforms.push(existingTransforms);
         }
         
         // Apply the positioning and scaling.
-        bigMapCanvas.style.position = 'fixed';
-        bigMapCanvas.style.top = '50%';
-        bigMapCanvas.style.left = '50%';
-        bigMapCanvas.style.transform = transforms.join(' ');
-        bigMapCanvas.style.zIndex = '1000';
+        streetviewCanvas.style.position = 'fixed';
+        streetviewCanvas.style.top = '50%';
+        streetviewCanvas.style.left = '50%';
+        streetviewCanvas.style.transform = transforms.join(' ');
+        streetviewCanvas.style.zIndex = '1000';
     }
 };
 
@@ -256,7 +256,7 @@ const updateFunFilters = (forceState = undefined) => {
         applyScreenScaling(streetviewSize);
     } else {
         removeColorOverlay();
-        const canvas3d = getBigMapCanvas();
+        const canvas3d = getStreetviewCanvas();
         if (canvas3d && IS_OPERA) {
             canvas3d.classList.remove('opera-friendly-filter');
         }
@@ -268,7 +268,7 @@ const updateFunFilters = (forceState = undefined) => {
 };
 
 const applyDisplayFilters = (filterStr, transformStr) => {
-    const canvas3d = getBigMapCanvas();
+    const canvas3d = getStreetviewCanvas();
     if (!canvas3d) {
         // Retry after a short delay if canvas is not available
         setTimeout(() => applyDisplayFilters(filterStr, transformStr), 200);

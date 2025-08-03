@@ -59,7 +59,7 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
             return false;
         }
 
-        const bigMapContainer = getBigMapContainer();
+        const bigMapContainer = getStreetviewContainer();
         const modContainer = getModDiv(); // Includes header and buttons.
         if (modContainer || !bigMapContainer) { // Mods already loaded, or map not loaded yet.
             return false;
@@ -333,8 +333,8 @@ const isGoogleReady = () => {
         if (!google || !google.maps) {
             return false;
         }
-        const map2dReady = GOOGLE_MAP && getSmallMap();
-        const map3dReady = GOOGLE_STREETVIEW && getBigMapCanvas();
+        const map2dReady = GOOGLE_MAP && getGuessmap();
+        const map3dReady = GOOGLE_STREETVIEW && getStreetviewCanvas();
         return map2dReady && map3dReady;
     } catch (err) {
         console.error('Error checking map readiness:', err);

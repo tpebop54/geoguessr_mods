@@ -296,7 +296,7 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
 };
 
 const removeClickBlock = () => {
-    const container = getSmallMapContainer();
+    const container = getGuessmapContainer();
     if (!container) {
         return;
     }
@@ -315,7 +315,7 @@ const removeClickBlock = () => {
 const addClickBlock = () => {
     removeClickBlock();
 
-    const container = getSmallMapContainer();
+    const container = getGuessmapContainer();
 
     const overlay = document.createElement('div');
     overlay.className = 'gg-lottery-overlay';

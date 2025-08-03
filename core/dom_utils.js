@@ -40,15 +40,15 @@ const getGameContent = () => {
     return document.querySelector('div[class^="game_content__"]');
 };
 
-const getSmallMapContainer = () => {
+const getGuessmapContainer = () => {
     return document.querySelector('div[class^="guess-map_canvasContainer__"]');
 };
 
-const getSmallMap = () => {
+const getGuessmap = () => {
     return document.querySelector('div[class^="guess-map_canvas__"]');
 };
 
-const getBigMapContainer = () => {
+const getStreetviewContainer = () => {
     const selectors = [
         `div[class^="game_canvas__"]`,
         `div[class*="game_canvas"]`,
@@ -94,8 +94,8 @@ const getBigMapContainer = () => {
     return null;
 };
 
-const getBigMapCanvas = () => {
-    const container = getBigMapContainer();
+const getStreetviewCanvas = () => {
+    const container = getStreetviewContainer();
     if (!container) {
         return undefined;
     }
@@ -676,7 +676,7 @@ const fixFormatting = () => {
 };
 
 const addDebugger = () => {
-    const smallMapContainer = getSmallMapContainer();
+    const smallMapContainer = getGuessmapContainer();
     if (smallMapContainer) {
         smallMapContainer.addEventListener('contextmenu', (evt) => {
             debugMap(this, evt);

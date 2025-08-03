@@ -337,7 +337,7 @@ const addMarkerAt = (lat, lng, title = null) => {
 };
 
 const setGuessMapEvents = (enabled = true) => {
-    const container = getSmallMapContainer();
+    const container = getGuessmapContainer();
     if (enabled) {
         container.style.pointerEvents = 'auto';
         const overlay = container.querySelector('.gg-contextmenu-overlay');
