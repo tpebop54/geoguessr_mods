@@ -189,20 +189,18 @@ const applyScreenScaling = (percentage) => {
         return;
     }
     
-    if (percentage === 100 || !percentage || percentage <= 0) {
+    if (percentage === 100 || !percentage || percentage <= 0) {    
         // Reset canvas to original state
         streetviewCanvas.style.width = '';
         streetviewCanvas.style.height = '';
         streetviewCanvas.style.position = '';
         streetviewCanvas.style.top = '';
         streetviewCanvas.style.left = '';
-        streetviewCanvas.style.zIndex = '';
         streetviewCanvas.style.transformOrigin = '';
         
-        // Remove any scaling transform we added, but preserve other transforms
-        const currentTransform = streetviewCanvas.style.transform || '';
-        const transformWithoutScale = currentTransform.replace(/scale\([^)]*\)/g, '').replace(/translate\([^)]*\)/g, '').trim();
-        streetviewCanvas.style.transform = transformWithoutScale;
+        // Store that we're not scaling anymore
+        streetviewCanvas.dataset.isScaled = 'false';
+        streetviewCanvas.dataset.scalePercentage = '100';
     } else {
         const scale = percentage / 100;
         
@@ -213,25 +211,16 @@ const applyScreenScaling = (percentage) => {
         // Set transform origin to center for proper scaling
         streetviewCanvas.style.transformOrigin = 'center center';
         
-        const transforms = [];
-        transforms.push('translate(-50%, -50%)');
-        transforms.push(`scale(${scale})`);
-        
-        // Preserve any existing transforms that aren't scale or translate.
-        const currentTransform = streetviewCanvas.style.transform || '';
-        const existingTransforms = currentTransform.replace(/scale\([^)]*\)/g, '').replace(/translate\([^)]*\)/g, '').trim();
-        if (existingTransforms) {
-            transforms.push(existingTransforms);
-        }
-        
-        // Apply the positioning and scaling to the canvas.
+        // Apply the positioning to the canvas
         streetviewCanvas.style.position = 'fixed';
         streetviewCanvas.style.top = '50%';
         streetviewCanvas.style.left = '50%';
-        streetviewCanvas.style.transform = transforms.join(' ');
-        streetviewCanvas.style.zIndex = '1000';
         
-        // Ensure the canvas maintains its aspect ratio.
+        // Store scaling info for applyDisplayFilters to use
+        streetviewCanvas.dataset.isScaled = 'true';
+        streetviewCanvas.dataset.scalePercentage = percentage.toString();
+        
+        // Ensure the canvas maintains its aspect ratio
         if (originalWidth && originalHeight) {
             streetviewCanvas.style.width = `${originalWidth}px`;
             streetviewCanvas.style.height = `${originalHeight}px`;
@@ -275,7 +264,7 @@ const updateFunFilters = (forceState = undefined) => {
         if (canvas3d && IS_OPERA) {
             canvas3d.classList.remove('opera-friendly-filter');
         }
-        applyScreenScaling(100);
+        applyScreenScaling(100); // This will reset scaling and dataset attributes
     }
     
     // Apply the filters and transforms (these go on the canvas)
@@ -290,20 +279,39 @@ const applyDisplayFilters = (filterStr, transformStr) => {
         return;
     }
     
+    // Build the complete transform string combining scaling and flip transforms
+    const transforms = [];
+    
+    // Check if we have scaling active
+    const isScaled = canvas3d.dataset.isScaled === 'true';
+    const scalePercentage = parseInt(canvas3d.dataset.scalePercentage) || 100;
+    
+    if (isScaled && scalePercentage !== 100) {
+        const scale = scalePercentage / 100;
+        transforms.push('translate(-50%, -50%)');
+        transforms.push(`scale(${scale})`);
+    }
+    
+    // Add flip transforms if provided
+    if (transformStr && transformStr.trim()) {
+        transforms.push(transformStr);
+    }
+    
+    const finalTransform = transforms.join(' ');
+    
     // For Opera, apply filters more efficiently
     if (IS_OPERA) {
         // Add Opera-friendly CSS class for better performance
         canvas3d.classList.add('opera-friendly-filter');
         
-        
         // Use requestAnimationFrame to avoid blocking the main thread
         requestAnimationFrame(() => {
             canvas3d.style.filter = filterStr;
-            canvas3d.style.transform = transformStr;
+            canvas3d.style.transform = finalTransform;
         });
     } else {
         canvas3d.style.filter = filterStr;
-        canvas3d.style.transform = transformStr;
+        canvas3d.style.transform = finalTransform;
     }
 };
 
