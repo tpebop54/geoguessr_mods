@@ -339,8 +339,8 @@ const onRoundEnd = (evt) => {
 
 GEF = GeoGuessrEventFramework;
 GEF.init().then(GEF => { // Note: GG_MAP is the min-map, GOOGLE_MAP is used for pulling funtionality from Google's map functions.
-    GEF.events.addEventListener('round_start', onRoundStart);
-    GEF.events.addEventListener('round_end', onRoundEnd);
+    GEF.events.addEventListener('round_start', (evt) => onRoundStart(evt));
+    GEF.events.addEventListener('round_end', (evt) => onRoundEnd(evt));
 }).catch(err => {
     console.error(err);
 });
