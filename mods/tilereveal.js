@@ -191,16 +191,37 @@ const updateTileReveal = (forceState = undefined) => {
     resetTileCount();
 };
 
-THE_WINDOW.addEventListener('gg_round_start', () => {
+const onTileRevealNewRound = () => {
     const mod = MODS.tileReveal;
-    if (isModActive(mod)) {
-        waitForMapsReady(() => {
+    if (!isModActive(mod) || !areModsAvailable()) {
+        return;
+    }
+    const refreshTiles = () => {
+        try {
             const nRows = getOption(mod, 'nRows');
             const nCols = getOption(mod, 'nCols');
             makeTiles(nRows, nCols);
             if (getOption(mod, 'resetEachRound')) {
                 resetTileCount();
             }
-        });
+        } catch (err) {
+            setTimeout(() => {
+                if (isModActive(mod)) {
+                    onTileRevealNewRound();
+                }
+            }, 500);
+        }
+    };
+    waitForMapsReady(refreshTiles, {
+        timeout: 5000,
+        interval: 100,
+    });
+};
+
+THE_WINDOW.addEventListener('gg_round_start', onTileRevealNewRound);
+
+THE_WINDOW.addEventListener('gg_mod_reactivated', (evt) => {
+    if (evt.detail && evt.detail.modName === 'tileReveal') {
+        onTileRevealNewRound();
     }
 });
