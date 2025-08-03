@@ -234,14 +234,14 @@ const updateFunFilters = (forceState = undefined) => {
 
     _updateTidy(mod);
 
+    const satView = getOption(mod, 'satView');
+    const mapType = active && satView ? 'satellite' : 'roadmap';
+    GOOGLE_MAP.setMapTypeId(mapType);
+
     let filterStr = '';
     let transformStr = '';
     
     if (active) {
-
-        const satView = getOption(mod, 'satView');
-        GOOGLE_MAP.setMapTypeId(satView ? 'satellite' : 'roadmap');
-
         makeColorOverlay();
         filterStr = getFilterStr(mod);
         
@@ -285,59 +285,17 @@ const applyDisplayFilters = (filterStr, transformStr) => {
     
     // Build the complete transform string combining scaling and flip transforms
     const transforms = [];
-    
-    // Check if we have scaling active
     const isScaled = canvas3d.dataset.isScaled === 'true';
     const scalePercentage = parseInt(canvas3d.dataset.scalePercentage) || 100;
-    
     if (isScaled && scalePercentage !== 100) {
         const scale = scalePercentage / 100;
         transforms.push('translate(-50%, -50%)');
         transforms.push(`scale(${scale})`);
     }
-    
-    // Add flip transforms if provided
     if (transformStr && transformStr.trim()) {
         transforms.push(transformStr);
     }
-    
     const finalTransform = transforms.join(' ');
-    
-    // For Opera, apply filters more efficiently
-    if (IS_OPERA) {
-        // Add Opera-friendly CSS class for better performance
-        canvas3d.classList.add('opera-friendly-filter');
-        
-        // Use requestAnimationFrame to avoid blocking the main thread
-        requestAnimationFrame(() => {
-            canvas3d.style.filter = filterStr;
-            canvas3d.style.transform = finalTransform;
-        });
-    } else {
-        canvas3d.style.filter = filterStr;
-        canvas3d.style.transform = finalTransform;
-    }
+    canvas3d.style.filter = filterStr;
+    canvas3d.style.transform = finalTransform;
 };
-
-// TODO: can these be removed?
-
-/**
-// Add round start and reactivation event listeners
-THE_WINDOW.addEventListener('gg_round_start', (evt) => {
-    const mod = MODS.funFilters;
-    if (isModActive(mod)) {
-        setTimeout(() => {
-            updateFunFilters(true); // Force reapplication
-        }, 500);
-    }
-});
-
-THE_WINDOW.addEventListener('gg_mods_reactivate', (evt) => {
-    const mod = MODS.funFilters;
-    if (isModActive(mod)) {
-        setTimeout(() => {
-            updateFunFilters(true);
-        }, 500);
-    }
-});
-*/

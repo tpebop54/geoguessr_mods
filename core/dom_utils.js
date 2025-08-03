@@ -309,7 +309,7 @@ const makeOptionMenu = (mod) => {
         } else if (typeof defaultVal === 'boolean') {
             type = Boolean;
             input = document.createElement('input');
-            Object.assign(input, { type: 'checkbox', value, className: 'gg-option-input' });
+            Object.assign(input, { type: 'checkbox', checked: !!value, className: 'gg-option-input' });
         } else {
             throw new Error(`Invalid option specification: ${key} is of type ${typeof defaultVal}`);
         }
