@@ -346,14 +346,12 @@ const reactivateMods = () => {
     if (!isGoogleReady()) {
         return;
     }
-
     if (!getModDiv()) {
         const buttonsAdded = addButtons();
         if (buttonsAdded) {
             bindButtons();
         }
     }
-
     for (const [mod, callback] of getBindings()) {
         if (mod.active && mod.show) {
             try {
@@ -363,7 +361,6 @@ const reactivateMods = () => {
             }
         }
     }
-
     THE_WINDOW.dispatchEvent(new CustomEvent('gg_mods_reactivate', { detail: { timestamp: Date.now() } }));
 };
 
@@ -372,16 +369,6 @@ const onRoundStart = (evt) => {
     THE_WINDOW.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
 
     createQuoteOverlay();
-
-    THE_WINDOW.dispatchEvent(new CustomEvent('gg_round_start', {
-        detail: evt.detail || {}
-    }));
-
-    // Delay mod reactivation to allow maps to fully load
-    // Use multiple attempts with increasing delays
-    setTimeout(() => {
-        reactivateMods();
-    }, 3000);
 
     try {
         let round, mapID;
@@ -419,6 +406,14 @@ const onRoundStart = (evt) => {
     } catch (err) {
         console.error('Error in round_start handler:', err);
     }
+
+    THE_WINDOW.dispatchEvent(new CustomEvent('gg_round_start', {
+        detail: evt.detail || {}
+    }));
+
+    waitForMapsReady(() => {
+        reactivateMods();
+    });
 };
 
 const onRoundEnd = (evt) => {
