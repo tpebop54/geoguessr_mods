@@ -22,185 +22,7 @@ const MODS = {
         options: {}, // Used when mod requires or allows configurable values. Can be null.
     },
 
-    rotateMap: {
-        show: !IS_OPERA,
-        key: 'rotate-map',
-        name: 'Map Rotation',
-        tooltip: 'Makes the guess map rotate while you are trying to click.',
-        options: {
-            every: {
-                label: 'Run Every (s)',
-                default: 0.05,
-                tooltip: 'Rotate the map every X seconds. Lower numbers will reduce choppiness but may also slow the game down.',
-            },
-            degrees: {
-                label: 'Degrees',
-                default: 2,
-                tooltip: 'Rotate by X degrees at the specified time interval. Positive for clockwise, negative for counter-clockwise.',
-            },
-            startDegrees: {
-                label: 'Start at',
-                default: 0,
-                tooltip: 'Start at a fixed rotation. Note: "Randomize" will override this, and if you want a static map, set the others to 0.',
-            },
-            startRandom: {
-                label: 'Randomize',
-                default: false,
-                tooltip: 'Randomize starting position. Note: this will override the "Start at" setting if enabled.',
-            },
-        },
-    },
-
-    zoomInOnly: { // This one is alright, but just not really good content quality. Try it out if you want!
-        show: false,
-        key: 'zoom-in-only',
-        name: 'Zoom In Only',
-        tooltip: 'You can only zoom inward.',
-        options: {},
-    },
-
-    showScore: {
-        show: true,
-        key: 'show-score',
-        name: 'Show Score',
-        tooltip: 'Shows the would-be score of each click.',
-        scoreMode: true,
-        options: {},
-    },
-
-    flashlight: {
-        show: true,
-        key: 'flashlight',
-        name: 'Flashlight',
-        tooltip: 'Uses cursor as a "flashlight" where you can only see part of the screen',
-        options: {
-            radius: {
-                label: 'Radius',
-                default: 100,
-                tooltip: 'Radius of flashlight, in pixels.',
-            },
-            blur: {
-                label: 'Blur',
-                default: 50,
-                tooltip: 'Blur (in pixels) to add to the flashlight. Extends out from the radius.',
-            }
-        }
-    },
-
-    bopIt: {
-        show: true,
-        key: 'bop-it',
-        name: 'Bop It',
-        tooltip: `Bop It mode where it tells you the intercardinal direction you need to go from your click. You'll figure it out...`,
-        isScoring: true,
-        options: {
-            threshold: {
-                label: 'Bop It Threshold (Points)',
-                default: 4900,
-                tooltip: 'Bop It when your click will earn this many points. (0 to 5000).',
-            },
-        }
-    },
-
-    inFrame: {
-        show: true,
-        key: 'in-frame',
-        name: 'Show In-Frame',
-        tooltip: 'Shows if the location is in or out of your current guess map view.',
-        scoreMode: true,
-        options: {},
-    },
-
-    lottery: {
-        show: true,
-        key: 'lottery',
-        name: 'Lottery',
-        tooltip: 'Get a random guess and you have to decide if you want it or not.',
-        options: {
-            nGuesses: {
-                label: 'Max. guesses',
-                default: 20,
-                tooltip: 'Maximum number of random guesses you get before you have to take the guess.',
-            },
-            nDegLat: {
-                label: 'Latitude margin (deg)',
-                default: 90,
-                tooltip: 'Guess up to this many degrees latitude away from the target',
-            },
-            nDegLng: {
-                label: 'Longitude margin (deg)',
-                default: 180,
-                tooltip: 'Guess up to this many degrees longitude away from the target',
-            },
-            resetEachRound: {
-                label: 'Reset each round',
-                default: true,
-                tooltip: 'Reset the number of tokens for each round.',
-            },
-            onlyStreetView: {
-                label: 'Only Street View',
-                default: false,
-                tooltip: 'Only generate guesses in locations with official Google Street View coverage. Requires Google Maps API key to be configured.',
-            },
-            onlyLand: {
-                label: 'Only Land',
-                default: false,
-                tooltip: 'Only generate guesses on land (not in water). Requires Google Maps API key to be configured.',
-            },
-
-        },
-    },
-
-    puzzle: {
-        show: false, // Almost working...
-        key: 'puzzle',
-        name: 'Puzzle',
-        tooltip: 'Split up the large map into tiles and rearrange them randomly',
-        disableInOpera: true, // Disable in Opera due to complex DOM manipulation and rendering issues
-        options: {
-            nRows: {
-                label: '# Rows',
-                default: 4,
-                tooltip: 'How many tiles to split up the puzzle into vertically.',
-            },
-            nCols: {
-                label: '# Columns',
-                default: 4,
-                tooltip: 'How many tiles to split up the puzzle into horizontally.',
-            },
-        },
-    },
-
-    tileReveal: {
-        show: true,
-        key: 'tile-reveal',
-        name: 'Tile Reveal',
-        tooltip: 'Overlay big map with tiles and you can click to reveal them.',
-        options: {
-            nRows: {
-                label: '# Rows',
-                default: 4,
-                tooltip: 'How many rows of tiles for you to select from.',
-            },
-            nCols: {
-                label: '# Columns',
-                default: 4,
-                tooltip: 'How many columns of titles for you to select from.',
-            },
-            nClicks: {
-                label: 'Max. clicks',
-                default: 4,
-                tooltip: 'How many tiles you are allowed to reveal for a given round.',
-            },
-            resetEachRound: {
-                label: 'Reset each round',
-                default: true,
-                tooltip: 'Reset the number of clicks allowed for each round.',
-            },
-        },
-    },
-
-    funFilters: { // Miscellaneous display options that don't deserve a full button.
+    funFilters: {
         show: true, // Broken in duels.
         key: 'fun-filters',
         name: 'Fun Filters',
@@ -250,6 +72,184 @@ const MODS = {
                 tooltip: 'How big the streetview appears on your screen.',
             },
         },
+    },
+
+    lottery: {
+        show: true,
+        key: 'lottery',
+        name: 'Lottery',
+        tooltip: 'Get a random guess and you have to decide if you want it or not.',
+        options: {
+            nGuesses: {
+                label: 'Max. guesses',
+                default: 20,
+                tooltip: 'Maximum number of random guesses you get before you have to take the guess.',
+            },
+            nDegLat: {
+                label: 'Latitude margin (deg)',
+                default: 90,
+                tooltip: 'Guess up to this many degrees latitude away from the target',
+            },
+            nDegLng: {
+                label: 'Longitude margin (deg)',
+                default: 180,
+                tooltip: 'Guess up to this many degrees longitude away from the target',
+            },
+            resetEachRound: {
+                label: 'Reset each round',
+                default: true,
+                tooltip: 'Reset the number of tokens for each round.',
+            },
+            onlyStreetView: {
+                label: 'Only Street View',
+                default: false,
+                tooltip: 'Only generate guesses in locations with official Google Street View coverage. Requires Google Maps API key to be configured.',
+            },
+            onlyLand: {
+                label: 'Only Land',
+                default: false,
+                tooltip: 'Only generate guesses on land (not in water). Requires Google Maps API key to be configured.',
+            },
+
+        },
+    },
+
+    tileReveal: {
+        show: true,
+        key: 'tile-reveal',
+        name: 'Tile Reveal',
+        tooltip: 'Overlay big map with tiles and you can click to reveal them.',
+        options: {
+            nRows: {
+                label: '# Rows',
+                default: 4,
+                tooltip: 'How many rows of tiles for you to select from.',
+            },
+            nCols: {
+                label: '# Columns',
+                default: 4,
+                tooltip: 'How many columns of titles for you to select from.',
+            },
+            nClicks: {
+                label: 'Max. clicks',
+                default: 4,
+                tooltip: 'How many tiles you are allowed to reveal for a given round.',
+            },
+            resetEachRound: {
+                label: 'Reset each round',
+                default: true,
+                tooltip: 'Reset the number of clicks allowed for each round.',
+            },
+        },
+    },
+
+    flashlight: {
+        show: true,
+        key: 'flashlight',
+        name: 'Flashlight',
+        tooltip: 'Uses cursor as a "flashlight" where you can only see part of the screen',
+        options: {
+            radius: {
+                label: 'Radius',
+                default: 100,
+                tooltip: 'Radius of flashlight, in pixels.',
+            },
+            blur: {
+                label: 'Blur',
+                default: 50,
+                tooltip: 'Blur (in pixels) to add to the flashlight. Extends out from the radius.',
+            }
+        }
+    },
+
+    rotateMap: {
+        show: !IS_OPERA,
+        key: 'rotate-map',
+        name: 'Map Rotation',
+        tooltip: 'Makes the guess map rotate while you are trying to click.',
+        options: {
+            every: {
+                label: 'Run Every (s)',
+                default: 0.05,
+                tooltip: 'Rotate the map every X seconds. Lower numbers will reduce choppiness but may also slow the game down.',
+            },
+            degrees: {
+                label: 'Degrees',
+                default: 2,
+                tooltip: 'Rotate by X degrees at the specified time interval. Positive for clockwise, negative for counter-clockwise.',
+            },
+            startDegrees: {
+                label: 'Start at',
+                default: 0,
+                tooltip: 'Start at a fixed rotation. Note: "Randomize" will override this, and if you want a static map, set the others to 0.',
+            },
+            startRandom: {
+                label: 'Randomize',
+                default: false,
+                tooltip: 'Randomize starting position. Note: this will override the "Start at" setting if enabled.',
+            },
+        },
+    },
+
+    showScore: {
+        show: true,
+        key: 'show-score',
+        name: 'Show Score',
+        tooltip: 'Shows the would-be score of each click.',
+        scoreMode: true,
+        options: {},
+    },
+
+    bopIt: {
+        show: true,
+        key: 'bop-it',
+        name: 'Bop It',
+        tooltip: `Bop It mode where it tells you the intercardinal direction you need to go from your click. You'll figure it out...`,
+        isScoring: true,
+        options: {
+            threshold: {
+                label: 'Bop It Threshold (Points)',
+                default: 4900,
+                tooltip: 'Bop It when your click will earn this many points. (0 to 5000).',
+            },
+        }
+    },
+
+    inFrame: {
+        show: true,
+        key: 'in-frame',
+        name: 'In-Frame',
+        tooltip: 'Shows if the location is in or out of your current guess map view.',
+        scoreMode: true,
+        options: {},
+    },
+
+    puzzle: {
+        show: false, // Almost working...
+        key: 'puzzle',
+        name: 'Puzzle',
+        tooltip: 'Split up the large map into tiles and rearrange them randomly',
+        disableInOpera: true, // Disable in Opera due to complex DOM manipulation and rendering issues
+        options: {
+            nRows: {
+                label: '# Rows',
+                default: 4,
+                tooltip: 'How many tiles to split up the puzzle into vertically.',
+            },
+            nCols: {
+                label: '# Columns',
+                default: 4,
+                tooltip: 'How many tiles to split up the puzzle into horizontally.',
+            },
+        },
+    },
+
+    zoomInOnly: { // This one is alright, but just not really good content quality. Try it out if you want!
+        show: false,
+        key: 'zoom-in-only',
+        name: 'Zoom In Only',
+        tooltip: 'You can only zoom inward.',
+        options: {},
     },
 
     scratch: {
