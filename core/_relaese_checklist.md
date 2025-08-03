@@ -1,10 +1,13 @@
 # Check manually prior to release
 
+Debug console open for all of this!!!
+
 ## Classic Maps (Solo)
 
 For each browser (Opera, Firefox, Chrome):
 
-* Toggle every mode on and off.
+* Toggle every mode on and off. Basic check for all mods, but in at least one browser, check thoroughly.
+* Check that Close/Reset/Apply buttons work.
 * Toggle one or more on at a time and refresh the page to make sure the settings are persistent.
 * Toggle one or more on at a time and go to a new round to make sure the settings are persistent.
 * Add API key and disable cheat protection, make sure relevant settings are enabled.

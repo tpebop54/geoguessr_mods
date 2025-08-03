@@ -266,7 +266,7 @@ document.addEventListener('gg_maps_ready', () => {
     initializeMods();
 });
 
-const fetchMapDataWithRetry = async (mapId, maxRetries = 3, retryDelay = 1000) => {
+const fetchMapDataWithRetry = async (mapId, maxRetries = 5, retryDelay = 1000) => {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             const controller = new AbortController();
