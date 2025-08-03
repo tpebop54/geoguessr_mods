@@ -244,6 +244,11 @@ const MODS = {
                 default: false,
                 tooltip: 'Flip the main view horizontally (left-right mirror).',
             },
+            streetviewSize: {
+                label: 'Streetview Size (%)',
+                default: 100,
+                tooltip: 'How big the streetview appears on your screen.',
+            },
         },
     },
 

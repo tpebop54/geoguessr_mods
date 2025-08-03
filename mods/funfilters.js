@@ -183,39 +183,54 @@ const getFilterStr = (mod) => { // Get string that can be applied to streetview 
     return filterStr;
 };
 
-// Location tracking for display options persistence
-let displayLocationTrackingActive = false;
-
-const setupDisplayLocationTracking = () => {
-    if (displayLocationTrackingActive) return;
-    
-    if (!THE_WINDOW.GG_LOCATION_TRACKER) {
-        console.warn('Display mod: Location tracker not available, options may not persist');
+const applyScreenScaling = (percentage) => {
+    const bigMapContainer = getBigMapContainer();
+    if (!bigMapContainer) {
         return;
     }
     
-    THE_WINDOW.GG_LOCATION_TRACKER.subscribe('display-options', (newUrl, oldUrl) => {
+    if (percentage === 100 || !percentage) {
+        // Reset to normal size and position
+        bigMapContainer.style.width = '';
+        bigMapContainer.style.height = '';
+        bigMapContainer.style.position = '';
+        bigMapContainer.style.top = '';
+        bigMapContainer.style.left = '';
+        bigMapContainer.style.zIndex = '';
         
-        // Small delay to allow the page to settle
-        setTimeout(() => {
-            const mod = MODS.funFilters;
-            if (isModActive(mod)) {
-                updateFunFilters(true); // Force reapplication
-            }
-        }, 500);
-    }, 1000);
-    
-    displayLocationTrackingActive = true;
+        // Remove any scaling transform we added, but preserve other transforms
+        const currentTransform = bigMapContainer.style.transform || '';
+        const transformWithoutScale = currentTransform.replace(/scale\([^)]*\)/g, '').replace(/translate\([^)]*\)/g, '').trim();
+        bigMapContainer.style.transform = transformWithoutScale;
+    } else {
+        // Calculate scale factor
+        const scale = percentage / 100;
+        
+        // Apply scaling and centering via CSS transforms
+        // This preserves aspect ratio and centers the container
+        const transforms = [];
+        transforms.push('translate(-50%, -50%)');
+        transforms.push(`scale(${scale})`);
+        
+        // Preserve any existing transforms that aren't scale or translate
+        const currentTransform = bigMapContainer.style.transform || '';
+        const existingTransforms = currentTransform.replace(/scale\([^)]*\)/g, '').replace(/translate\([^)]*\)/g, '').trim();
+        if (existingTransforms) {
+            transforms.push(existingTransforms);
+        }
+        
+        // Apply the positioning and scaling
+        bigMapContainer.style.position = 'fixed';
+        bigMapContainer.style.top = '50%';
+        bigMapContainer.style.left = '50%';
+        bigMapContainer.style.transform = transforms.join(' ');
+        bigMapContainer.style.zIndex = '1000';
+    }
 };
 
 const updateFunFilters = (forceState = undefined) => {
     const mod = MODS.funFilters;
     const active = updateMod(mod, forceState);
-
-    // Setup location tracking if not already active and mod is being enabled
-    if (active && !displayLocationTrackingActive) {
-        setupDisplayLocationTracking();
-    }
 
     _updateTidy(mod);
 
@@ -226,9 +241,10 @@ const updateFunFilters = (forceState = undefined) => {
         makeColorOverlay(); // TODO: depends on mode.
         filterStr = getFilterStr(mod);
         
-        // Handle flip transforms
+        // Handle flip transforms (these go on the canvas, not the container)
         const flipVertical = getOption(mod, 'flipVertical');
         const flipHorizontal = getOption(mod, 'flipHorizontal');
+        const streetviewSize = getOption(mod, 'streetviewSize');
         
         const transforms = [];
         if (flipVertical) {
@@ -241,6 +257,7 @@ const updateFunFilters = (forceState = undefined) => {
         if (transforms.length > 0) {
             transformStr = transforms.join(' ');
         }
+        applyScreenScaling(streetviewSize);
     } else {
         // When mod is disabled, clear overlays and classes
         removeColorOverlay();
@@ -249,15 +266,11 @@ const updateFunFilters = (forceState = undefined) => {
         if (canvas3d && IS_OPERA) {
             canvas3d.classList.remove('opera-friendly-filter');
         }
-        
-        // Cleanup location tracking if mod is disabled
-        if (displayLocationTrackingActive && THE_WINDOW.GG_LOCATION_TRACKER) {
-            THE_WINDOW.GG_LOCATION_TRACKER.unsubscribe('display-options');
-            displayLocationTrackingActive = false;
-        }
+        applyScreenScaling(100);
+
     }
     
-    // Apply the filters and transforms
+    // Apply the filters and transforms (these go on the canvas)
     applyDisplayFilters(filterStr, transformStr);
 };
 
