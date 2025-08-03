@@ -341,7 +341,7 @@ const addClickBlock = () => {
     overlay.addEventListener('click', overlayClickHandler, true);
 };
 
-const resetLotteryCount = () => {
+const resetTokens = () => {
     const mod = MODS.lottery;
     _LOTTERY_COUNT = getOption(mod, 'nGuesses');
 
@@ -378,3 +378,35 @@ const updateLottery = (forceState = undefined) => {
     });
     saveState();
 };
+
+const onLotteryNewRound = () => {
+    const mod = MODS.lottery;
+    if (!isModActive(mod) || !areModsAvailable()) {
+        return;
+    }
+    const refreshTiles = () => {
+        try {
+            if (getOption(mod, 'resetEachRound')) {
+                resetTokens();
+            }
+        } catch (err) {
+            setTimeout(() => {
+                if (isModActive(mod)) {
+                    onLotteryNewRound();
+                }
+            }, 500);
+        }
+    };
+    waitForMapsReady(refreshTiles, {
+        timeout: 5000,
+        interval: 100,
+    });
+};
+
+THE_WINDOW.addEventListener('gg_round_start', onLotteryNewRound);
+
+THE_WINDOW.addEventListener('gg_mod_reactivated', (evt) => {
+    if (evt.detail && evt.detail.modName === 'lottery') {
+        onLotteryNewRound();
+    }
+});

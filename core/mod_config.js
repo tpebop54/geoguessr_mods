@@ -132,6 +132,11 @@ const MODS = {
                 default: 180,
                 tooltip: 'Guess up to this many degrees longitude away from the target',
             },
+            resetEachRound: {
+                label: 'Reset each round',
+                default: true,
+                tooltip: 'Reset the number of tokens for each round.',
+            },
             onlyStreetView: {
                 label: 'Only Street View',
                 default: false,
