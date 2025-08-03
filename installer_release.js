@@ -14,7 +14,6 @@
 
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/_version.js?v=2.0.6
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/evt_framework.js?v=2.0.6
-// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/location_tracker.js?v=2.0.6
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/quotes.js?v=2.0.6
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/coordinate_extractor.js?v=2.0.6
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/debug_utils.js?v=2.0.6
