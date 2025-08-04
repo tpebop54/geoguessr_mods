@@ -233,7 +233,7 @@ const initializeMods = async () => {
         addButtons();
         fixFormatting();
 
-        if (!THE_WINDOW.DISABLE_CHEAT_PROTECTION) { // This is disabled by default but left for potential future use.
+        if (THE_WINDOW.CHEAT_PROTECTION) { // This is disabled by default but left for potential future use.
             setTimeout(() => {
                 clickGarbage(900);
             }, 500);

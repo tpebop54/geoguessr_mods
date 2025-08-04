@@ -49,7 +49,25 @@ const getGuessmap = () => {
 };
 
 const getStreetviewContainer = () => {
-    return document.querySelector(`div[class^="game_status__"]`);
+    const selectors = [
+        `div[class^="game_canvas__"]`,
+        `div[class*="game_canvas"]`,
+        `#panorama-container`,
+        `div[class*="game-layout_panoramaContainer"]`,
+        `div[class*="game_panoramaContainer"]`,
+        `div[class*="panorama"]`,
+        `.game-layout__panorama-container`,
+        `[data-qa="panorama"]`,
+        `div[class*="game-layout_content"]`,
+        `div[class*="game_content"]`,
+        `main[class*="game"]`,
+        `div[id*="panorama"]`,
+        `div[class*="street-view"]`,
+        `div[class*="streetview"]`,
+        `div:has(.widget-scene-canvas)`,
+        `div:has(canvas)`,
+    ];
+    return _tryMultiple(selectors);
 };
 
 const getStreetviewCanvas = () => {
