@@ -53,11 +53,12 @@ const bindButtons = () => {
 };
 
 // Keep the button menu open or closed between page change or refresh.
-let _MENU_VISIBLE = true;
-const _menuVisibleKey = 'gg_mods_menu_visible';
-const _storeMenuVisible = (visible) => {
-    _MENU_VISIBLE = visible;
-    localStorage.setItem(_menuVisibleKey, JSON.stringify(!!visible));
+const _buttonsVisibleKey = 'gg_mod_buttons_visible';
+let _BUTTONS_VISIBLE = localStorage.getItem(_buttonsVisibleKey);
+_BUTTONS_VISIBLE = _BUTTONS_VISIBLE == 'true' || _BUTTONS_VISIBLE == null;
+const _storeButtonsVisible = (visible) => {
+    _BUTTONS_VISIBLE = visible;
+    localStorage.setItem(_buttonsVisibleKey, JSON.stringify(visible));
 };
 
 const _IS_DUEL = window.location.pathname.includes('/live-challenge/') || window.location.pathname.includes('/multiplayer/');
@@ -137,14 +138,14 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
                 buttonContainer.classList.add('hidden');
                 modMenuToggle.textContent = '▶';
             }
-            _storeMenuVisible(show);
+            _storeButtonsVisible(show);
         };
 
         modMenuToggle.addEventListener('click', function () {
-            _MENU_VISIBLE = !_MENU_VISIBLE;
-            setMenuVisible(_MENU_VISIBLE);
+            _BUTTONS_VISIBLE = !_BUTTONS_VISIBLE;
+            setMenuVisible(_BUTTONS_VISIBLE);
         });
-        setMenuVisible(window.localStorage.getItem(_menuVisibleKey) === 'true' || _MENU_VISIBLE);
+        setMenuVisible(!!_BUTTONS_VISIBLE);
 
         setTimeout(addButtonContainer, 100);
         _MODS_LOADED = true;
