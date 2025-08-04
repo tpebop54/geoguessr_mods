@@ -44,8 +44,7 @@
 // Configuration - see here for detailed setup instructions: https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/README.md
 
 let GOOGLE_MAPS_API_KEY = ''; // Optional: Add your Google Maps API key here for enhanced features. See README.md for details.
-let DISABLE_CHEAT_PROTECTION = false; // Set to true if you promise not to use this to cheat in competitive duels. All other modes are fine.
 let ENABLE_QUOTES = false; // On the loading screen, show random quotes instead of "Loading...".
 
-Object.assign(THE_WINDOW, { GOOGLE_MAPS_API_KEY, DISABLE_CHEAT_PROTECTION, ENABLE_QUOTES });
+Object.assign(THE_WINDOW, { GOOGLE_MAPS_API_KEY, ENABLE_QUOTES });
 console.log(`Tpebop's mods loaded. (${MOD_VERSION})`);

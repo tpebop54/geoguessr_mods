@@ -283,7 +283,7 @@ const getRandomLng = (lng1, lng2) => {
     }
 };
 
-// Get random { lat, lng } between the given bounds, or for the full Mercator projectionif bounds are not provided.
+// Get random { lat, lng } between the given bounds, or for the full Mercator projection if bounds are not provided.
 const getRandomLoc = (minLat = null, maxLat = null, minLng = null, maxLng = null) => {
     const lat = getRandomLat(minLat, maxLat);
     const lng = getRandomLng(minLng, maxLng);
@@ -310,6 +310,7 @@ const clickAt = (lat, lng) => { // Trigger actual click on guessMap at { lat, ln
         latLng: new google.maps.LatLng(safeLat, safeLng),
     };
     google.maps.event.trigger(GOOGLE_MAP, 'click', click);
+    GG_CLICK = { lat: safeLat, lng: safeLng };
 };
 
 const clearMarker = () => {

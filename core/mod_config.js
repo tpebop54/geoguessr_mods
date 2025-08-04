@@ -12,13 +12,14 @@ const _isOpera = () => { // Opera can't render the 2D map as vector, so disable 
 const IS_OPERA = _isOpera();
 
     /** 
-     * COMMON CONFIGURATION FOR MODS
+    COMMON CONFIGURATION FOR MODS
      
     show: true, // false to hide this mod from the panel. Mostly used for dev, but you can change it to disable stuff.
     key: 'some-key', // Used for global state and document elements.
     name: 'Name in Menu', // Used for menus.
     tooltip: 'Brief explanation of the mod for the menu tooltip', // Shows when hovering over menu button.
     isScoring: false, // Says whether or not this is a scoring mod (only one scoring mod can be used at a time). Can be null.
+    allowInDuels: true, // True to allow in duels and multiplayer, false if only for single player.
     options: {}, // Used when mod requires or allows configurable values. Can be null.
 
     */
@@ -30,7 +31,7 @@ const MODS = {
         key: 'fun-filters',
         name: 'Fun Filters',
         tooltip: 'Various display options for page elements, colors, etc. Does not mess with gameplay.',
-        // Note: CSS filters may have issues in Opera, but transforms work fine
+        allowInDuels: true,
         options: {
             satView: {
                 label: 'Satellite View',
@@ -87,6 +88,7 @@ const MODS = {
         key: 'lottery',
         name: 'Lottery',
         tooltip: 'Get a random guess and you have to decide if you want it or not.',
+        allowInDuels: true,
         options: {
             nGuesses: {
                 label: 'Max. guesses',
@@ -127,6 +129,7 @@ const MODS = {
         key: 'tile-reveal',
         name: 'Tile Reveal',
         tooltip: 'Overlay big map with tiles and you can click to reveal them.',
+        allowInDuels: true,
         options: {
             nRows: {
                 label: '# Rows',
@@ -156,6 +159,7 @@ const MODS = {
         key: 'flashlight',
         name: 'Flashlight',
         tooltip: 'Uses cursor as a "flashlight" where you can only see part of the screen',
+        allowInDuels: true,
         options: {
             radius: {
                 label: 'Radius',
@@ -175,6 +179,7 @@ const MODS = {
         key: 'rotate-map',
         name: 'Map Rotation',
         tooltip: 'Makes the guess map rotate while you are trying to click.',
+        allowInDuels: true,
         options: {
             every: {
                 label: 'Run Every (s)',
@@ -205,6 +210,7 @@ const MODS = {
         name: 'Show Score',
         tooltip: 'Shows the would-be score of each click.',
         scoreMode: true,
+        allowInDuels: false,
         options: {},
     },
 
@@ -214,6 +220,7 @@ const MODS = {
         name: 'Bop It',
         tooltip: `Bop It mode where it tells you the intercardinal direction you need to go from your click. You'll figure it out...`,
         isScoring: true,
+        allowInDuels: false,
         options: {
             threshold: {
                 label: 'Bop It Threshold (Points)',
@@ -229,6 +236,7 @@ const MODS = {
         name: 'In-Frame',
         tooltip: 'Shows if the location is in or out of your current guess map view.',
         scoreMode: true,
+        allowInDuels: false,
         options: {},
     },
 
@@ -238,6 +246,7 @@ const MODS = {
         name: 'Puzzle',
         tooltip: 'Split up the large map into tiles and rearrange them randomly',
         disableInOpera: true, // Disable in Opera due to complex DOM manipulation and rendering issues
+        allowInDuels: true,
         options: {
             nRows: {
                 label: '# Rows',
@@ -257,6 +266,7 @@ const MODS = {
         key: 'zoom-in-only',
         name: 'Zoom In Only',
         tooltip: 'You can only zoom inward.',
+        allowInDuels: true,
         options: {},
     },
 
@@ -266,12 +276,13 @@ const MODS = {
         name: 'Show Scratch',
         tooltip: 'For dev.',
         scoreMode: false,
+        allowInDuels: true,
         options: {},
     },
 
 };
 
-// Default configuration for options restoration
+// Default configuration for options restoration.
 const GG_DEFAULT = {}
 for (const mod of Object.values(MODS)) {
     GG_DEFAULT[mod.key] = JSON.parse(JSON.stringify(mod));
