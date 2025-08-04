@@ -396,3 +396,26 @@ const addKeyBindings = () => {
     });
 };
 addKeyBindings();
+
+
+
+
+
+
+const waitForDuelRoundButton = () => {
+    const observer = new MutationObserver(() => {
+        const button = Array.from(document.querySelectorAll('button'))
+            .find(btn => btn.textContent.trim() === 'Start next round');
+
+        if (button) {
+            observer.disconnect();
+            console.log('Button found! Attaching click listener.');
+
+            button.addEventListener("click", () => {
+                debugger
+            });
+        }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+}
+waitForButtonAndBind();
