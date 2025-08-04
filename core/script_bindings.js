@@ -413,8 +413,6 @@ const watchForDuelRoundButton = () => {
                 initLoadOverlay();
             }, 3000);
 
-            debugger
-
             setTimeout(() => {
                 watchForDuelRoundButton();
             }, 8000);
