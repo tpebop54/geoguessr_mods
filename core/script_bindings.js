@@ -402,20 +402,34 @@ addKeyBindings();
 
 
 
-const waitForDuelRoundButton = () => {
+const watchForDuelRoundButton = () => {
     const observer = new MutationObserver(() => {
-        const button = Array.from(document.querySelectorAll('button'))
-            .find(btn => btn.textContent.trim() === 'Start next round');
+        // const button = Array.from(document.querySelectorAll('span[class^="button_label__"]'))
+        //     .find(span => span.textContent.toLowerCase().indexOf('next round') !== -1);
+        // if (button) {
+        //     observer.disconnect();
+        //     button.addEventListener("click", () => {
+        //         debugger
+        //         setTimeout(() => {
+        //             watchForDuelRoundButton();
+        //         }, 300);
+        //     });
+        // }
 
-        if (button) {
+        const roundStarting = document.querySelector('div[class^="round-starting_wrapper__"]');
+
+        if (roundStarting) {
             observer.disconnect();
-            console.log('Button found! Attaching click listener.');
 
-            button.addEventListener("click", () => {
-                debugger
-            });
+            debugger
+
+            setTimeout(() => {
+                watchForDuelRoundButton();
+            }, 8000);
         }
+
+
     });
     observer.observe(document.body, { childList: true, subtree: true });
 }
-waitForButtonAndBind();
+watchForDuelRoundButton();
