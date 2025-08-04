@@ -404,22 +404,14 @@ addKeyBindings();
 
 const watchForDuelRoundButton = () => {
     const observer = new MutationObserver(() => {
-        // const button = Array.from(document.querySelectorAll('span[class^="button_label__"]'))
-        //     .find(span => span.textContent.toLowerCase().indexOf('next round') !== -1);
-        // if (button) {
-        //     observer.disconnect();
-        //     button.addEventListener("click", () => {
-        //         debugger
-        //         setTimeout(() => {
-        //             watchForDuelRoundButton();
-        //         }, 300);
-        //     });
-        // }
-
         const roundStarting = document.querySelector('div[class^="round-starting_wrapper__"]');
 
         if (roundStarting) {
             observer.disconnect();
+
+            setTimeout(() => {
+                initLoadOverlay();
+            }, 3000);
 
             debugger
 

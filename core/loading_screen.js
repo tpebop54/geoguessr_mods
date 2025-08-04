@@ -35,7 +35,7 @@ const splitQuote = (quote) => {  // Split the quote and the author by the dash c
     return parts;
 };
 
-const clearQuoteOverlay = () => {
+const clearLoadOverlay = () => {
     if (_LOAD_OVERLAY && document.body.contains(_LOAD_OVERLAY)) {
         _LOAD_OVERLAY.style.transition = 'opacity 0.3s ease-out';
         _LOAD_OVERLAY.style.opacity = '0';
@@ -154,7 +154,7 @@ const createLoadOverlayDiv = () => {
 
             if (strategy1 || strategy2) {
                 setTimeout(() => {
-                    clearQuoteOverlay();
+                    clearLoadOverlay();
                 }, 1000); // Wait 1 second after map is detected
                 return true;
             }
@@ -182,7 +182,7 @@ const createLoadOverlayDiv = () => {
     setTimeout(() => {
         clearInterval(mapCheckInterval);
         try {
-            clearQuoteOverlay();
+            clearLoadOverlay();
         } catch (err) {
         }
 
