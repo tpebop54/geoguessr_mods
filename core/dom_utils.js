@@ -49,49 +49,7 @@ const getGuessmap = () => {
 };
 
 const getStreetviewContainer = () => {
-    const selectors = [
-        `div[class^="game_canvas__"]`,
-        `div[class*="game_canvas"]`,
-        `#panorama-container`,
-        `div[class*="game-layout_panoramaContainer"]`,
-        `div[class*="game_panoramaContainer"]`,
-        `div[class*="panorama"]`,
-        `.game-layout__panorama-container`,
-        `[data-qa="panorama"]`,
-        `div[class*="game-layout_content"]`,
-        `div[class*="game_content"]`,
-        `main[class*="game"]`,
-        `div[id*="panorama"]`,
-        `div[class*="street-view"]`,
-        `div[class*="streetview"]`,
-        // Fallback to any div that contains Street View canvas
-        `div:has(.widget-scene-canvas)`,
-        `div:has(canvas)`,
-    ];
-    
-    // First try the specific selectors
-    for (const selector of selectors) {
-        try {
-            const element = document.querySelector(selector);
-            if (element) {
-                return element;
-            }
-        } catch (err) {
-            // Some selectors might not be supported in all browsers
-            continue;
-        }
-    }
-    
-    // Fallback: look for any div containing a canvas (likely the game view)
-    const canvasContainers = document.querySelectorAll('div');
-    for (const container of canvasContainers) {
-        if (container.querySelector('canvas') && container.offsetWidth > 400 && container.offsetHeight > 300) {
-            return container;
-        }
-    }
-    
-    console.warn('Could not find game container with any selector');
-    return null;
+    return document.querySelector(`div[class^="game_status__"]`);
 };
 
 const getStreetviewCanvas = () => {
@@ -777,9 +735,7 @@ const handleGoogleMapsShortcut = (key) => {
     }
 };
 
-/**
- * Initialize global keybindings when DOM is ready
- */
+// Initialize global keybindings when DOM is ready
 const initializeGlobalKeybindings = () => {
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', setupGlobalKeyBindings);

@@ -60,6 +60,8 @@ const _storeMenuVisible = (visible) => {
     localStorage.setItem(_menuVisibleKey, JSON.stringify(!!visible));
 };
 
+const _IS_DUEL = window.location.pathname.includes('/live-challenge/') || window.location.pathname.includes('/multiplayer/');
+
 const addButtons = () => { // Add mod buttons to the active round, with a little button to toggle them.
     try {
         if (!areModsAvailable()) {
@@ -92,6 +94,9 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
 
         for (const mod of Object.values(MODS)) {
             if (!mod.show) {
+                continue;
+            }
+            if (_IS_DUEL && !mod.allowInDuels) {
                 continue;
             }
             try {
