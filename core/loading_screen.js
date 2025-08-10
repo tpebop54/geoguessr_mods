@@ -58,13 +58,29 @@ const clearLoadOverlay = () => {
     }
 };
 
+const createVersionDiv = () => {
+    const versionDiv = document.createElement('div');
+    versionDiv.id = 'loading-screen-version-div';
+    versionDiv.innerText = `v${MOD_VERSION}`;
+    Object.assign(versionDiv.style, {
+        position: 'fixed',
+        bottom: '0px',
+        right: '15px',
+        'z-index': '10000000',
+        'pointer-events': 'none',
+        transform: 'translate(-50%, -50%)',
+        color: 'white',
+    });
+    return versionDiv;
+};
+
 const createLoadOverlayDiv = () => {
     if (_LOAD_OVERLAY && document.body.contains(_LOAD_OVERLAY)) {
         return;
     }
 
     const loadOverlay = document.createElement('div'); // Opaque black div that covers everything while the page loads.
-    loadOverlay.id = 'on-your-honor';
+    loadOverlay.id = 'loading-screen-div';
     Object.assign(loadOverlay.style, { // Intentionally not in CSS to make it harder for people to figure out.
         height: '100vh',
         width: '100vw',
@@ -124,6 +140,7 @@ const createLoadOverlayDiv = () => {
     // On page load, black out everything. Then, we listen for the google map load event, add a time buffer, and remove it after that.
     // We have to have the map loaded to do the anti-cheat clicks. This is done down below in the map load event bubble.
     loadOverlay.appendChild(textDiv);
+    loadOverlay.appendChild(createVersionDiv());
 
     // First check if body is available
     if (document.body) {
@@ -197,7 +214,7 @@ const createLoadOverlayDiv = () => {
                 } catch (err) {
                     // Last resort - try to find and remove by ID
                     try {
-                        const overlayById = document.getElementById('on-your-honor');
+                        const overlayById = document.getElementById('loading-screen-div');
                         if (overlayById) {
                             overlayById.remove();
                         }
