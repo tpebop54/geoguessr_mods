@@ -204,23 +204,18 @@ const applyScreenScaling = (percentage) => {
     } else {
         const scale = percentage / 100;
         
-        // Get the original canvas dimensions
         const originalWidth = streetviewCanvas.width || streetviewCanvas.offsetWidth;
         const originalHeight = streetviewCanvas.height || streetviewCanvas.offsetHeight;
         
-        // Set transform origin to center for proper scaling
         streetviewCanvas.style.transformOrigin = 'center center';
         
-        // Apply the positioning to the canvas
         streetviewCanvas.style.position = 'fixed';
         streetviewCanvas.style.top = '50%';
         streetviewCanvas.style.left = '50%';
         
-        // Store scaling info for applyDisplayFilters to use
         streetviewCanvas.dataset.isScaled = 'true';
         streetviewCanvas.dataset.scalePercentage = percentage.toString();
         
-        // Ensure the canvas maintains its aspect ratio
         if (originalWidth && originalHeight) {
             streetviewCanvas.style.width = `${originalWidth}px`;
             streetviewCanvas.style.height = `${originalHeight}px`;
