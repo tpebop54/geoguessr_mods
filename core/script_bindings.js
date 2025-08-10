@@ -397,12 +397,23 @@ const addKeyBindings = () => {
 };
 addKeyBindings();
 
-const watchForDuelRoundButton = () => {
+
+let _NEXT_ROUND_BUTTON = null;
+const watchForMultiplayerRoundEnd = () => {
     const observer = new MutationObserver(() => {
-        const nextRoundButton = getDuelsNextRoundButton();
-        if (nextRoundButton) {
-            debugger;
+        if (_NEXT_ROUND_BUTTON) {
+            return;
         }
+        const nextRoundButton = getMultiplayerNextRoundButton();
+        if (!nextRoundButton) {
+            return;
+        }
+        _NEXT_ROUND_BUTTON = nextRoundButton;
+        _NEXT_ROUND_BUTTON.addEventListener('click', () => {
+            debugger
+            THE_WINDOW.dispatchEvent(new CustomEvent('gg_round_start', { detail: { rounds: [] } }));
+            _NEXT_ROUND_BUTTON = null
+        });
     });
     observer.observe(document.body, { childList: true, subtree: true });
 }

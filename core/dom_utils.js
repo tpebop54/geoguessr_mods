@@ -94,7 +94,15 @@ const getGameStatusDiv = () => {
     return document.querySelector(`div[class^="game_status__"]`);
 };
 
-const getDuelsNextRoundButton = () => {
+const getMultiplayerResultsDiv = () => {
+    if (!THE_WINDOW.location.pathname.includes('/live-challenge/')) {
+        return null;
+    }
+    const resultsDiv = document.querySelector(`button[class^="multiplayer-round-results_root__"]`);
+    return resultsDiv;
+};
+
+const getMultiplayerNextRoundButton = () => {
     if (!THE_WINDOW.location.pathname.includes('/live-challenge/')) {
         return null;
     }
