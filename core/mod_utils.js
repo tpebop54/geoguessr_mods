@@ -479,28 +479,17 @@ const waitForMapsReady = (callback, options = {}) => {
                 return true;
             }
             
-            // Enhanced logging for debugging
             const elapsed = Date.now() - startTime;
-            if (elapsed > 2000 && elapsed % 2000 < intervalMs) {
-                
-                // Additional debugging info
-                if (!map2dReady && require2D) {
-                }
-                if (!map3dReady && require3D) {
-                }
-            }
-            
             if (elapsed > timeout) {
                 console.warn(`${modName}: Timeout waiting for maps after ${timeout}ms, executing callback anyway`);
                 console.warn(`${modName}: Final state - 2D ready: ${map2dReady}, 3D ready: ${map3dReady}, gameElements: ${gameElementsReady}`);
-                callback(true); // Pass true to indicate this is automatic activation
+                callback(true); // Pass true to indicate this is forced activation.
                 return true;
             }
             
             return false;
         } catch (err) {
             console.error(`${modName}: Error checking map readiness:`, err);
-            // Continue waiting rather than failing completely, but log the error
             return false;
         }
     };
@@ -510,46 +499,12 @@ const waitForMapsReady = (callback, options = {}) => {
         return;
     }
 
-    // If not ready, start interval checking
+    // If not ready, start interval checking.
     const checkInterval = setInterval(() => {
         if (checkMapsReady()) {
             clearInterval(checkInterval);
         }
     }, intervalMs);
-};
-
-// Helper to create a map-safe mod update function
-const createMapSafeModUpdate = (originalUpdateFunction, options = {}) => {
-    const { 
-        require2D = true, 
-        require3D = false, 
-        modName = 'Unknown',
-        timeout = 5000
-    } = options;
-
-    return (forceState = undefined) => {
-        // If mod is being disabled, execute immediately without waiting
-        if (forceState === false) {
-            originalUpdateFunction(forceState);
-            return;
-        }
-
-        // Check if maps are immediately available for instant execution
-        const mapsInstantlyAvailable = (
-            (!require2D || (GOOGLE_MAP && GOOGLE_MAP.getBounds && GOOGLE_MAP.getCenter)) &&
-            (!require3D || (GOOGLE_STREETVIEW && GOOGLE_STREETVIEW.getPosition))
-        );
-        
-        if (mapsInstantlyAvailable) {
-            originalUpdateFunction(forceState);
-            return;
-        }
-
-        // For enabling or toggling when maps aren't immediately ready, wait for them
-        waitForMapsReady(() => {
-            originalUpdateFunction(forceState);
-        }, { require2D, require3D, modName, timeout });
-    };
 };
 
 /**

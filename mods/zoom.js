@@ -27,7 +27,7 @@ const setRestriction = (latLngBounds, zoom) => {
     }
 };
 
-const updateZoomInOnlyLogic = (forceState = undefined) => {
+const updateZoomInOnly = (forceState = undefined) => {
     const mod = MODS.zoomInOnly;
     const active = updateMod(mod, forceState);
     
@@ -73,10 +73,3 @@ const updateZoomInOnlyLogic = (forceState = undefined) => {
         console.error('Zoom mod: Error in update logic:', err);
     }
 };
-
-const updateZoomInOnly = createMapSafeModUpdate(updateZoomInOnlyLogic, {
-    require2D: true,
-    require3D: false,
-    modName: 'Zoom mod',
-    timeout: 5000
-});

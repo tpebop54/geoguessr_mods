@@ -410,7 +410,6 @@ const watchForMultiplayerRoundEnd = () => {
         }
         _NEXT_ROUND_BUTTON = nextRoundButton;
         _NEXT_ROUND_BUTTON.addEventListener('click', () => {
-            debugger
             THE_WINDOW.dispatchEvent(new CustomEvent('gg_round_start', { detail: { rounds: [] } }));
             _NEXT_ROUND_BUTTON = null
         });

@@ -213,4 +213,4 @@ const onTileRevealNewRound = () => {
     });
 };
 
-THE_WINDOW.addEventListener('gg_round_start', onTileRevealNewRound);
+THE_WINDOW.addEventListener('gg_round_start', waitForMapsReady(onTileRevealNewRound));

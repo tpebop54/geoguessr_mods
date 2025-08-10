@@ -406,4 +406,4 @@ const onLotteryNewRound = () => {
     }
 };
 
-THE_WINDOW.addEventListener('gg_round_start', onLotteryNewRound);
+THE_WINDOW.addEventListener('gg_round_start', waitForMapsReady(onLotteryNewRound));

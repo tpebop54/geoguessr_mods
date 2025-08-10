@@ -36,7 +36,7 @@ const doRotation = (nDegrees) => {
 
 let ROTATION_INTERVAL;
 
-const updateRotateMapLogic = (forceState = undefined) => {
+const updateRotateMap = (forceState = undefined) => {
     const mod = MODS.rotateMap;
     const active = updateMod(mod, forceState);
 
@@ -70,10 +70,3 @@ const updateRotateMapLogic = (forceState = undefined) => {
         }
     }
 };
-
-const updateRotateMap = createMapSafeModUpdate(updateRotateMapLogic, {
-    require2D: true,
-    require3D: false,
-    modName: 'Rotate map',
-    timeout: 5000
-});
