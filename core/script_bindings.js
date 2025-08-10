@@ -417,4 +417,4 @@ const watchForMultiplayerRoundEnd = () => {
     });
     observer.observe(document.body, { childList: true, subtree: true });
 }
-watchForDuelRoundButton();
+watchForMultiplayerRoundEnd();
