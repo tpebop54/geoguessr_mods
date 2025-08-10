@@ -441,6 +441,55 @@ const lotteryStyles = `
     }
 `;
 
+// Loading screen styles
+const loadingScreenStyles = `
+    #loading-screen-div {
+        height: 100vh;
+        width: 100vw;
+        background: black;
+        z-index: 99999999;
+        position: fixed;
+        top: 0;
+        left: 0;
+        overflow-wrap: break-word;
+        pointer-events: none;
+        transition: opacity 0.5s ease-out;
+    }
+
+    #loading-screen-version-div {
+        position: fixed;
+        bottom: 0px;
+        right: 15px;
+        z-index: 10000000;
+        pointer-events: none;
+        transform: translate(-50%, -50%);
+        color: white;
+    }
+
+    .loading-screen-text-container {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        font-size: 60px;
+        color: white;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        display: flex;
+        flex-direction: column;
+        text-align: center;
+        align-items: center;
+    }
+
+    .loading-screen-text {
+        font-size: 40px;
+    }
+
+    .loading-screen-author {
+        margin-top: 10px;
+        font-size: 20px;
+    }
+`;
+
 // Utility styles (used by multiple mods)
 const utilityStyles = `
     #gg-guessmap-blocker {
@@ -464,6 +513,7 @@ const applyModStyles = () => {
         (IS_OPERA ? operaOptimizationStyles : '') +
         tileRevealStyles +
         lotteryStyles +
+        loadingScreenStyles +
         utilityStyles;
         
     GM_addStyle(combinedStyles);

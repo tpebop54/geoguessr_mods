@@ -62,15 +62,6 @@ const createVersionDiv = () => {
     const versionDiv = document.createElement('div');
     versionDiv.id = 'loading-screen-version-div';
     versionDiv.innerText = `v${MOD_VERSION}`;
-    Object.assign(versionDiv.style, {
-        position: 'fixed',
-        bottom: '0px',
-        right: '15px',
-        'z-index': '10000000',
-        'pointer-events': 'none',
-        transform: 'translate(-50%, -50%)',
-        color: 'white',
-    });
     return versionDiv;
 };
 
@@ -81,20 +72,9 @@ const createLoadOverlayDiv = () => {
 
     const loadOverlay = document.createElement('div'); // Opaque black div that covers everything while the page loads.
     loadOverlay.id = 'loading-screen-div';
-    Object.assign(loadOverlay.style, { // Intentionally not in CSS to make it harder for people to figure out.
-        height: '100vh',
-        width: '100vw',
-        background: 'black',
-        'z-index': '99999999',
-        position: 'fixed',
-        top: '0',
-        left: '0',
-        'overflow-wrap': 'break-word',
-        'pointer-events': 'none',
-        transition: 'opacity 0.5s ease-out', // Smooth fade-out transition
-    });
 
     const textDiv = document.createElement('div');
+    textDiv.className = 'loading-screen-text-container';
     const text = getOverlayText();
     let parts;
     try {
@@ -103,36 +83,14 @@ const createLoadOverlayDiv = () => {
         parts = [text];
     }
 
-    Object.assign(textDiv.style, { // Style for div that contains quote and author. Again, done via JS to obfuscate the code.
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        'font-size': '60px',
-        color: 'white',
-        transform: 'translate(-50%, -50%)',
-        'pointer-events': 'none',
-        display: 'flex',
-        'flex-direction': 'column',
-        'text-align': 'center',
-        'align-items': 'center',
-    });
-
-    const textStyle = { // Styling for just the text.
-        'font-size': '40px',
-    };
-    const authorStyle = { // Styling for just the author.
-        'margin-top': '10px',
-        'font-size': '20px',
-    };
-
     for (const [ix, part] of Object.entries(parts)) {
         const div = document.createElement('div');
         if (Number(ix) === parts.length - 1 && parts.length > 1) {
             div.innerText = '— ' + part;
-            Object.assign(div.style, authorStyle);
+            div.className = 'loading-screen-author';
         } else {
             div.innerText = part;
-            Object.assign(div.style, textStyle);
+            div.className = 'loading-screen-text';
         }
         textDiv.appendChild(div);
     }
