@@ -214,9 +214,3 @@ const onTileRevealNewRound = () => {
 };
 
 THE_WINDOW.addEventListener('gg_round_start', onTileRevealNewRound);
-
-THE_WINDOW.addEventListener('gg_mod_reactivated', (evt) => {
-    if (evt.detail && evt.detail.modName === 'tileReveal') {
-        onTileRevealNewRound();
-    }
-});

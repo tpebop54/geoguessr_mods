@@ -407,9 +407,3 @@ const onLotteryNewRound = () => {
 };
 
 THE_WINDOW.addEventListener('gg_round_start', onLotteryNewRound);
-
-THE_WINDOW.addEventListener('gg_mod_reactivated', (evt) => {
-    if (evt.detail && evt.detail.modName === 'lottery') {
-        onLotteryNewRound();
-    }
-});

@@ -94,6 +94,19 @@ const getGameStatusDiv = () => {
     return document.querySelector(`div[class^="game_status__"]`);
 };
 
+const getDuelsNextRoundButton = () => {
+    if (!THE_WINDOW.location.pathname.includes('/live-challenge/')) {
+        return null;
+    }
+    const buttons = document.querySelectorAll(`button[class^="button_button__"]`);
+    for (const button of buttons) {
+        if (button.innerText.toLowerCase().includes('next round')) {
+            return button;
+        }
+    }
+    return null;
+};
+
 const getGameReactionsDiv = () => {
     const selectors = [
         `div[class^="game-reactions_root__"]`,

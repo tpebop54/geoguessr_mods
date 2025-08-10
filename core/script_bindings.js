@@ -397,28 +397,12 @@ const addKeyBindings = () => {
 };
 addKeyBindings();
 
-
-
-
-
-
 const watchForDuelRoundButton = () => {
     const observer = new MutationObserver(() => {
-        const roundStarting = document.querySelector('div[class^="round-starting_wrapper__"]');
-
-        if (roundStarting) {
-            observer.disconnect();
-
-            setTimeout(() => {
-                initLoadOverlay();
-            }, 3000);
-
-            setTimeout(() => {
-                watchForDuelRoundButton();
-            }, 8000);
+        const nextRoundButton = getDuelsNextRoundButton();
+        if (nextRoundButton) {
+            debugger;
         }
-
-
     });
     observer.observe(document.body, { childList: true, subtree: true });
 }
