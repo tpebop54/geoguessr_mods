@@ -323,7 +323,7 @@ const reactivateMods = () => {
     THE_WINDOW.dispatchEvent(new CustomEvent('gg_mods_reactivate', { detail: { timestamp: Date.now() } }));
 };
 
-const onRoundStart = (evt) => {
+const onRoundStart = (evt) => { // Singleplayer only. TODO: clean up, share with duels logic if possible.
     _MODS_LOADED = false;
     THE_WINDOW.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
 
@@ -351,7 +351,7 @@ const onRoundStart = (evt) => {
     }));
 };
 
-const onRoundEnd = (evt) => {
+const onRoundEnd = (evt) => { // Singleplayer only. TODO: clean up, share with duels logic if possible.
     GG_ROUND = undefined;
     GG_CLICK = undefined;
     GG_MAP = undefined;
@@ -381,9 +381,6 @@ const addDebugger = () => {
     }
 };
 
-/**
- * Sets up global keyboard shortcuts that are available throughout the application
- */
 const setupGlobalKeyBindings = () => {
     document.addEventListener('keydown', (evt) => {
         // Check if user is interacting with form elements or options menu
@@ -493,20 +490,25 @@ initializeGlobalKeybindings();
 let _RESULT_MAP = null;
 const watchForNextRound = () => {
     const observer = new MutationObserver(() => {
-        if (_RESULT_MAP) {
-            return;
-        }
         const resultMap = getResultMap();
-        if (!resultMap) {
-            return;
-        }
-        _RESULT_MAP = resultMap;
-        _RESULT_MAP.addEventListener('click', () => {
-            THE_WINDOW.dispatchEvent(new CustomEvent('gg_maps_ready'));
-            waitForMapsReady(() => {
+
+        if (resultMap) { // Results page between rounds.
+            if (_RESULT_MAP) { // document.body changes on the results page, we can ignore.
+                return;
+            } else { // Freshly loaded results page, we need to store that globally.
+                _RESULT_MAP = resultMap;
+                return;
+            }
+        } else { // In-game page.
+            if (_RESULT_MAP) { // Clear for the next round results.
                 _RESULT_MAP = null;
-            });
-        });
+                waitForMapsReady(() => {
+                    initializeMods();
+                });
+            } else { // document.body changes in the in-game page.
+                return;
+            }
+        }
     });
     observer.observe(document.body, { childList: true, subtree: true });
 }
