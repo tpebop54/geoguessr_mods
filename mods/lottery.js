@@ -317,17 +317,7 @@ const addClickBlock = () => {
     removeClickBlock();
 
     const overlay = document.createElement('div');
-    overlay.className = 'gg-lottery-overlay';
-    overlay.style.cssText = `
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        pointer-events: none;
-        background: transparent;
-        z-index: 1000;
-    `;
+    overlay.id = 'gg-lottery-overlay';
 
     // Only block click events, allow all other interactions (drag, zoom, etc.)
     const overlayClickHandler = (evt) => {
@@ -336,7 +326,6 @@ const addClickBlock = () => {
             evt.stopPropagation();
         }
     };
-    overlay.style.pointerEvents = 'auto';
     overlay.addEventListener('click', overlayClickHandler, true);
 
     const container = getGuessmapContainer();
@@ -376,6 +365,7 @@ const updateLottery = (forceState = undefined) => {
         makeLotteryDisplay();
     }
 
+    waitForMapsReady(() => { return true; });
     addClickBlock();
 
     saveState();

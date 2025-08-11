@@ -352,16 +352,6 @@ const setGuessMapEvents = (enabled = true) => {
         if (!container.querySelector('.gg-contextmenu-overlay')) {
             const overlay = document.createElement('div');
             overlay.className = 'gg-contextmenu-overlay';
-            overlay.style.cssText = `
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                pointer-events: auto;
-                background: transparent;
-                z-index: 1000;
-            `;
             
             // Only capture contextmenu events, let everything else pass through
             overlay.addEventListener('contextmenu', (evt) => {

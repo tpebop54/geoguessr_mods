@@ -141,6 +141,17 @@ const optionMenuStyles = `
         margin-top: 20px;
     }
 
+    .gg-contextmenu-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        pointer-events: auto;
+        background: transparent;
+        z-index: 1000;
+    }
+
     /* Common interactive button styles for hover, active, and click animations */
     .gg-interactive-button {
         cursor: pointer;
@@ -400,6 +411,17 @@ const lotteryStyles = `
         border-radius: 10px;
         z-index: 9999;
         cursor: move;
+    }
+
+    #gg-lottery-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: transparent;
+        z-index: 1000;
+        pointer-events: auto;
     }
 
     #gg-lottery-counter-div {
