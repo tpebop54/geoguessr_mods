@@ -103,34 +103,9 @@ const updateBopIt = (forceState = undefined) => {
         SCORE_FUNC = getBopIt;
         mapClickListener(bopItListener, true);
     } else {
-        // When disabling, clean up this mod's listeners
         mapClickListener(bopItListener, false);
-        
-        // Clear the score function if this mod was using it
         if (SCORE_FUNC === getBopIt) {
             SCORE_FUNC = undefined;
-        }
-        
-        // Check if any other scoring mods should be re-enabled
-        const otherActiveScoringMods = Object.values(MODS).filter(otherMod => 
-            otherMod !== mod && 
-            otherMod.active && 
-            isScoringMod(otherMod)
-        );
-        
-        if (otherActiveScoringMods.length > 0) {
-            // Re-enable the first active scoring mod found
-            const modToRestore = otherActiveScoringMods[0];
-            console.debug('BopIt disabled: Re-enabling scoring mod:', modToRestore.name);
-            
-            // Find the update function for this mod and call it
-            const modBinding = getBindings().find(([bindingMod]) => bindingMod.key === modToRestore.key);
-            if (modBinding) {
-                // Force re-enable the mod
-                setTimeout(() => {
-                    modBinding[1](true); // Call the update function with forceState=true
-                }, 100); // Small delay to ensure cleanup is complete
-            }
         }
     }
 };

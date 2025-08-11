@@ -245,10 +245,7 @@ document.addEventListener('gg_maps_ready', initMods); // After additional GEF se
 const reactivateMods = () => {
     waitForMapsReady(() => { return true; });
     if (!getModDiv()) {
-        const buttonsAdded = addButtons();
-        if (buttonsAdded) {
-            bindButtons();
-        }
+        addButtons();
     }
     for (const [mod, callback] of getBindings()) {
         if (mod.active && mod.show) {

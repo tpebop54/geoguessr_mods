@@ -37,7 +37,7 @@ const clearState = () => {
     THE_WINDOW.localStorage.removeItem(STATE_KEY);
 };
 
-const loadState = () => { // Load state from local storage if it exists, else use default.
+const getState = () => {
     const stateStr = THE_WINDOW.localStorage.getItem(STATE_KEY);
     
     let storedState;
@@ -46,6 +46,11 @@ const loadState = () => { // Load state from local storage if it exists, else us
     } catch (err) {
         console.error('Error parsing stored state:', err);
     }
+    return storedState;
+};
+
+const loadState = () => { // Load state from local storage if it exists, else use default.
+    const storedState = getState();
     if (!storedState || typeof storedState !== 'object') {
         clearState();
         storedState = {};
@@ -62,7 +67,6 @@ const loadState = () => { // Load state from local storage if it exists, else us
             continue;
         }
         
-        const wasActive = mod.active;
         mod.active = !!storedMod.active;
         
         if (typeof storedMod.options !== 'object') {

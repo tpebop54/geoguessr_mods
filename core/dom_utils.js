@@ -362,9 +362,10 @@ const makeOptionMenu = (mod) => {
             }
             setOption(mod, key, value, false);
         }
-        saveState();
+        mod.active = true;
         UPDATE_CALLBACKS[mod.key](mod.active);
         closeOptionMenu();
+        saveState();
     };
 
     const formDiv = document.createElement('div');
