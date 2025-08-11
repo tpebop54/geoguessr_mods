@@ -267,10 +267,8 @@ const makeOptionMenu = (mod) => {
         _OPTION_MENU_DRAGGING_OFFSET_X = undefined;
         _OPTION_MENU_DRAGGING_OFFSET_Y = undefined;
     });
-    /* eslint-enable no-return-assign */
 
     const defaults = getDefaultMod(mod).options || {};
-
     const inputs = []; // Array of [key, type, input element].
     for (const [key, option] of Object.entries(defaults)) {
         // Skip Google Maps API-dependent options if no API key is configured
@@ -326,12 +324,7 @@ const makeOptionMenu = (mod) => {
         lineDiv.appendChild(input);
         inputs.push([key, type, input]);
 
-        // Safety check before appending to menu
-        if (_OPTION_MENU) {
-            _OPTION_MENU.appendChild(lineDiv);
-        } else {
-            console.error('Option menu container is null, cannot add option line');
-        }
+        _OPTION_MENU.appendChild(lineDiv);
     };
 
     const onReset = () => {
@@ -396,7 +389,6 @@ const makeOptionMenu = (mod) => {
         formDiv.appendChild(button);
     };
 
-    const modDiv = getModDiv();
     _OPTION_MENU.appendChild(formDiv);
     
     // Always append to body with fixed positioning for better visibility

@@ -341,9 +341,7 @@ const onRoundStartSingleplayer = (evt) => { // Singleplayer only. TODO: clean up
         console.err(err);
     }
 
-    waitForMapsReady(() => {
-        reactivateMods();
-    });
+    waitForMapsReady(reactivateMods);
 
     THE_WINDOW.dispatchEvent(new CustomEvent('gg_round_start', {
         detail: evt.detail || {}
@@ -503,9 +501,7 @@ const watchRoundEnd = () => {
             } else { // In-game page.
                 if (_RESULT_MAP) { // Clear for the next round results.
                     _RESULT_MAP = null;
-                    waitForMapsReady(() => {
-                        reactivateMods();
-                    });
+                    waitForMapsReady(reactivateMods);
                 } else { // document.body changes in the in-game page.
                     return;
                 }

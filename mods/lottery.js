@@ -376,6 +376,7 @@ const updateLottery = (forceState = undefined) => {
     if (getOption(mod, 'resetEachRound')) {
         resetTokens();
     }
+    addClickBlock();
 
     saveState();
 };
