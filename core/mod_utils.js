@@ -413,8 +413,6 @@ const waitForMapsReady = (callback, options = {}) => {
         {
             timeout: 10000,
             intervalMs: 200,
-            require2D: true,
-            require3D: true,
         },
         options || {},
     );
@@ -427,12 +425,7 @@ const waitForMapsReady = (callback, options = {}) => {
             }         
             const map2dReady = GOOGLE_MAP && isMapReady(GOOGLE_MAP);
             const map3dReady = GOOGLE_STREETVIEW && isMapReady(GOOGLE_STREETVIEW);
-            if (options.require2D && !map2dReady) {
-                return false;
-            }
-            if (options.require3D && !map3dReady) {
-                return false;
-            }
+            return map2dReady && map3dReady;
         } catch (err) {
             console.error(err);
         }
@@ -444,7 +437,9 @@ const waitForMapsReady = (callback, options = {}) => {
             callback(true);
             return true;
         }
+
     }
+    console.error('Unable to load mods. Requires debugging.')
     return false;
 };
 

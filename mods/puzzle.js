@@ -456,10 +456,5 @@ const updatePuzzle = (forceState = undefined) => {
     // Convert to sync wrapper since we need async inside but the mod system expects sync
     waitForMapsReady(() => {
         updatePuzzleLogic(forceState);
-    }, {
-        require2D: false,
-        require3D: true,
-        modName: 'Puzzle',
-        timeout: 5000
     });
 };

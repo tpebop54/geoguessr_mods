@@ -98,4 +98,4 @@ let _IS_DRAGGING_GUESSMAP = false; // true when user is actively dragging the gu
 */
 let SCORE_FUNC;
 
-let _MODS_LOADED = false;
+let _MODS_READY = false;

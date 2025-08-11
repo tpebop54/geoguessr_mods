@@ -148,7 +148,7 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
         setMenuVisible(!!_BUTTONS_VISIBLE);
 
         setTimeout(addButtonContainer, 100);
-        _MODS_LOADED = true;
+        _MODS_READY = true;
         return true;
 
     } catch (err) {
@@ -217,7 +217,7 @@ const activateLoadedMods = () => {  // Refresh state from localStorage and activ
 };
 
 const initMods = () => {
-    if (_MODS_LOADED) {
+    if (_MODS_READY) {
         return;
     }
 
@@ -237,7 +237,7 @@ const initMods = () => {
         addDebugger();
     }
 
-    _MODS_LOADED = true;
+    _MODS_READY = true;
 };
 
 document.addEventListener('gg_maps_ready', initMods); // After additional GEF setup has been done.
@@ -279,7 +279,7 @@ const reactivateMods = () => {
 };
 
 const onRoundStartSingleplayer = (evt) => { // Singleplayer only. TODO: clean up, share with duels logic if possible.
-    _MODS_LOADED = false;
+    _MODS_READY = false;
     THE_WINDOW.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
 
     createLoadOverlay();
@@ -308,7 +308,7 @@ const onRoundEndSingleplayer = (evt) => { // Singleplayer only. TODO: clean up, 
     GG_ROUND = undefined;
     GG_CLICK = undefined;
     GG_MAP = undefined;
-    _MODS_LOADED = false;
+    _MODS_READY = false;
 }
 
 GEF = GeoGuessrEventFramework;
