@@ -21,11 +21,11 @@ const getTileCount = () => {
 
 const resetTileCount = () => {
     _TILE_COUNT = getOption(MODS.tileReveal, 'nClicks');
-    
     const counter = document.getElementById('gg-tile-count-value');
     if (counter) {
         counter.innerText = getTileCount();
     }
+    saveState();
 };
 
 const removeTileCounter = () => {
@@ -180,12 +180,13 @@ const updateTileReveal = (forceState = undefined) => {
         return;
     }
 
+    if (getOption(mod, 'resetEachRound')) {
+        resetTileCount();
+    }
+
     const nRows = getOption(mod, 'nRows');
     const nCols = getOption(mod, 'nCols');
     makeTiles(nRows, nCols);
     makeTileCounter();
-    if (getOption(mod, 'resetEachRound')) {
-        resetTileCount();
-    }
     saveState();
 };

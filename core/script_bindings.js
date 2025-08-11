@@ -221,7 +221,7 @@ const initMods = () => {
         return;
     }
 
-    const modsLoaded = waitForMapsReady(() => { return true; }); // Synchronous so we don't have to check for map load everywhere else.
+    const modsLoaded = waitForMapsReady(() => { return true; });
     if (!modsLoaded) {
         console.error('Failed to load mods.');
         return;
@@ -242,25 +242,8 @@ const initMods = () => {
 
 document.addEventListener('gg_maps_ready', initMods); // After additional GEF setup has been done.
 
-const isGoogleReady = () => {
-    try {
-        const google = getGoogle();
-        if (!google || !google.maps) {
-            return false;
-        }
-        const map2dReady = GOOGLE_MAP && getGuessmap();
-        const map3dReady = GOOGLE_STREETVIEW && getStreetviewCanvas();
-        return map2dReady && map3dReady;
-    } catch (err) {
-        console.error('Error checking map readiness:', err);
-        return false;
-    }
-};
-
 const reactivateMods = () => {
-    if (!isGoogleReady()) {
-        return;
-    }
+    waitForMapsReady(() => { return true; });
     if (!getModDiv()) {
         const buttonsAdded = addButtons();
         if (buttonsAdded) {

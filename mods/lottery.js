@@ -352,6 +352,7 @@ const resetTokens = () => {
     if (counter) {
         counter.innerText = _LOTTERY_COUNT;
     }
+    saveState();
 };
 
 const updateLottery = (forceState = undefined) => {
@@ -366,16 +367,15 @@ const updateLottery = (forceState = undefined) => {
 
     disableConflictingMods(mod);
 
+    if (getOption(mod, 'resetEachRound')) {
+        resetTokens();
+    }
+
     if (!_LOTTERY_DISPLAY) {
         _LOTTERY_COUNT = getOption(mod, 'nGuesses');
         makeLotteryDisplay();
     }
-    const counter = document.getElementById('gg-lottery-counter');
-    counter.innerText = _LOTTERY_COUNT
 
-    if (getOption(mod, 'resetEachRound')) {
-        resetTokens();
-    }
     addClickBlock();
 
     saveState();
