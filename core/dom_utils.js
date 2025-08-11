@@ -17,7 +17,7 @@ const _tryMultiple = (selectors) => { // Different modes, different versions, Ge
 };
 
 const getGoogle = () => { // Used to interact with the panorama and mini-map.
-    return THE_WINDOW.google || unsafeWindow.google;
+    return window.google || unsafeWindow.google;
 };
 
 const isOperaBrowser = () => { // Check if current browser is Opera (has WebGL/Vector rendering issues)
