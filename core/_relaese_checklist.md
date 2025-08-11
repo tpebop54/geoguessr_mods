@@ -22,5 +22,4 @@ Between two different browsers (e.g. Opera vs. Chrome), set up a duel with an al
 
 ## Competitive Duel:
 
-* Ensure that cheat prevention is disabled.
 * Start a duel with the tool enabled, toggle one of the mods to make sure it works, and then play the duel without cheating.

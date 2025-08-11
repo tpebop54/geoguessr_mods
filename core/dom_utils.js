@@ -147,6 +147,10 @@ const getResultMap = () => {
     return document.querySelector(`div[class^="result-map_map__"]`);
 };
 
+const getPlayAgainButton = () => {
+    return document.querySelector(`button[data-qa="play-again-button"]`);
+};
+
 const getModDiv = () => {
     return document.getElementById('gg-mods-container');
 };
