@@ -216,74 +216,32 @@ const activateLoadedMods = () => {  // Refresh state from localStorage and activ
     }
 };
 
-const initializeMods = async () => {
+const initMods = () => {
     if (_MODS_LOADED) {
         return;
     }
 
-    const mapsReady = MAP_STATE.map2d && MAP_STATE.map3d;
-    if (!mapsReady) {
-        console.debug(`Maps not loaded yet; can't activate mods.`);
-        setTimeout(initializeMods, 300);
+    const modsLoaded = waitForMapsReady(initMods); // Synchronous so we don't have to check for map load everywhere else.
+    if (!modsLoaded) {
+        console.error('Failed to load mods.');
+        return;
     }
 
-    try {
-        loadState();
-        activateLoadedMods();
-        setUpMapEventListeners();
-        addButtons();
-        fixFormatting();
+    loadState();
+    activateLoadedMods();
+    setUpMapEventListeners();
+    addButtons();
+    fixFormatting();
 
-        if (THE_WINDOW.CHEAT_PROTECTION) { // This is disabled by default but left for potential future use.
-            setTimeout(() => {
-                clickGarbage(900);
-            }, 500);
-        }
-
-        if (DEBUG) {
-            addDebugger();
-        }
-
-        // Create observer to monitor DOM changes and add buttons when the game interface loads.
-        const observer = new MutationObserver(() => {
-            try {
-                addButtons();
-            } catch (err) {
-                console.error(err);
-            }
-        });
-
-        // Start observing the React root element for changes
-        const nextElement = document.querySelector('#__next');
-        if (nextElement) {
-            observer.observe(nextElement, { subtree: true, childList: true });
-            addButtons();
-        } else {
-            const alternatives = ['#root', 'body', 'main'];
-            let foundElement = null;
-
-            for (const selector of alternatives) {
-                const element = document.querySelector(selector);
-                if (element) {
-                    foundElement = element;
-                    break;
-                }
-            }
-
-            if (foundElement) {
-                observer.observe(foundElement, { subtree: true, childList: true });
-                addButtons();
-            } else {
-                setTimeout(initializeMods, 1000);
-            }
-        }
-    } catch (err) {
-        console.error(err);
+    if (DEBUG) {
+        addDebugger();
     }
+
+    _MODS_LOADED = true;
 };
 
 document.addEventListener('gg_maps_ready', () => { // After additional GEF setup has been done.
-    initializeMods();
+    initMods();
 });
 
 const isGoogleReady = () => {
@@ -352,6 +310,7 @@ const onRoundEndSingleplayer = (evt) => { // Singleplayer only. TODO: clean up, 
     GG_ROUND = undefined;
     GG_CLICK = undefined;
     GG_MAP = undefined;
+    _MODS_LOADED = false;
 }
 
 GEF = GeoGuessrEventFramework;
