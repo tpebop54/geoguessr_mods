@@ -316,8 +316,6 @@ const removeClickBlock = () => {
 const addClickBlock = () => {
     removeClickBlock();
 
-    const container = getGuessmapContainer();
-
     const overlay = document.createElement('div');
     overlay.className = 'gg-lottery-overlay';
     overlay.style.cssText = `
@@ -340,6 +338,9 @@ const addClickBlock = () => {
     };
     overlay.style.pointerEvents = 'auto';
     overlay.addEventListener('click', overlayClickHandler, true);
+
+    const container = getGuessmapContainer();
+    container.insertBefore(overlay, container.firstChild);
 };
 
 const resetTokens = () => {
