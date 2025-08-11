@@ -221,7 +221,7 @@ const initMods = () => {
         return;
     }
 
-    const modsLoaded = waitForMapsReady(initMods); // Synchronous so we don't have to check for map load everywhere else.
+    const modsLoaded = waitForMapsReady(() => { return true; }); // Synchronous so we don't have to check for map load everywhere else.
     if (!modsLoaded) {
         console.error('Failed to load mods.');
         return;
@@ -240,9 +240,7 @@ const initMods = () => {
     _MODS_LOADED = true;
 };
 
-document.addEventListener('gg_maps_ready', () => { // After additional GEF setup has been done.
-    initMods();
-});
+document.addEventListener('gg_maps_ready', initMods); // After additional GEF setup has been done.
 
 const isGoogleReady = () => {
     try {
