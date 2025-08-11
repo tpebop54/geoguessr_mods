@@ -135,6 +135,10 @@ const getGuessButton = () => {
     return document.querySelector(`button[class^="button_button__"]`);
 };
 
+const getScoreDiv= () => {
+    return document.querySelector(`button[class^="score_score__"]`);
+}
+
 const getModDiv = () => {
     return document.getElementById('gg-mods-container');
 };
@@ -679,6 +683,7 @@ const addDebugger = () => {
     const modHeader = document.querySelector('#gg-mods-header');
     if (modHeader) {
         modHeader.addEventListener('contextmenu', (evt) => {
+            evt.preventDefault()
             debugMap(this, evt);
         });
     }

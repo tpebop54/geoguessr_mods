@@ -397,19 +397,19 @@ const addKeyBindings = () => {
 };
 addKeyBindings();
 
-
-let _NEXT_ROUND_BUTTON = null;
-const watchForMultiplayerRoundEnd = () => {
+// For duels, we need to detect when a new round starts. Do this by watching the disappearance and reappearance of the 
+let _SCORE_DIV = null;
+const watchForMultiplayerNextRound = () => {
     const observer = new MutationObserver(() => {
-        if (_NEXT_ROUND_BUTTON) {
+        if (_SCORE_DIV) {
             return;
         }
-        const nextRoundButton = getMultiplayerNextRoundButton();
-        if (!nextRoundButton) {
+        const scoreDiv = getScoreDiv();
+        if (!scoreDiv) {
             return;
         }
-        _NEXT_ROUND_BUTTON = nextRoundButton;
-        _NEXT_ROUND_BUTTON.addEventListener('click', () => {
+        _SCORE_DIV = scoreDiv;
+        _SCORE_DIV.addEventListener('click', () => {
             THE_WINDOW.dispatchEvent(new CustomEvent('gg_round_start', { detail: { rounds: [] } }));
             waitForMapsReady(() => {
                 _NEXT_ROUND_BUTTON = null;
@@ -418,4 +418,4 @@ const watchForMultiplayerRoundEnd = () => {
     });
     observer.observe(document.body, { childList: true, subtree: true });
 }
-watchForMultiplayerRoundEnd();
+watchForMultiplayerNextRound();
