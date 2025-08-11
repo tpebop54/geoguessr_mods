@@ -66,6 +66,28 @@ const initGoogle = () => {
     });
 };
 
+const isMapReady = (map) => {
+    const google = getGoogle();
+    if (!map || !google) {
+        return false;
+    }
+    try {
+        if (map.constructor === google.maps.Map) {
+            const mapBounds = map.getBounds();
+            const mapDiv = map.getDiv();
+            return mapBounds && mapDiv;
+        }
+        if (map.constructor === google.maps.StreetViewPanorama) {
+            const loc = map.getLocation();
+            const visible = map.getVisible();
+            return loc && visible;
+        }
+    } catch (err) {
+        console.error(err);
+        return false;
+    }
+};
+
 const initGmapsIntegration = () => {
     document.addEventListener('ggCoordinates', (evt) => { // Used for duels.
         GG_LOC = evt.detail;
@@ -160,27 +182,6 @@ const initGmapsIntegration = () => {
                         detail: { type: '3d', streetView: this }
                     }));
                 }, 100);
-            }
-        };
-
-        const isMapReady = (map) => {
-            if (!map) {
-                return false;
-            }
-            try {
-                if (map.constructor === google.maps.Map) {
-                    const mapBounds = map.getBounds();
-                    const mapDiv = map.getDiv();
-                    return mapBounds && mapDiv;
-                }
-                if (map.constructor === google.maps.StreetViewPanorama) {
-                    const loc = map.getLocation();
-                    const visible = map.getVisible();
-                    return loc && visible;
-                }
-            } catch (err) {
-                console.error(err);
-                return false;
             }
         };
 
