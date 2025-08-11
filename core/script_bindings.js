@@ -503,7 +503,7 @@ const watchForNextRound = () => {
             if (_RESULT_MAP) { // Clear for the next round results.
                 _RESULT_MAP = null;
                 waitForMapsReady(() => {
-                    initializeMods();
+                    reactivateMods();
                 });
             } else { // document.body changes in the in-game page.
                 return;
