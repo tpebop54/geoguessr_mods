@@ -351,10 +351,6 @@ const makeOptionMenu = (mod) => {
         }
     };
 
-    const onClose = () => {
-        closeOptionMenu();
-    };
-
     const onApply = () => {
         for (const [key, type, input] of inputs) {
             let value;
@@ -371,12 +367,12 @@ const makeOptionMenu = (mod) => {
         }
         saveState();
         UPDATE_CALLBACKS[mod.key](mod.active);
+        closeOptionMenu();
     };
 
     const formDiv = document.createElement('div');
     formDiv.id = 'gg-option-form-div';
     for (const [label, callback] of [
-        ['Close', onClose],
         ['Reset', onReset],
         ['Apply', onApply],
     ]) {

@@ -188,10 +188,6 @@ const optionMenuStyles = `
         padding: 0;
     }
 
-    #gg-option-close {
-       background: red;
-    }
-
     #gg-option-reset {
         background: purple;
         margin: 0 5px;
