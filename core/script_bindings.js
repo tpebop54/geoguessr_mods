@@ -489,25 +489,25 @@ const initializeGlobalKeybindings = () => {
 // Initialize global keybindings immediately
 initializeGlobalKeybindings();
 
-// For duels, we need to detect when a new round starts. Do this by watching the disappearance and reappearance of the 
-let _SCORE_DIV = null;
-const watchForMultiplayerNextRound = () => {
+// For reloading mods on new rounds, we need to watch the disappearance and reapperance of the results map.
+let _RESULT_MAP = null;
+const watchForNextRound = () => {
     const observer = new MutationObserver(() => {
-        if (_SCORE_DIV) {
+        if (_RESULT_MAP) {
             return;
         }
-        const scoreDiv = getScoreDiv();
-        if (!scoreDiv) {
+        const resultMap = getResultMap();
+        if (!resultMap) {
             return;
         }
-        _SCORE_DIV = scoreDiv;
-        _SCORE_DIV.addEventListener('click', () => {
+        _RESULT_MAP = resultMap;
+        _RESULT_MAP.addEventListener('click', () => {
             THE_WINDOW.dispatchEvent(new CustomEvent('gg_maps_ready'));
             waitForMapsReady(() => {
-                _SCORE_DIV = null;
+                _RESULT_MAP = null;
             });
         });
     });
     observer.observe(document.body, { childList: true, subtree: true });
 }
-watchForMultiplayerNextRound();
+watchForNextRound();

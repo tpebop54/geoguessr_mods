@@ -137,7 +137,11 @@ const getGuessButton = () => {
 
 const getScoreDiv= () => {
     return document.querySelector(`button[class^="score_score__"]`);
-}
+};
+
+const getResultMap = () => {
+    return document.querySelector(`div[class^="result-map_map__"]`);
+};
 
 const getModDiv = () => {
     return document.getElementById('gg-mods-container');
