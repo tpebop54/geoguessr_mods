@@ -322,7 +322,7 @@ const reactivateMods = () => {
     }
 };
 
-const onRoundStart = (evt) => { // Singleplayer only. TODO: clean up, share with duels logic if possible.
+const onRoundStartSingleplayer = (evt) => { // Singleplayer only. TODO: clean up, share with duels logic if possible.
     _MODS_LOADED = false;
     THE_WINDOW.localStorage.setItem(STATE_KEY, JSON.stringify(MODS));
 
@@ -350,7 +350,7 @@ const onRoundStart = (evt) => { // Singleplayer only. TODO: clean up, share with
     }));
 };
 
-const onRoundEnd = (evt) => { // Singleplayer only. TODO: clean up, share with duels logic if possible.
+const onRoundEndSingleplayer = (evt) => { // Singleplayer only. TODO: clean up, share with duels logic if possible.
     GG_ROUND = undefined;
     GG_CLICK = undefined;
     GG_MAP = undefined;
@@ -358,8 +358,8 @@ const onRoundEnd = (evt) => { // Singleplayer only. TODO: clean up, share with d
 
 GEF = GeoGuessrEventFramework;
 GEF.init().then(GEF => { // Note: GG_MAP is the min-map, GOOGLE_MAP is used for pulling funtionality from Google's map functions.
-    GEF.events.addEventListener('round_start', (evt) => onRoundStart(evt));
-    GEF.events.addEventListener('round_end', (evt) => onRoundEnd(evt));
+    GEF.events.addEventListener('round_start', (evt) => onRoundStartSingleplayer(evt));
+    GEF.events.addEventListener('round_end', (evt) => onRoundEndSingleplayer(evt));
 }).catch(err => {
     console.error(err);
 });

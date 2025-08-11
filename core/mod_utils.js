@@ -406,7 +406,7 @@ const getGGMapWithFallback = async (maxWaitTime = 5000) => {
     };
 };
 
-// Utility function for mods to wait for both 2D and 3D maps to be ready
+// Utility function for mods to wait for both 2D and 3D maps to be ready.
 const waitForMapsReady = (callback, options = {}) => {
     const {
         timeout = 10000,
