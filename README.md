@@ -11,13 +11,13 @@ Some of the mods are helpful, some make it much harder.
 Install via Tampermonkey/Greasemonkey using one of these scripts. Simply copy and paste the text file to a new TamperMonkey script.
 
 - **Main version**: [installer.js](https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/installer.js) - Stable version. For public use.
-- **Release version**: [installer_release.js](https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/installer_release.js) - Release candidate, used for inal testing before pushing to main.
+- **Release version**: [installer_release.js](https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/installer_release.js) - Release candidate, used for initial testing before pushing to main.
 - **Development version**: [installer_dev.js](https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/installer_dev.js) - Latest features; dev work and will be frequently broken. Versions may not match.
 
 
 ## Updates
 
-By default, auto-update should be enabled, but it may not run at a regular interval.
+By default, auto-update should be enabled at a 1-day interval.
 
 To make sure that you have the latest version: open the script in TamperMonkey, go to the Settings menu (for the script, not the overall settings menu), then under "Updates" click "Check for userscript updates"
 

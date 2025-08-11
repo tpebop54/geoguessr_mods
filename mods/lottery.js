@@ -32,6 +32,7 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
 
     const container = document.createElement('div'); // Contains the full lottery display.
     container.id = 'gg-lottery';
+    container.classList.add('gg-persistent-container');
 
     /* eslint-disable no-return-assign */
     container.addEventListener('mousedown', (evt) => {

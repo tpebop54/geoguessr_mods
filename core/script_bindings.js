@@ -486,29 +486,43 @@ const initializeGlobalKeybindings = () => {
 initializeGlobalKeybindings();
 
 // For reloading mods on new rounds, we need to watch the disappearance and reapperance of the results map.
+// We also need to watch for the game end in a similar manner, to do final cleanup.
 let _RESULT_MAP = null;
-const watchForNextRound = () => {
+const watchRoundEnd = () => {
     const observer = new MutationObserver(() => {
-        const resultMap = getResultMap();
 
-        if (resultMap) { // Results page between rounds.
-            if (_RESULT_MAP) { // document.body changes on the results page, we can ignore.
-                return;
-            } else { // Freshly loaded results page, we need to store that globally.
-                _RESULT_MAP = resultMap;
-                return;
+        const prepNewRound = () => {
+            const resultMap = getResultMap();
+            if (resultMap) { // Results page between rounds.
+                if (_RESULT_MAP) { // document.body changes on the results page, we can ignore.
+                    return;
+                } else { // Freshly loaded results page, we need to store that globally.
+                    _RESULT_MAP = resultMap;
+                    return;
+                }
+            } else { // In-game page.
+                if (_RESULT_MAP) { // Clear for the next round results.
+                    _RESULT_MAP = null;
+                    waitForMapsReady(() => {
+                        reactivateMods();
+                    });
+                } else { // document.body changes in the in-game page.
+                    return;
+                }
             }
-        } else { // In-game page.
-            if (_RESULT_MAP) { // Clear for the next round results.
-                _RESULT_MAP = null;
-                waitForMapsReady(() => {
-                    reactivateMods();
-                });
-            } else { // document.body changes in the in-game page.
-                return;
+        };
+        prepNewRound();
+
+        const onEndGame = () => {
+            const endGameOverlay = getSingleplayerGameResultsDiv();
+            if (endGameOverlay) {
+                for (const container of document.querySelectorAll('.gg-persistent-container')) {
+                    container.parentElement.removeChild(container);
+                }
             }
-        }
+        };
+        onEndGame();
     });
     observer.observe(document.body, { childList: true, subtree: true });
 }
-watchForNextRound();
+watchRoundEnd();

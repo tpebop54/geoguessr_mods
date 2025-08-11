@@ -44,6 +44,7 @@ const makeTileCounter = () => {
 
     const container = document.createElement('div');
     container.id = 'gg-tile-count';
+    container.classList.add('gg-persistent-container');
 
     container.onmousedown = (evt) => {
         _TILE_COUNT_DRAGGING = true;

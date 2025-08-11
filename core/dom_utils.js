@@ -115,6 +115,10 @@ const getMultiplayerNextRoundButton = () => {
     return null;
 };
 
+const getSingleplayerGameResultsDiv = () => {
+    return document.querySelector(`div[class^="result-overlay-"]`);
+};
+
 const getGameReactionsDiv = () => {
     const selectors = [
         `div[class^="game-reactions_root__"]`,
