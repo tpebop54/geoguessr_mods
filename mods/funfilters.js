@@ -223,6 +223,31 @@ const applyScreenScaling = (percentage) => {
     }
 };
 
+const applyDisplayFilters = (filterStr, transformStr) => {
+    const canvas3d = getStreetviewCanvas();
+    if (!canvas3d) {
+        // Retry after a short delay if canvas is not available
+        setTimeout(() => applyDisplayFilters(filterStr, transformStr), 200);
+        return;
+    }
+    
+    // Build the complete transform string combining scaling and flip transforms
+    const transforms = [];
+    const isScaled = canvas3d.dataset.isScaled === 'true';
+    const scalePercentage = parseInt(canvas3d.dataset.scalePercentage) || 100;
+    if (isScaled && scalePercentage !== 100) {
+        const scale = scalePercentage / 100;
+        transforms.push('translate(-50%, -50%)');
+        transforms.push(`scale(${scale})`);
+    }
+    if (transformStr && transformStr.trim()) {
+        transforms.push(transformStr);
+    }
+    const finalTransform = transforms.join(' ');
+    canvas3d.style.filter = filterStr;
+    canvas3d.style.transform = finalTransform;
+};
+
 const updateFunFilters = (forceState = undefined) => {
     const mod = MODS.funFilters;
     const active = updateMod(mod, forceState);
@@ -268,29 +293,4 @@ const updateFunFilters = (forceState = undefined) => {
     
     // Apply the filters and transforms (these go on the canvas)
     applyDisplayFilters(filterStr, transformStr);
-};
-
-const applyDisplayFilters = (filterStr, transformStr) => {
-    const canvas3d = getStreetviewCanvas();
-    if (!canvas3d) {
-        // Retry after a short delay if canvas is not available
-        setTimeout(() => applyDisplayFilters(filterStr, transformStr), 200);
-        return;
-    }
-    
-    // Build the complete transform string combining scaling and flip transforms
-    const transforms = [];
-    const isScaled = canvas3d.dataset.isScaled === 'true';
-    const scalePercentage = parseInt(canvas3d.dataset.scalePercentage) || 100;
-    if (isScaled && scalePercentage !== 100) {
-        const scale = scalePercentage / 100;
-        transforms.push('translate(-50%, -50%)');
-        transforms.push(`scale(${scale})`);
-    }
-    if (transformStr && transformStr.trim()) {
-        transforms.push(transformStr);
-    }
-    const finalTransform = transforms.join(' ');
-    canvas3d.style.filter = filterStr;
-    canvas3d.style.transform = finalTransform;
 };

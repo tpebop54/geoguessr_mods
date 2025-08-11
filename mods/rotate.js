@@ -49,7 +49,8 @@ const updateRotateMap = (forceState = undefined) => {
         if (isNaN(startDegrees)) {
             startDegrees = 0;
         }
-        const nMilliseconds = Number(getOption(mod, 'every')) * 1000;
+        const hz = Number(getOption(mod, 'hz'));
+        const nMilliseconds = 1 / hz * 1000;
         const nDegrees = Number(getOption(mod, 'degrees'));
         if (isNaN(nMilliseconds) || isNaN(nDegrees) || nMilliseconds < 0) {
             THE_WINDOW.alert('Invalid interval or amount.');

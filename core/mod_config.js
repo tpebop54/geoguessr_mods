@@ -181,15 +181,15 @@ const MODS = {
         tooltip: 'Makes the guess map rotate while you are trying to click.',
         allowInDuels: true,
         options: {
-            every: {
-                label: 'Run Every (s)',
-                default: 0.05,
-                tooltip: 'Rotate the map every X seconds. Lower numbers will reduce choppiness but may also slow the game down.',
-            },
             degrees: {
                 label: 'Degrees',
                 default: 2,
                 tooltip: 'Rotate by X degrees at the specified time interval. Positive for clockwise, negative for counter-clockwise.',
+            },
+            hz: {
+                label: 'Rotation rate (Hz)',
+                default: 20,
+                tooltip: 'Rotate the map this many times at the specified degrees interval.',
             },
             startDegrees: {
                 label: 'Start at',
