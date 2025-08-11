@@ -427,19 +427,29 @@ const waitForMapsReady = (callback, options = {}) => {
             const map3dReady = GOOGLE_STREETVIEW && isMapReady(GOOGLE_STREETVIEW);
             return map2dReady && map3dReady;
         } catch (err) {
-            console.error(err);
+            console.error('Error checking maps readiness:', err);
+            return false;
         }
     };
 
-    const startTime = Date.now();
-    while (Date.now() - startTime < options.timeout) {
-        if (checkMapsReady()) {
-            callback(true);
-            return true;
-        }
-
+    if (checkMapsReady()) {
+        callback(true);
+        return true;
     }
-    console.error('Unable to load mods. Requires debugging.')
+    
+    const startTime = Date.now();
+    const intervalId = setInterval(() => {
+        if (checkMapsReady()) {
+            clearInterval(intervalId);
+            callback(true);
+            return;
+        }
+        if (Date.now() - startTime >= options.timeout) {
+            clearInterval(intervalId);
+            console.error('waitForMapsReady: Unable to load mods. Requires debugging.');
+        }
+    }, options.intervalMs);
+    
     return false;
 };
 
