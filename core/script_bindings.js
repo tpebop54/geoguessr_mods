@@ -320,7 +320,6 @@ const reactivateMods = () => {
             }
         }
     }
-    THE_WINDOW.dispatchEvent(new CustomEvent('gg_mods_reactivate', { detail: { timestamp: Date.now() } }));
 };
 
 const onRoundStart = (evt) => { // Singleplayer only. TODO: clean up, share with duels logic if possible.

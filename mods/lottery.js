@@ -364,48 +364,16 @@ const updateLottery = (forceState = undefined) => {
 
     disableConflictingMods(mod);
 
-    waitForMapsReady(() => {
-        if (!_LOTTERY_DISPLAY) {
-            _LOTTERY_COUNT = getOption(mod, 'nGuesses');
-            makeLotteryDisplay();
-        }
-        const counter = document.getElementById('gg-lottery-counter');
-        counter.innerText = _LOTTERY_COUNT
-    }, {
-        require2D: true,
-        require3D: true,
-        timeout: 5000,
-    });
+    if (!_LOTTERY_DISPLAY) {
+        _LOTTERY_COUNT = getOption(mod, 'nGuesses');
+        makeLotteryDisplay();
+    }
+    const counter = document.getElementById('gg-lottery-counter');
+    counter.innerText = _LOTTERY_COUNT
+
+    if (getOption(mod, 'resetEachRound')) {
+        resetTokens();
+    }
+
     saveState();
 };
-
-const onLotteryNewRound = () => {
-    const mod = MODS.lottery;
-    if (!isModActive(mod) || !areModsAvailable()) {
-        return;
-    }
-    const resetEachRound = getOption(mod, 'resetEachRound');
-    if (resetEachRound) {
-        const refreshTokens = () => {
-            try {
-                if (getOption(mod, 'resetEachRound')) {
-                    resetTokens();
-                }
-            } catch (err) {
-                setTimeout(() => {
-                    if (isModActive(mod)) {
-                        onLotteryNewRound();
-                    }
-                }, 500);
-            }
-        };
-        waitForMapsReady(refreshTokens, {
-            timeout: 5000,
-            interval: 100,
-        });
-    }
-};
-
-THE_WINDOW.addEventListener('gg_round_start', () => {
-    waitForMapsReady(onLotteryNewRound);
-});

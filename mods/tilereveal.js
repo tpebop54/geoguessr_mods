@@ -183,36 +183,8 @@ const updateTileReveal = (forceState = undefined) => {
     const nCols = getOption(mod, 'nCols');
     makeTiles(nRows, nCols);
     makeTileCounter();
-    resetTileCount();
-};
-
-const onTileRevealNewRound = () => {
-    const mod = MODS.tileReveal;
-    if (!isModActive(mod) || !areModsAvailable()) {
-        return;
+    if (getOption(mod, 'resetEachRound')) {
+        resetTileCount();
     }
-    const refreshTiles = () => {
-        try {
-            const nRows = getOption(mod, 'nRows');
-            const nCols = getOption(mod, 'nCols');
-            makeTiles(nRows, nCols);
-            if (getOption(mod, 'resetEachRound')) {
-                resetTileCount();
-            }
-        } catch (err) {
-            setTimeout(() => {
-                if (isModActive(mod)) {
-                    onTileRevealNewRound();
-                }
-            }, 500);
-        }
-    };
-    waitForMapsReady(refreshTiles, {
-        timeout: 5000,
-        interval: 100,
-    });
+    saveState();
 };
-
-THE_WINDOW.addEventListener('gg_round_start', () => {
-    waitForMapsReady(onTileRevealNewRound);
-});
