@@ -58,6 +58,30 @@ const clearLoadOverlay = () => {
     }
 };
 
+const createTextDiv = () => { // Loading... or a quote.
+    const textDiv = document.createElement('div');
+    textDiv.className = 'loading-screen-text-container';
+    const text = getOverlayText();
+    let parts;
+    try {
+        parts = splitQuote(text);
+    } catch (err) {
+        parts = [text];
+    }
+    for (const [ix, part] of Object.entries(parts)) {
+        const div = document.createElement('div');
+        if (Number(ix) === parts.length - 1 && parts.length > 1) {
+            div.innerText = '— ' + part;
+            div.className = 'loading-screen-author';
+        } else {
+            div.innerText = part;
+            div.className = 'loading-screen-text';
+        }
+        textDiv.appendChild(div);
+    }
+    return textDiv;
+};
+
 const createVersionDiv = () => {
     const versionDiv = document.createElement('div');
     versionDiv.id = 'loading-screen-version-div';
@@ -70,67 +94,24 @@ const createLoadOverlayDiv = () => {
         return;
     }
 
+    // On page load, black out everything. Then, listen for the google map load events, add a time buffer, and remove it after that.
     const loadOverlay = document.createElement('div'); // Opaque black div that covers everything while the page loads.
     loadOverlay.id = 'loading-screen-div';
-
-    const textDiv = document.createElement('div');
-    textDiv.className = 'loading-screen-text-container';
-    const text = getOverlayText();
-    let parts;
-    try {
-        parts = splitQuote(text);
-    } catch (err) {
-        parts = [text];
-    }
-
-    for (const [ix, part] of Object.entries(parts)) {
-        const div = document.createElement('div');
-        if (Number(ix) === parts.length - 1 && parts.length > 1) {
-            div.innerText = '— ' + part;
-            div.className = 'loading-screen-author';
-        } else {
-            div.innerText = part;
-            div.className = 'loading-screen-text';
-        }
-        textDiv.appendChild(div);
-    }
-
-    // On page load, black out everything. Then, we listen for the google map load event, add a time buffer, and remove it after that.
-    // We have to have the map loaded to do the anti-cheat clicks. This is done down below in the map load event bubble.
-    loadOverlay.appendChild(textDiv);
+    loadOverlay.appendChild(createTextDiv());
     loadOverlay.appendChild(createVersionDiv());
+    
+    _LOAD_OVERLAY = document.body.insertBefore(loadOverlay, document.body.firstChild);
 
-    // First check if body is available
-    if (document.body) {
-        _LOAD_OVERLAY = document.body.insertBefore(loadOverlay, document.body.firstChild);
-    } else {
-        // If body is not available yet, wait for it
-        const bodyCheckInterval = setInterval(() => {
-            if (document.body) {
-                clearInterval(bodyCheckInterval);
-                _LOAD_OVERLAY = document.body.insertBefore(loadOverlay, document.body.firstChild);
-            }
-        }, 50);
-    }
-
-    // Use our map waiting utility instead of a simple interval
     const checkMapsReadyAndRemoveOverlay = () => {
         try {
-            // Define which elements to look for to determine map readiness
             const googleLoaded = typeof getGoogle === 'function' && getGoogle();
             const googleMapsReady = typeof GOOGLE_MAP !== 'undefined' && GOOGLE_MAP && GOOGLE_MAP.getBounds;
             const googleStreetViewReady = typeof GOOGLE_STREETVIEW !== 'undefined' && GOOGLE_STREETVIEW && GOOGLE_STREETVIEW.getPosition;
-            const canvasElements = document.querySelectorAll('.gm-style, canvas, .widget-scene-canvas');
-            const domElementsReady = canvasElements && canvasElements.length > 0;
 
-            // Multiple detection strategies for better reliability
-            const strategy1 = googleLoaded && (googleMapsReady || googleStreetViewReady);
-            const strategy2 = domElementsReady;
-
-            if (strategy1 || strategy2) {
+            if (googleLoaded && (googleMapsReady || googleStreetViewReady)) {
                 setTimeout(() => {
                     clearLoadOverlay();
-                }, 1000); // Wait 1 second after map is detected
+                }, 1000);
                 return true;
             }
 
@@ -140,7 +121,7 @@ const createLoadOverlayDiv = () => {
         }
     };
 
-    // Check immediately first
+    // Check immediately first.
     if (checkMapsReadyAndRemoveOverlay()) {
         return;
     }

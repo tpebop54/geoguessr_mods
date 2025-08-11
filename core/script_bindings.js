@@ -411,7 +411,9 @@ const watchForMultiplayerRoundEnd = () => {
         _NEXT_ROUND_BUTTON = nextRoundButton;
         _NEXT_ROUND_BUTTON.addEventListener('click', () => {
             THE_WINDOW.dispatchEvent(new CustomEvent('gg_round_start', { detail: { rounds: [] } }));
-            _NEXT_ROUND_BUTTON = null
+            waitForMapsReady(() => {
+                _NEXT_ROUND_BUTTON = null;
+            });
         });
     });
     observer.observe(document.body, { childList: true, subtree: true });
