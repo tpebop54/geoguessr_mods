@@ -21,6 +21,17 @@ const initQuotesFlat = () => {
 };
 initQuotesFlat();
 
+function isChromiumBased() {
+    const ua = navigator.userAgent;
+    const isChromium = ua.includes('Chrome') || ua.includes('Chromium');
+    if (ua.includes('Edg')) return [isChromium, 'Edge'];
+    if (ua.includes('OPR') || ua.includes('Opera')) return [isChromium, 'Opera'];
+    if (ua.includes('Chrome')) return [isChromium, 'Chrome'];
+    if (ua.includes('Safari') && !ua.includes('Chrome')) return [false, 'Safari'];
+    if (ua.includes('Firefox')) return [false, 'Firefox'];
+    return [isChromium, 'Unknown'];
+}
+
 const getOverlayText = () => {
     if (!!THE_WINDOW.ENABLE_QUOTES) {
         const ix = Math.floor(Math.random() * _QUOTES_FLAT.length);
