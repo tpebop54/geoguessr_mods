@@ -380,26 +380,28 @@ const initializeGlobalKeybindings = () => {
 };
 initializeGlobalKeybindings();
 
-// For reloading mods on new rounds, we need to watch the disappearance and reappearance of the results map and round countdown.
-// We also need to watch for the game end in a similar manner, to do final cleanup.
+// For reloading mods on new rounds, we need to watch for the disappearance of specific elements
+// that indicate a new round is starting.
 let _RESULT_MAP = null;
-let _ROUND_STARTING_WRAPPER = null
+let _ROUND_STARTING_WRAPPER = null;
+
 const watchRoundEnd = () => {
     const prepNewRound = () => {
-        const resultMap = getResultMap();
-        if (resultMap) { // Results page between rounds.
-            if (_RESULT_MAP) { // document.body changes on the results page, we can ignore.
-                return;
-            } else { // Freshly loaded results page, we need to store that globally.
-                _RESULT_MAP = resultMap;
-                return;
-            }
-        } else { // In-game page.
-            if (_RESULT_MAP) { // Clear for the next round results.
-                _RESULT_MAP = null;
+        if (_IS_DUEL) {
+            const currentWrapper = getRoundStartingWrapper();
+            if (currentWrapper) {
+                _ROUND_STARTING_WRAPPER = currentWrapper;
+            } else if (_ROUND_STARTING_WRAPPER) {
+                _ROUND_STARTING_WRAPPER = null; // Wrapper disappeared, new round starting.
                 waitForMapsReady(reactivateMods);
-            } else { // document.body changes in the in-game page.
-                return;
+            }
+        } else {
+            const currentResultMap = getResultMap();
+            if (currentResultMap) {
+                _RESULT_MAP = currentResultMap;
+            } else if (_RESULT_MAP) {
+                _RESULT_MAP = null; // Result map disappeared, new round starting.
+                waitForMapsReady(reactivateMods);
             }
         }
     };
