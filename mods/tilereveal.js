@@ -151,7 +151,8 @@ const makeTiles = (nRows, nCols) => {
 
     for (let i = 0; i < nRows * nCols; i++) {
         const tile = document.createElement('div');
-        tile.className = 'gg-tile-block';
+        tile.classList.add('gg-tile-block');
+        tile.classList.remove('removed');
         tile.addEventListener('click', (evt) => {
             evt.preventDefault();
             evt.stopPropagation();
