@@ -140,7 +140,7 @@ const getPlayAgainButton = () => {
     return document.querySelector(`button[data-qa="play-again-button"]`);
 };
 
-const getModDiv = () => {
+const getModsContainer = () => {
     return document.getElementById('gg-mods-container');
 };
 
@@ -505,14 +505,20 @@ const closeOptionMenu = () => {
 
 const fixFormatting = () => {
     const ticketBar = getTicketBar();
-    if (ticketBar) {
-        const ggHeader = getGGHeader();
-        if (ggHeader) {
+    const ggHeader = getGGHeader();
+    const modsContainer = getModsContainer();
+
+    if (ggHeader) {
+        if (ticketBar) {
             Object.assign(ggHeader.style, {
                 position: 'absolute',
-                top: '-35px',
+                top: '-23px',
+            });
+        } else if (modsContainer) {
+            Object.assign(modsContainer.style, {
+                position: 'absolute',
+                'margin-top': '23px',
             });
         }
-    };
+    }
 };
-
