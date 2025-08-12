@@ -132,14 +132,15 @@ const onClickTile = (evt) => {
 };
 
 const makeTiles = (nRows, nCols) => {
+    removeTiles();
+
     if (!areModsAvailable()) {
         return;
     }
-    
-    removeTiles();
-
-    const bigMapCanvas = getStreetviewCanvas();
-    if (!bigMapCanvas) {
+      
+    waitForMapsReady();
+    const streetviewCanvas = getStreetviewCanvas();
+    if (!streetviewCanvas) {
         return;
     }
 
@@ -167,7 +168,7 @@ const makeTiles = (nRows, nCols) => {
         tileOverlay.appendChild(tile);
     }
 
-    bigMapCanvas.parentElement.insertBefore(tileOverlay, bigMapCanvas.parentElement.firstChild);
+    streetviewCanvas.parentElement.insertBefore(tileOverlay, streetviewCanvas.parentElement.firstChild);
 };
 
 const updateTileReveal = (forceState = undefined) => {

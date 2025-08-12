@@ -97,7 +97,7 @@ async function drawCanvas2d() {
         const nRows = Math.ceil(Math.pow(2, zoom));
 
         clearCanvas2d();
-        const canvas3d = getBigMapCanvas();
+        const canvas3d = getStreetviewCanvas();
         CANVAS_2D = document.createElement('canvas');
         CANVAS_2D.id = 'gg-big-canvas-2d';
         CANVAS_2D.width = nCols * tileSize.width;
