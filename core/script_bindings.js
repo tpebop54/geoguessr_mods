@@ -364,10 +364,10 @@ const handleGoogleMapsShortcut = (key) => {
     }
 
     const onlyLand = getOption(lotteryMod, 'onlyLand');
-    const onlyStreetView = getOption(lotteryMod, 'onlyStreetView');
+    const onlyStreetview = getOption(lotteryMod, 'onlyStreetview');
     
     // Check if either special option is enabled
-    if (!onlyLand && !onlyStreetView) {
+    if (!onlyLand && !onlyStreetview) {
         return;
     }
 
@@ -389,10 +389,10 @@ const handleGoogleMapsShortcut = (key) => {
         // Ctrl+] - Open aerial view of nearest land location OR street view if both are enabled
         let mapsUrl;
         
-        if (onlyStreetView && onlyLand) {
+        if (onlyStreetview && onlyLand) {
             // Both enabled - open Street View location (as per user requirement)
             mapsUrl = `https://www.google.com/maps/@${lat},${lng},3a,75y,90t/data=!3m1!1e1`;
-        } else if (onlyStreetView) {
+        } else if (onlyStreetview) {
             // Only Street View enabled - open Street View
             mapsUrl = `https://www.google.com/maps/@${lat},${lng},3a,75y,90t/data=!3m1!1e1`;
         } else if (onlyLand) {

@@ -90,9 +90,9 @@ const makeTileCounter = () => {
     const onReset = () => {
         resetTileCount();
         const tiles = document.querySelectorAll('.gg-tile-block');
-        tiles.forEach(tile => {
+        for (const tile of tiles) {
             tile.classList.remove('removed');
-        });
+        }
     };
     
     resetButton.addEventListener('click', onReset);
@@ -139,8 +139,8 @@ const makeTiles = (nRows, nCols) => {
     }
       
     waitForMapsReady();
-    const streetviewCanvas = getStreetviewCanvas();
-    if (!streetviewCanvas) {
+    const streetviewContainer = getStreetviewContainer();
+    if (!streetviewContainer) {
         return;
     }
 
@@ -169,7 +169,7 @@ const makeTiles = (nRows, nCols) => {
         tileOverlay.appendChild(tile);
     }
 
-    streetviewCanvas.parentElement.insertBefore(tileOverlay, streetviewCanvas.parentElement.firstChild);
+    streetviewContainer.parentElement.insertBefore(tileOverlay, streetviewContainer.parentElement.firstChild);
 };
 
 const updateTileReveal = (forceState = undefined) => {

@@ -148,9 +148,9 @@ const createLoadOverlayDiv = () => {
         try {
             const googleLoaded = typeof getGoogle === 'function' && getGoogle();
             const googleMapsReady = typeof GOOGLE_MAP !== 'undefined' && GOOGLE_MAP && GOOGLE_MAP.getBounds;
-            const googleStreetViewReady = typeof GOOGLE_STREETVIEW !== 'undefined' && GOOGLE_STREETVIEW && GOOGLE_STREETVIEW.getPosition;
+            const googleStreetviewReady = typeof GOOGLE_STREETVIEW !== 'undefined' && GOOGLE_STREETVIEW && GOOGLE_STREETVIEW.getPosition;
 
-            if (googleLoaded && (googleMapsReady || googleStreetViewReady)) {
+            if (googleLoaded && (googleMapsReady || googleStreetviewReady)) {
                 setTimeout(() => {
                     clearLoadOverlay();
                 }, 1000);

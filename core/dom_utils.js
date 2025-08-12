@@ -51,21 +51,8 @@ const getGuessmap = () => {
 const getStreetviewContainer = () => {
     const selectors = [
         `div[class^="game_canvas__"]`,
-        `div[class*="game_canvas"]`,
-        `#panorama-container`,
-        `div[class*="game-layout_panoramaContainer"]`,
-        `div[class*="game_panoramaContainer"]`,
-        `div[class*="panorama"]`,
-        `.game-layout__panorama-container`,
-        `[data-qa="panorama"]`,
-        `div[class*="game-layout_content"]`,
-        `div[class*="game_content"]`,
-        `main[class*="game"]`,
-        `div[id*="panorama"]`,
-        `div[class*="street-view"]`,
-        `div[class*="streetview"]`,
-        `div:has(.widget-scene-canvas)`,
-        `div:has(canvas)`,
+        `div[class*="game-panorama_panorama__"]`,
+        `div[class*="game_panorama__"]`,
     ];
     return _tryMultiple(selectors);
 };
@@ -276,7 +263,7 @@ const makeOptionMenu = (mod) => {
     const inputs = []; // Array of [key, type, input element].
     for (const [key, option] of Object.entries(defaults)) {
         // Skip Google Maps API-dependent options if no API key is configured
-        const isApiDependentOption = (mod.key === 'lottery' && (key === 'onlyStreetView' || key === 'onlyLand'));
+        const isApiDependentOption = (mod.key === 'lottery' && (key === 'onlyStreetview' || key === 'onlyLand'));
         const hasApiKey = THE_WINDOW.GOOGLE_MAPS_API_KEY && THE_WINDOW.GOOGLE_MAPS_API_KEY.trim().length > 0;
         
         if (isApiDependentOption && !hasApiKey) {

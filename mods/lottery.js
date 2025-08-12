@@ -115,7 +115,7 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
         const mod = MODS.lottery;
         const nDegLat = getOption(mod, 'nDegLat');
         const nDegLng = getOption(mod, 'nDegLng');
-        const onlyStreetView = getOption(mod, 'onlyStreetView');
+        const onlyStreetview = getOption(mod, 'onlyStreetview');
         const onlyLand = getOption(mod, 'onlyLand');
 
         const actual = getActualLoc();
@@ -199,7 +199,7 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
 
             // Generate location with criteria if any special options are enabled
             let location;
-            if (onlyStreetView || onlyLand) {
+            if (onlyStreetview || onlyLand) {
                 // Check if API key is available for these features
                 if (!hasGoogleApiKey()) {
                     console.warn('Lottery mod: API-dependent features (Only Street View/Only Land) attempted without Google Maps API key');
@@ -215,7 +215,7 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
                 // Show loading indicator with more specific message
                 const criteria = [];
                 if (onlyLand) criteria.push('land');
-                if (onlyStreetView) criteria.push('Street View');
+                if (onlyStreetview) criteria.push('Street View');
 
                 button.textContent = `Finding ${criteria.join(' + ')}...`;
                 button.disabled = true;
@@ -225,7 +225,7 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
                     location = await Promise.race([
                         getRandomLocationWithCriteria(
                             minLat, maxLat, minLng, maxLng,
-                            onlyStreetView, onlyLand
+                            onlyStreetview, onlyLand
                         ),
                         new Promise((_, reject) =>
                             setTimeout(() => reject(new Error('Location search timed out')), 30000)

@@ -110,7 +110,7 @@ const MODS = {
                 default: true,
                 tooltip: 'Reset the number of tokens for each round.',
             },
-            onlyStreetView: {
+            onlyStreetview: {
                 label: 'Only Street View',
                 default: false,
                 tooltip: 'Only generate guesses in locations with official Google Street View coverage. Requires Google Maps API key to be configured.',

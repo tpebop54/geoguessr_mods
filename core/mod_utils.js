@@ -600,7 +600,7 @@ if (typeof window !== 'undefined') {
 
 
 // Check if Street View is available at a given location using Google Street View API.
-const checkStreetViewAvailability = async (lat, lng, radius = 50) => {
+const checkStreetviewAvailability = async (lat, lng, radius = 50) => {
     if (!hasGoogleApiKey()) {
         console.warn('Street View check requires Google Maps API key');
         return false;
@@ -652,14 +652,14 @@ const calculateDistance = (lat1, lng1, lat2, lng2) => {
  * @param {number} maxAttempts - Maximum number of search attempts
  * @returns {Promise<{lat: number, lng: number} | null>} Nearest Street View location or null
  */
-const findNearestStreetView = async (lat, lng, maxRadius = 1000, maxAttempts = 15) => {
+const findNearestStreetview = async (lat, lng, maxRadius = 1000, maxAttempts = 15) => {
     if (!hasGoogleApiKey()) {
         warnMissingApiKey('Street View location search');
         return { lat, lng }; // Return original location if no API key
     }
     
     // First check the exact location
-    if (await checkStreetViewAvailability(lat, lng)) {
+    if (await checkStreetviewAvailability(lat, lng)) {
         return { lat, lng };
     }
     
@@ -676,7 +676,7 @@ const findNearestStreetView = async (lat, lng, maxRadius = 1000, maxAttempts = 1
             if (remainingAttempts <= 0) break;
             remainingAttempts--;
             
-            if (await checkStreetViewAvailability(point.lat, point.lng)) {
+            if (await checkStreetviewAvailability(point.lat, point.lng)) {
                 const distance = calculateDistance(lat, lng, point.lat, point.lng);
                 if (distance < shortestDistance) {
                     shortestDistance = distance;
@@ -784,12 +784,12 @@ const checkIsOnLand = async (lat, lng) => {
  * @param {number} maxLat - Maximum latitude  
  * @param {number} minLng - Minimum longitude
  * @param {number} maxLng - Maximum longitude
- * @param {boolean} requireStreetView - Require Street View availability
+ * @param {boolean} requireStreetview - Require Street View availability
  * @param {boolean} requireLand - Require location to be on land
  * @param {number} maxAttempts - Maximum attempts to find valid location
  * @returns {Promise<{lat: number, lng: number} | null>} Valid location or null
  */
-const getRandomLocationWithCriteria = async (minLat, maxLat, minLng, maxLng, requireStreetView = false, requireLand = false, maxAttempts = 25) => {
+const getRandomLocationWithCriteria = async (minLat, maxLat, minLng, maxLng, requireStreetview = false, requireLand = false, maxAttempts = 25) => {
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
         // Generate random location using sinusoidal projection
         let location = getRandomLocSinusoidal(minLat, maxLat, minLng, maxLng);
@@ -809,15 +809,15 @@ const getRandomLocationWithCriteria = async (minLat, maxLat, minLng, maxLng, req
         }
         
         // Check Street View requirement
-        if (requireStreetView) {
-            const hasStreetView = await checkStreetViewAvailability(location.lat, location.lng);
-            if (!hasStreetView) {
+        if (requireStreetview) {
+            const hasStreetview = await checkStreetviewAvailability(location.lat, location.lng);
+            if (!hasStreetview) {
                 // Try to find nearest Street View location
-                const streetViewLocation = await findNearestStreetView(location.lat, location.lng, 1500, 10);
-                if (!streetViewLocation) {
+                const streetviewLocation = await findNearestStreetview(location.lat, location.lng, 1500, 10);
+                if (!streetviewLocation) {
                     continue; // Try a completely new location
                 }
-                location = streetViewLocation;
+                location = streetviewLocation;
             }
         }
         
@@ -826,7 +826,7 @@ const getRandomLocationWithCriteria = async (minLat, maxLat, minLng, maxLng, req
             continue;
         }
         
-        if (requireStreetView && !(await checkStreetViewAvailability(location.lat, location.lng))) {
+        if (requireStreetview && !(await checkStreetviewAvailability(location.lat, location.lng))) {
             continue;
         }
         
