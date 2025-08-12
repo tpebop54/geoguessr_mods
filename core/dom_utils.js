@@ -423,9 +423,8 @@ const updateMod = (mod, forceState = undefined) => {
             const options = mod.options;
             
             if (options && typeof options === 'object' && Object.keys(options).length) {
-                // Check if mod container exists before creating option menu
-                const modDiv = getModsContainer();
-                if (modDiv || document.body) {
+                const modsContainer = getModsContainer();
+                if (modsContainer || document.body) {
                     try {
                         makeOptionMenu(mod);
                     } catch (err) {

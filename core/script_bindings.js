@@ -291,26 +291,27 @@ const onRoundEndSingleplayer = (evt) => { // Singleplayer only. TODO: clean up, 
     _MODS_READY = false;
 };
 
-const onRoundStartMultiplayer = (evt) => {
-    debugger
+const onRoundStartMultiplayer = () => {
+    waitForMapsReady(reactivateMods);
+    fixFormatting();
 };
 
-const onRoundEndMultiplayer = (evt) => {
-    debugger
+const onRoundEndMultiplayer = () => {
+    waitForMapsReady(reactivateMods);
 };
 
 GEF.events.addEventListener('round_start', (evt) => {
     if (_IS_DUEL) {
         onRoundStartMultiplayer(evt);
     } else {
-        onRoundStartSingleplayer(evt)
+        onRoundStartSingleplayer();
     }
 });
 GEF.events.addEventListener('round_end', (evt) => {
     if (_IS_DUEL) {
         onRoundEndMultiplayer(evt);
     } else {
-        onRoundEndSingleplayer(evt)
+        onRoundEndSingleplayer()
     }
 });
 
@@ -393,7 +394,7 @@ const watchRoundEnd = () => {
                 _ROUND_STARTING_WRAPPER = currentWrapper;
             } else if (_ROUND_STARTING_WRAPPER) {
                 _ROUND_STARTING_WRAPPER = null; // Wrapper disappeared, new round starting.
-                waitForMapsReady(reactivateMods);
+                onRoundStartMultiplayer();
             }
         } else {
             const currentResultMap = getResultMap();
@@ -401,7 +402,7 @@ const watchRoundEnd = () => {
                 _RESULT_MAP = currentResultMap;
             } else if (_RESULT_MAP) {
                 _RESULT_MAP = null; // Result map disappeared, new round starting.
-                waitForMapsReady(reactivateMods);
+                onRoundStarSingleplayer();
             }
         }
     };
