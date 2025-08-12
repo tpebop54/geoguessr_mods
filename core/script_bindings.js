@@ -68,7 +68,7 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
         }
 
         const bigMapContainer = getStreetviewContainer();
-        const modContainer = getModDiv(); // Includes header and buttons.
+        const modContainer = getModsContainer(); // Includes header and buttons.
         if (modContainer || !bigMapContainer) { // Mods already loaded, or map not loaded yet.
             return false;
         }
@@ -156,7 +156,7 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
 };
 
 const removeModMenu = () => {
-    const modContainer = getModDiv();
+    const modContainer = getModsContainer();
     if (modContainer) {
         modContainer.remove();
         return true;
@@ -243,7 +243,7 @@ document.addEventListener('gg_maps_ready', initMods); // After additional GEF se
 
 const reactivateMods = () => {
     waitForMapsReady();
-    if (!getModDiv()) {
+    if (!getModsContainer()) {
         addButtons();
     }
     for (const [mod, callback] of getBindings()) {

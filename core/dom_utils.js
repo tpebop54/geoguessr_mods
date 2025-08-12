@@ -140,10 +140,6 @@ const getPlayAgainButton = () => {
     return document.querySelector(`button[data-qa="play-again-button"]`);
 };
 
-const getModsContainer = () => {
-    return document.getElementById('gg-mods-container');
-};
-
 const getOptionMenu = () => {
     return document.getElementById('gg-option-menu');
 };
@@ -420,7 +416,7 @@ const updateMod = (mod, forceState = undefined) => {
             
             if (options && typeof options === 'object' && Object.keys(options).length) {
                 // Check if mod container exists before creating option menu
-                const modDiv = getModDiv();
+                const modDiv = getModsContainer();
                 if (modDiv || document.body) {
                     try {
                         makeOptionMenu(mod);

@@ -492,7 +492,7 @@ const getGuessButton = () => {
     return document.querySelector(`button[class^="button_button__"]`);
 };
 
-const getModDiv = () => {
+const getModsContainer = () => {
     return document.getElementById('gg-mods-container');
 };
 
@@ -695,7 +695,7 @@ const makeOptionMenu = (mod) => {
         formDiv.appendChild(button);
     };
 
-    const modDiv = getModDiv();
+    const modDiv = getModsContainer();
     _OPTION_MENU.appendChild(formDiv);
     modDiv.appendChild(_OPTION_MENU);
 };
@@ -2524,7 +2524,7 @@ const bindButtons = () => {
 const addButtons = () => { // Add mod buttons to the active round, with a little button to toggle them.
     try {
         const bigMapContainer = getBigMapContainer();
-        const modContainer = getModDiv(); // Includes header and buttons.
+        const modContainer = getModsContainer(); // Includes header and buttons.
         if (!bigMapContainer || modContainer) { // Page not loaded, or modContainer is already rendered.
             return;
         }
