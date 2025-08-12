@@ -4,7 +4,7 @@ Debug console open for all of this!!!
 
 ## Classic Maps (Solo)
 
-For each browser (Opera, Firefox, Chrome):
+In a Chromium-based broswer:
 
 * Toggle every mode on and off. Basic check for all mods, but in at least one browser, check thoroughly.
 * Check that Close/Reset/Apply buttons work.
