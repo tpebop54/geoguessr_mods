@@ -54,11 +54,11 @@ const bindButtons = () => {
 
 // Keep the button menu open or closed between page change or refresh.
 const _buttonsVisibleKey = 'gg_mod_buttons_visible';
-let _BUTTONS_VISIBLE = localStorage.getItem(_buttonsVisibleKey);
+let _BUTTONS_VISIBLE = THE_WINDOW.localStorage.getItem(_buttonsVisibleKey);
 _BUTTONS_VISIBLE = _BUTTONS_VISIBLE == 'true' || _BUTTONS_VISIBLE == null;
 const _storeButtonsVisible = (visible) => {
-    _BUTTONS_VISIBLE = visible;
-    localStorage.setItem(_buttonsVisibleKey, JSON.stringify(visible));
+    _BUTTONS_VISIBLE = !!visible;
+    THE_WINDOW.localStorage.setItem(_buttonsVisibleKey, _BUTTONS_VISIBLE);
 };
 
 const _IS_DUEL = window.location.pathname.includes('/live-challenge/') || window.location.pathname.includes('/multiplayer/');
@@ -228,6 +228,7 @@ const initMods = () => {
     }
 
     loadState();
+    saveState();
     activateLoadedMods();
     setUpMapEventListeners();
     addButtons();
@@ -328,7 +329,7 @@ const setupGlobalKeyBindings = () => {
             activeElement.contentEditable === 'true' ||
             activeElement.classList.contains('gg-option-input')
         );
-        
+
         // Don't process hotkeys if user is in a form element or options menu
         if (isFormElement || isInOptionsMenu) {
             return;
@@ -424,36 +425,37 @@ initializeGlobalKeybindings();
 // We also need to watch for the game end in a similar manner, to do final cleanup.
 let _RESULT_MAP = null;
 const watchRoundEnd = () => {
+    const prepNewRound = () => {
+        const resultMap = getResultMap();
+        if (resultMap) { // Results page between rounds.
+            if (_RESULT_MAP) { // document.body changes on the results page, we can ignore.
+                return;
+            } else { // Freshly loaded results page, we need to store that globally.
+                _RESULT_MAP = resultMap;
+                return;
+            }
+        } else { // In-game page.
+            if (_RESULT_MAP) { // Clear for the next round results.
+                _RESULT_MAP = null;
+                waitForMapsReady(reactivateMods);
+            } else { // document.body changes in the in-game page.
+                return;
+            }
+        }
+    };
+
+    const onEndGame = () => {
+        const endGameOverlay = getSingleplayerGameResultsDiv();
+        if (endGameOverlay) {
+            for (const container of document.querySelectorAll('.gg-persistent-container')) {
+                container.parentElement.removeChild(container);
+            }
+        }
+    };
+
+
     const observer = new MutationObserver(() => {
-
-        const prepNewRound = () => {
-            const resultMap = getResultMap();
-            if (resultMap) { // Results page between rounds.
-                if (_RESULT_MAP) { // document.body changes on the results page, we can ignore.
-                    return;
-                } else { // Freshly loaded results page, we need to store that globally.
-                    _RESULT_MAP = resultMap;
-                    return;
-                }
-            } else { // In-game page.
-                if (_RESULT_MAP) { // Clear for the next round results.
-                    _RESULT_MAP = null;
-                    waitForMapsReady(reactivateMods);
-                } else { // document.body changes in the in-game page.
-                    return;
-                }
-            }
-        };
         prepNewRound();
-
-        const onEndGame = () => {
-            const endGameOverlay = getSingleplayerGameResultsDiv();
-            if (endGameOverlay) {
-                for (const container of document.querySelectorAll('.gg-persistent-container')) {
-                    container.parentElement.removeChild(container);
-                }
-            }
-        };
         onEndGame();
     });
     observer.observe(document.body, { childList: true, subtree: true });

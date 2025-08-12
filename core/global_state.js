@@ -45,6 +45,9 @@ const getState = () => {
     let stateObj;
     try {
         stateObj = JSON.parse(stateStr);
+        if (typeof stateObj !== 'object' || stateObj === null) {
+            throw new Error('Parsed state is not an object');
+        }
     } catch (err) {
         console.error('Error parsing stored state:', err);
         clearState();
