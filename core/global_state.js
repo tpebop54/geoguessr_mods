@@ -194,3 +194,5 @@ const compareState = (newState = null) => { // Used for debugging.
 
     return differences;
 };
+
+THE_WINDOW.compareState = compareState; // Added here so TamperMonkey doesn't auto remove it.
