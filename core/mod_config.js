@@ -21,7 +21,9 @@ const IS_OPERA = _isOpera();
     isScoring: false, // Says whether or not this is a scoring mod (only one scoring mod can be used at a time). Can be null.
     allowInDuels: true, // True to allow in duels and multiplayer, false if only for single player.
     options: {}, // Used when mod requires or allows configurable values. Can be null.
-
+        Some additional configurations can be put in individual options to show or hide them in certain circumstances.
+            - allowInDuels: some options may not work in duels, e.g. if knowing the coordinates is required. Default false.
+            - requiresApiKey: some options may require a Google API key to function. Default false.
     */
 
 const MODS = {
@@ -99,11 +101,13 @@ const MODS = {
                 label: 'Latitude margin (deg)',
                 default: 90,
                 tooltip: 'Guess up to this many degrees latitude away from the target',
+                allowInDuels: false,
             },
             nDegLng: {
                 label: 'Longitude margin (deg)',
                 default: 180,
                 tooltip: 'Guess up to this many degrees longitude away from the target',
+                allowInDuels: false,
             },
             resetEachRound: {
                 label: 'Reset each round',
@@ -114,11 +118,13 @@ const MODS = {
                 label: 'Only Street View',
                 default: false,
                 tooltip: 'Only generate guesses in locations with official Google Street View coverage. Requires Google Maps API key to be configured.',
+                requiresApiKey: true,
             },
             onlyLand: {
                 label: 'Only Land',
                 default: false,
                 tooltip: 'Only generate guesses on land (not in water). Requires Google Maps API key to be configured.',
+                requiresApiKey: true,
             },
 
         },

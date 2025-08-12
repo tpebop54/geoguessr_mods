@@ -221,14 +221,14 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
                 button.disabled = true;
 
                 try {
-                    // Add timeout protection (30 seconds max)
+                    // Add timeout protection (5 seconds max)
                     location = await Promise.race([
                         getRandomLocationWithCriteria(
                             minLat, maxLat, minLng, maxLng,
                             onlyStreetview, onlyLand
                         ),
                         new Promise((_, reject) =>
-                            setTimeout(() => reject(new Error('Location search timed out')), 30000)
+                            setTimeout(() => reject(new Error('Location search timed out')), 5000)
                         )
                     ]);
 

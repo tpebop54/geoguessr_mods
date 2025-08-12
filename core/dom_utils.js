@@ -2,6 +2,8 @@
 
 // ==/UserScript==
 
+const _IS_DUEL = window.location.pathname.includes('/live-challenge/') || window.location.pathname.includes('/multiplayer/');
+
 // DOM and state utility functions.
 // ===============================================================================================================================
 
@@ -229,21 +231,16 @@ const isArrayOption = (mod, key) => {
 };
 
 const makeOptionMenu = (mod) => {
-    
-    // Close any existing option menu first
     closeOptionMenu();
 
     _OPTION_MENU = document.createElement('div');
     _OPTION_MENU.id = 'gg-option-menu';
     
-
-    // Add title div to match legacy formatting
     const titleDiv = document.createElement('div');
     titleDiv.id = 'gg-option-title';
     titleDiv.textContent = mod.name;
     _OPTION_MENU.appendChild(titleDiv);
 
-    /* eslint-disable no-return-assign */
     _OPTION_MENU_DRAGGING_MOUSEDOWN = _OPTION_MENU.addEventListener('mousedown', (evt) => {
         _OPTION_MENU_DRAGGING = true;
         _OPTION_MENU_DRAGGING_OFFSET_X = evt.clientX - _OPTION_MENU.offsetLeft;
@@ -259,17 +256,16 @@ const makeOptionMenu = (mod) => {
         _OPTION_MENU_DRAGGING_OFFSET_Y = undefined;
     });
 
+    const hasApiKey = THE_WINDOW.GOOGLE_MAPS_API_KEY && THE_WINDOW.GOOGLE_MAPS_API_KEY.trim().length > 0;
     const defaults = getDefaultMod(mod).options || {};
     const inputs = []; // Array of [key, type, input element].
     for (const [key, option] of Object.entries(defaults)) {
-        // Skip Google Maps API-dependent options if no API key is configured
-        const isApiDependentOption = (mod.key === 'lottery' && (key === 'onlyStreetview' || key === 'onlyLand'));
-        const hasApiKey = THE_WINDOW.GOOGLE_MAPS_API_KEY && THE_WINDOW.GOOGLE_MAPS_API_KEY.trim().length > 0;
-        
-        if (isApiDependentOption && !hasApiKey) {
+        if (_IS_DUEL && option.allowInDuels === false) {
             continue;
         }
-
+        if (option.requiresApiKey && !hasApiKey) {
+            continue;
+        }
         const value = getOption(mod, key);
 
         const lineDiv = document.createElement('div'); // Label and input.

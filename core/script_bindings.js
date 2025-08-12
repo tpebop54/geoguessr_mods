@@ -61,8 +61,6 @@ const _storeButtonsVisible = (visible) => {
     THE_WINDOW.localStorage.setItem(_buttonsVisibleKey, _BUTTONS_VISIBLE);
 };
 
-const _IS_DUEL = window.location.pathname.includes('/live-challenge/') || window.location.pathname.includes('/multiplayer/');
-
 const addButtons = () => { // Add mod buttons to the active round, with a little button to toggle them.
     try {
         if (!areModsAvailable()) {
