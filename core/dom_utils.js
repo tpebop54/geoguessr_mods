@@ -128,7 +128,7 @@ const getGuessButton = () => {
     return document.querySelector(`button[class^="button_button__"]`);
 };
 
-const getScoreDiv= () => {
+const getScoreDiv = () => {
     return document.querySelector(`button[class^="score_score__"]`);
 };
 
@@ -142,6 +142,10 @@ const getRoundStartingWrapper = () => {
 
 const getPlayAgainButton = () => {
     return document.querySelector(`button[data-qa="play-again-button"]`);
+};
+
+const getModsContainer = () => {
+    return document.getElementById('gg-mods-container');
 };
 
 const getOptionMenu = () => {
