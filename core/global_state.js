@@ -31,8 +31,8 @@ let SCORE_FUNC;
 let _MODS_READY = false;
 
 const saveState = () => {
-    const stateToSave = JSON.stringify(MODS);
-    THE_WINDOW.localStorage.setItem(STATE_KEY, stateToSave);
+    const newState = JSON.stringify(MODS);
+    THE_WINDOW.localStorage.setItem(STATE_KEY, newState);
 };
 
 const clearState = () => {
@@ -42,21 +42,19 @@ const clearState = () => {
 const getState = () => {
     const stateStr = THE_WINDOW.localStorage.getItem(STATE_KEY);
     
-    let storedState;
+    let stateObj;
     try {
-        storedState = JSON.parse(stateStr);
+        stateObj = JSON.parse(stateStr);
     } catch (err) {
         console.error('Error parsing stored state:', err);
+        clearState();
+        stateObj = {};
     }
-    return storedState;
+    return stateObj;
 };
 
 const loadState = () => { // Load state from local storage if it exists, else use default.
-    let storedState = getState();
-    if (!storedState || typeof storedState !== 'object') {
-        clearState();
-        storedState = {};
-    }
+    let stateObj = getState();
 
     // Create a clean starting state, with the previous state if it existed.
     // Here, we only care about the active/inactive state, and the values of the options. Everything else comes from the default config.
@@ -64,7 +62,7 @@ const loadState = () => { // Load state from local storage if it exists, else us
         if (!mod.options) {
             continue;
         }
-        const storedMod = storedState[key];
+        const storedMod = stateObj[key];
         if (!storedMod) {
             continue;
         }
@@ -85,16 +83,16 @@ const loadState = () => { // Load state from local storage if it exists, else us
     return MODS;
 };
 
-const _compareState = (newState) => {
+const compareState = (newState = null) => { // Used for debugging.
     const oldState = getState();
+    newState = newState == null ? MODS : newState;
     
     const findDifferences = (oldObj, newObj, path = '') => {
         const changes = [];
         
-        // Get all unique keys from both objects
         const allKeys = new Set([
             ...Object.keys(oldObj || {}),
-            ...Object.keys(newObj || {})
+            ...Object.keys(newObj || {}),
         ]);
         
         for (const key of allKeys) {
@@ -102,36 +100,36 @@ const _compareState = (newState) => {
             const oldValue = oldObj?.[key];
             const newValue = newObj?.[key];
             
-            // Check if key was added
+            // Check if key was added.
             if (!(key in (oldObj || {})) && key in (newObj || {})) {
                 changes.push({
                     type: 'added',
                     path: currentPath,
-                    newValue: newValue
+                    newValue: newValue,
                 });
             }
-            // Check if key was removed
+            // Check if key was removed.
             else if (key in (oldObj || {}) && !(key in (newObj || {}))) {
                 changes.push({
                     type: 'removed',
                     path: currentPath,
-                    oldValue: oldValue
+                    oldValue: oldValue,
                 });
             }
             // Check if both values exist
             else if (key in (oldObj || {}) && key in (newObj || {})) {
-                // If both are objects (and not null/arrays), recurse
+                // If both are objects (and not null/arrays), recurse.
                 if (isObject(oldValue) && isObject(newValue)) {
                     const nestedChanges = findDifferences(oldValue, newValue, currentPath);
                     changes.push(...nestedChanges);
                 }
-                // If values are different (primitive comparison or different types)
+                // If values are different (primitive comparison or different types).
                 else if (!deepEqual(oldValue, newValue)) {
                     changes.push({
                         type: 'modified',
                         path: currentPath,
                         oldValue: oldValue,
-                        newValue: newValue
+                        newValue: newValue,
                     });
                 }
             }
@@ -140,7 +138,7 @@ const _compareState = (newState) => {
         return changes;
     };
     
-    // Helper function to check if value is a plain object
+    // Helper function to check if value is a plain object.
     const isObject = (value) => {
         return value !== null && 
                typeof value === 'object' && 
@@ -149,7 +147,7 @@ const _compareState = (newState) => {
                !(value instanceof RegExp);
     };
     
-    // Helper function for deep equality check (for primitives and arrays)
+    // Helper function for deep equality check (for primitives and arrays).
     const deepEqual = (a, b) => {
         if (a === b) return true;
         
@@ -196,9 +194,3 @@ const _compareState = (newState) => {
 
     return differences;
 };
-
-
-
-THE_WINDOW.loadState = loadState; // debugging convenience.
-
-
