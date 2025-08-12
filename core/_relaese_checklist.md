@@ -4,7 +4,7 @@ Debug console open for all of this!!!
 
 ## Classic Maps (Solo)
 
-In a Chromium-based broswer:
+In a Opera and at least one other Chromium-based broswer: (some behavior is different in Opera specifically)
 
 * Toggle every mode on and off. Basic check for all mods, but in at least one browser, check thoroughly.
 * Check that Close/Reset/Apply buttons work.

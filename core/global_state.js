@@ -33,7 +33,7 @@ const getState = () => {
 };
 
 const loadState = () => { // Load state from local storage if it exists, else use default.
-    const storedState = getState();
+    let storedState = getState();
     if (!storedState || typeof storedState !== 'object') {
         clearState();
         storedState = {};
