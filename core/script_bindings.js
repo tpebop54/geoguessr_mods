@@ -221,7 +221,7 @@ const initMods = () => {
         return;
     }
 
-    const modsLoaded = waitForMapsReady(() => { return true; });
+    const modsLoaded = waitForMapsReady();
     if (!modsLoaded) {
         console.error('Failed to load mods.');
         return;
@@ -243,7 +243,7 @@ const initMods = () => {
 document.addEventListener('gg_maps_ready', initMods); // After additional GEF setup has been done.
 
 const reactivateMods = () => {
-    waitForMapsReady(() => { return true; });
+    waitForMapsReady();
     if (!getModDiv()) {
         addButtons();
     }

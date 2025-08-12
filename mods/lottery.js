@@ -365,7 +365,7 @@ const updateLottery = (forceState = undefined) => {
         makeLotteryDisplay();
     }
 
-    waitForMapsReady(() => { return true; });
+    waitForMapsReady();
     addClickBlock();
 
     saveState();

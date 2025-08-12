@@ -422,6 +422,8 @@ const waitForMapsReady = (callback, options = {}) => {
         }
     };
 
+    callback = callback || (() => { return true; }); // Can pass null for callback to synchronously wait for maps to load.
+
     if (checkMapsReady()) {
         callback(true);
         return true;

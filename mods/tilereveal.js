@@ -184,6 +184,7 @@ const updateTileReveal = (forceState = undefined) => {
         resetTileCount();
     }
 
+    waitForMapsReady();
     const nRows = getOption(mod, 'nRows');
     const nCols = getOption(mod, 'nCols');
     makeTiles(nRows, nCols);
