@@ -97,9 +97,9 @@ const getScore = () => {
 
     let maxErrorDist;
     if (isGGMapLoaded()) {
-        maxErrorDist = GG_MAP.maxErrorDistance;
+        maxErrorDist = GG_GUESSMAP.maxErrorDistance;
     } else {
-        console.warn('getScore: GG_MAP not loaded, using fallback maxErrorDistance');
+        console.warn('getScore: GG_GUESSMAP not loaded, using fallback maxErrorDistance');
         maxErrorDist = 20015086; // Default world map max distance in meters
     }
     
@@ -129,7 +129,7 @@ const disableConflictingMods = (activatingMod) => {
 };
 
 // TODO: is this necessary?
-// Async version of getScore that waits for GG_MAP to load (for cases where you need accurate data)
+// Async version of getScore that waits for GG_GUESSMAP to load (for cases where you need accurate data)
 const getScoreAsync = async () => {
     const actual = getActualLoc();
     if (!actual) {
@@ -385,26 +385,26 @@ const setGuessMapEvents = (enabled = true) => {
 };
 
 const isGGMapLoaded = () => {
-    return GG_MAP && typeof GG_MAP.maxErrorDistance !== 'undefined' && GG_MAP.maxErrorDistance > 0;
+    return GG_GUESSMAP && typeof GG_GUESSMAP.maxErrorDistance !== 'undefined' && GG_GUESSMAP.maxErrorDistance > 0;
 };
 
-// Get GG_MAP with fallback - waits for a reasonable time if not loaded yet
+// Get GG_GUESSMAP with fallback - waits for a reasonable time if not loaded yet
 const getGGMapWithFallback = async (maxWaitTime = 5000) => {
     if (isGGMapLoaded()) {
-        return GG_MAP;
+        return GG_GUESSMAP;
     }
     
-    // Wait for GG_MAP to load with timeout
+    // Wait for GG_GUESSMAP to load with timeout
     const startTime = Date.now();
     while (!isGGMapLoaded() && (Date.now() - startTime) < maxWaitTime) {
         await new Promise(resolve => setTimeout(resolve, 100));
     }
     
     if (isGGMapLoaded()) {
-        return GG_MAP;
+        return GG_GUESSMAP;
     }
     
-    console.warn('GG_MAP not loaded within timeout, using fallback');
+    console.warn('GG_GUESSMAP not loaded within timeout, using fallback');
     return {
         maxErrorDistance: 20015086, // Default world map max distance
         name: 'Fallback Map',

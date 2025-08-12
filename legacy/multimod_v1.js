@@ -848,7 +848,7 @@ const getScore = () => {
     const dist = getDistance(actual, guess);
 
     // Ref: https://www.plonkit.net/beginners-guide#game-mechanics --> score
-    const maxErrorDist = GG_MAP.maxErrorDistance;
+    const maxErrorDist = GG_GUESSMAP.maxErrorDistance;
     const score = Math.round(5000 * Math.pow(Math.E, -10 * dist / maxErrorDist));
     return score;
 };
@@ -3039,7 +3039,7 @@ GeoGuessrEventFramework.init().then(GEF => { // Note: GG_MAP is the min-map, GOO
             GG_ROUND = round;
             const mapID = evt.detail.map.id;
             /* eslint-disable no-return-assign */
-            fetch(`https://www.geoguessr.com/api/maps/${mapID}`).then(data => data.json()).then(data => GG_MAP = data);
+            fetch(`https://www.geoguessr.com/api/maps/${mapID}`).then(data => data.json()).then(data => GG_GUESSMAP = data);
         } catch (err) {
             console.err(err);
         }

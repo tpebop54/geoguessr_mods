@@ -272,7 +272,7 @@ const onRoundStartSingleplayer = (evt) => { // Singleplayer only. TODO: clean up
         fetch(`https://www.geoguessr.com/api/maps/${mapID}`)
             .then(data => data.json())
             .then(data => {
-                GG_MAP = data;
+                GG_GUESSMAP = data;
             });
     } catch (err) {
         console.err(err);
@@ -285,11 +285,11 @@ const onRoundStartSingleplayer = (evt) => { // Singleplayer only. TODO: clean up
     }));
 };
 
-// Note: GG_MAP is the min-map, GOOGLE_MAP is used for pulling funtionality from Google's map functions.
+// Note: GG_GUESSMAP is the small guess map, GOOGLE_MAP is used for pulling funtionality from Google's map functions.
 const onRoundEndSingleplayer = (evt) => { // Singleplayer only. TODO: clean up, share with duels logic if possible.
     GG_ROUND = undefined;
     GG_CLICK = undefined;
-    GG_MAP = undefined;
+    GG_GUESSMAP = undefined;
     _MODS_READY = false;
 };
 

@@ -128,7 +128,7 @@ const initGmapsIntegration = () => {
 
                 this.setHeadingInteractionEnabled(true);
                 this.setTiltInteractionEnabled(true);
-                GOOGLE_MAP = this; // GG_MAP is used for the active round, this is used for the Google map event listeners.
+                GOOGLE_MAP = this; // GG_GUESSMAP is used for the active round, this is used for the Google map event listeners.
 
                 google.maps.event.addListener(this, 'dragstart', () => {
                     _IS_DRAGGING_GUESSMAP = true;

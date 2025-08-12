@@ -13,7 +13,7 @@ const STATE_KEY = 'gg_state'; // Key in THE_WINDOW.localStorage.
 
 let GG_ROUND; // Current round information. This gets set on round start, and deleted on round end.
 let GG_LOC; // This is intercepted from Google Maps API. It contains the lat, lng, and countryCode.
-let GG_MAP; // Current map info.
+let GG_GUESSMAP; // Current map info.
 let GG_CLICK; // { lat, lng } of latest map click.
 let GG_CUSTOM_MARKER; // Custom marker. This is not the user click marker. Can only use one at a time. Need to clear/move when used.
 
