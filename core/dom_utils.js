@@ -426,7 +426,7 @@ const makeOptionMenu = (mod) => {
 
 const updateMod = (mod, forceState = undefined) => {
     const previousState = isModActive(mod);
-    const newState = forceState !== undefined ? forceState : !previousState;
+    const newState = forceState != null ? !!forceState : !previousState;
 
     // Handle options menu display logic
     if (newState && !previousState) {

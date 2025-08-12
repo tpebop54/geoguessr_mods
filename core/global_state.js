@@ -12,25 +12,8 @@ let PREV_GOOGLE_STREETVIEW_POV, PREV_GOOGLE_STREETVIEW_POSITION; // Stored state
 const STATE_KEY = 'gg_state'; // Key in THE_WINDOW.localStorage.
 
 const saveState = () => {
-    try {
-        const stateToSave = JSON.stringify(MODS);
-        THE_WINDOW.localStorage.setItem(STATE_KEY, stateToSave);
-        
-        // Add detailed logging for active states
-        const activeStates = {};
-        for (const [key, mod] of Object.entries(MODS)) {
-            activeStates[key] = mod.active;
-        }
-        
-        // Verify the save worked by reading it back
-        const verification = THE_WINDOW.localStorage.getItem(STATE_KEY);
-        if (verification === stateToSave) {
-        } else {
-            console.error('State save verification: FAILED - data mismatch');
-        }
-    } catch (error) {
-        console.error('Error saving state to localStorage:', error);
-    }
+    const stateToSave = JSON.stringify(MODS);
+    THE_WINDOW.localStorage.setItem(STATE_KEY, stateToSave);
 };
 
 const clearState = () => {
