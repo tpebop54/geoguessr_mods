@@ -167,14 +167,3 @@ const QUOTES = {
     ]
 
 };
-
-function initQuotes() {
-    THE_WINDOW._QUOTES = QUOTES; // Make available globally
-    return QUOTES;
-}
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initQuotes);
-} else {
-    initQuotes();
-}

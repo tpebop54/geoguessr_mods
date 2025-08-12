@@ -198,7 +198,7 @@ const getOption = (mod, key) => {
     const options = mod.options || {};
     const value = (options[key] || {}).value;
     if (Array.isArray(value)) {
-        return value[0]; // May add support for multiselect at some point, but not yet.
+        return value[0];
     }
     if (value == null) {
         return getDefaultOption(mod, key);

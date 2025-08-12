@@ -16,7 +16,6 @@ let GG_LOC; // This is intercepted from Google Maps API. It contains the lat, ln
 let GG_MAP; // Current map info.
 let GG_CLICK; // { lat, lng } of latest map click.
 let GG_CUSTOM_MARKER; // Custom marker. This is not the user click marker. Can only use one at a time. Need to clear/move when used.
-let GG_GUESSMAP_BLOCKER; // Div that blocks events to the map. You can still open a debugger by right clicking the menu header.
 
 let _IS_DRAGGING_GUESSMAP = false; // true when user is actively dragging the guessMap. Some of the map events conflict with others.
 

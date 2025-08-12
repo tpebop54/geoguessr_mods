@@ -567,14 +567,6 @@ const hasGoogleApiKey = () => {
 };
 
 /**
- * Log a warning about missing API key for specific features
- * @param {string} feature - The feature that needs the API key
- */
-const warnMissingApiKey = (feature) => {
-    console.warn(`${feature}: Google Maps API key not configured. See installer comments for notes.`);
-};
-
-/**
  * Validate Google Maps API key format
  * @param {string} apiKey - The API key to validate
  * @returns {boolean} True if the API key appears to be valid format
@@ -670,7 +662,6 @@ const calculateDistance = (lat1, lng1, lat2, lng2) => {
  */
 const findNearestStreetview = async (lat, lng, maxRadius = 1000, maxAttempts = 15) => {
     if (!hasGoogleApiKey()) {
-        warnMissingApiKey('Street View location search');
         return { lat, lng }; // Return original location if no API key
     }
     
@@ -911,7 +902,6 @@ const processApiQueue = async () => {
  */
 const findNearestLand = async (lat, lng, maxRadius = 5000, maxAttempts = 20) => {
     if (!hasGoogleApiKey()) {
-        warnMissingApiKey('Land location search');
         return { lat, lng }; // Return original location if no API key
     }
     

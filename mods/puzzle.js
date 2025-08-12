@@ -149,7 +149,6 @@ async function drawCanvas2d() {
                     
                     // Only warn once per session
                     if (!THE_WINDOW._puzzleApiKeyWarned) {
-                        warnMissingApiKey('Puzzle mod');
                         THE_WINDOW._puzzleApiKeyWarned = true;
                     }
                 }
