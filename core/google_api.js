@@ -77,7 +77,7 @@ const isMapReady = (map) => {
             const mapDiv = map.getDiv();
             return mapBounds && mapDiv;
         }
-        if (map.constructor === google.maps.StreetviewPanorama) {
+        if (map.constructor === google.maps.StreetViewPanorama) {
             const loc = map.getLocation();
             const visible = map.getVisible();
             return loc && visible;
@@ -159,7 +159,7 @@ const initGmapsIntegration = () => {
             }
         }
 
-        google.maps.StreetviewPanorama = class extends google.maps.StreetviewPanorama {
+        google.maps.StreetViewPanorama = class extends google.maps.StreetViewPanorama {
             constructor(...args) {
                 super(...args);
                 GOOGLE_STREETVIEW = this;
@@ -173,7 +173,7 @@ const initGmapsIntegration = () => {
                     THE_WINDOW.dispatchEvent(new CustomEvent('gg_streetview_pano_changed', { detail: this }));
                 });
                 this.addListener('status_changed', () => {
-                    if (this.getStatus() === google.maps.StreetviewStatus.OK) {
+                    if (this.getStatus() === google.maps.StreetViewStatus.OK) {
                         THE_WINDOW.dispatchEvent(new CustomEvent('gg_streetview_ready', { detail: this }));
                     }
                 });
