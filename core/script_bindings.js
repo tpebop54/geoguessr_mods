@@ -67,9 +67,9 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
             return false;
         }
 
-        const bigMapContainer = getStreetviewContainer();
+        const streetviewContainer = getStreetviewContainer();
         const modContainer = getModsContainer(); // Includes header and buttons.
-        if (modContainer || !bigMapContainer) { // Mods already loaded, or map not loaded yet.
+        if (modContainer || !streetviewContainer) { // Mods already loaded, or map not loaded yet.
             return false;
         }
 
@@ -116,7 +116,7 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
 
         const addButtonContainer = () => {
             if (!document.getElementById('gg-mods-container')) {
-                bigMapContainer.appendChild(modsContainer);
+                streetviewContainer.appendChild(modsContainer);
                 const verifyContainer = document.getElementById('gg-mods-container');
                 if (verifyContainer) {
                     bindButtons();
@@ -291,11 +291,27 @@ const onRoundEndSingleplayer = (evt) => { // Singleplayer only. TODO: clean up, 
     _MODS_READY = false;
 };
 
+const onRoundStartMultiplayer = (evt) => {
+    debugger
+};
+
+const onRoundEndMultiplayer = (evt) => {
+    debugger
+};
+
 GEF.events.addEventListener('round_start', (evt) => {
-    onRoundStartSingleplayer(evt)
+    if (_IS_DUEL) {
+        onRoundStartMultiplayer(evt);
+    } else {
+        onRoundStartSingleplayer(evt)
+    }
 });
 GEF.events.addEventListener('round_end', (evt) => {
-    onRoundEndSingleplayer(evt)
+    if (_IS_DUEL) {
+        onRoundEndMultiplayer(evt);
+    } else {
+        onRoundEndSingleplayer(evt)
+    }
 });
 
 const addDebugger = () => {
@@ -316,7 +332,7 @@ const addDebugger = () => {
 
 const setupGlobalKeyBindings = () => {
     document.addEventListener('keydown', (evt) => {
-        // Check if user is interacting with form elements or options menu
+        // Check if user is interacting with form elements or options menu.
         const activeElement = document.activeElement;
         const isInOptionsMenu = activeElement && activeElement.closest('#gg-option-menu');
         const isFormElement = activeElement && (
@@ -328,12 +344,12 @@ const setupGlobalKeyBindings = () => {
             activeElement.classList.contains('gg-option-input')
         );
 
-        // Don't process hotkeys if user is in a form element or options menu
+        // Don't process hotkeys if user is in a form element or options menu.
         if (isFormElement || isInOptionsMenu) {
             return;
         }
 
-        // Nuclear option to disable all mods if things get out of control
+        // Nuclear option to disable all mods if things get out of control.
         if (evt.ctrlKey && evt.shiftKey && evt.key === '>') {
             console.log('Nuclear option triggered: disabling all mods');
             clearState();
@@ -354,74 +370,20 @@ const setupGlobalKeyBindings = () => {
     });
 };
 
-// TODO: clean up, move stuff to respective mods.
-/**
-const handleGoogleMapsShortcut = (key) => {
-    const lotteryMod = MODS.lottery;
-    if (!lotteryMod || !isModActive(lotteryMod)) {
-        return;
-    }
-
-    const onlyLand = getOption(lotteryMod, 'onlyLand');
-    const onlyStreetview = getOption(lotteryMod, 'onlyStreetview');
-    
-    // Check if either special option is enabled
-    if (!onlyLand && !onlyStreetview) {
-        return;
-    }
-
-    // Get the actual location
-    const actualLoc = getActualLoc();
-    if (!actualLoc) {
-        console.warn('Cannot open Google Maps: actual location not available');
-        return;
-    }
-
-    const lat = actualLoc.lat;
-    const lng = actualLoc.lng;
-    
-    if (key === '[') {
-        // Ctrl+[ - Open actual location in Google Maps (standard view)
-        const mapsUrl = `https://www.google.com/maps/@${lat},${lng},15z`;
-        GM_openInTab(mapsUrl, false);
-    } else if (key === ']') {
-        // Ctrl+] - Open aerial view of nearest land location OR street view if both are enabled
-        let mapsUrl;
-        
-        if (onlyStreetview && onlyLand) {
-            // Both enabled - open Street View location (as per user requirement)
-            mapsUrl = `https://www.google.com/maps/@${lat},${lng},3a,75y,90t/data=!3m1!1e1`;
-        } else if (onlyStreetview) {
-            // Only Street View enabled - open Street View
-            mapsUrl = `https://www.google.com/maps/@${lat},${lng},3a,75y,90t/data=!3m1!1e1`;
-        } else if (onlyLand) {
-            // Only Land enabled - open aerial view of nearest land location
-            mapsUrl = `https://www.google.com/maps/@${lat},${lng},15z/data=!3m1!1e3`;
-        }
-        
-        if (mapsUrl) {
-            GM_openInTab(mapsUrl, false);
-        }
-    }
-};
-*/
-
-// Initialize global keybindings when DOM is ready
+// Initialize global keybindings when DOM is ready, which it may be already.
 const initializeGlobalKeybindings = () => {
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', setupGlobalKeyBindings);
     } else {
-        // DOM is already ready
         setupGlobalKeyBindings();
     }
 };
-
-// Initialize global keybindings immediately
 initializeGlobalKeybindings();
 
-// For reloading mods on new rounds, we need to watch the disappearance and reapperance of the results map.
+// For reloading mods on new rounds, we need to watch the disappearance and reappearance of the results map and round countdown.
 // We also need to watch for the game end in a similar manner, to do final cleanup.
 let _RESULT_MAP = null;
+let _ROUND_STARTING_WRAPPER = null
 const watchRoundEnd = () => {
     const prepNewRound = () => {
         const resultMap = getResultMap();
@@ -450,7 +412,6 @@ const watchRoundEnd = () => {
             }
         }
     };
-
 
     const observer = new MutationObserver(() => {
         prepNewRound();

@@ -131,8 +131,8 @@ const removeColorOverlay = () => {
 const makeColorOverlay = () => {
     removeColorOverlay();
 
-    const bigMapContainer = getStreetviewContainer();
-    if (!bigMapContainer) {
+    const streetviewContainer = getStreetviewContainer();
+    if (!streetviewContainer) {
         return;
     }
 
@@ -142,7 +142,7 @@ const makeColorOverlay = () => {
     const colorOverlay = document.createElement('div');
     colorOverlay.id = 'gg-color-overlay';
 
-    bigMapContainer.parentElement.insertBefore(colorOverlay, bigMapContainer.parentElement.firstChild);
+    streetviewContainer.parentElement.insertBefore(colorOverlay, streetviewContainer.parentElement.firstChild);
 };
 
 const getFilterStr = (mod) => { // Get string that can be applied to streetview canvas filters.

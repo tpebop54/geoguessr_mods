@@ -136,6 +136,10 @@ const getResultMap = () => {
     return document.querySelector(`div[class^="result-map_map__"]`);
 };
 
+const getRoundStartingWrapper = () => {
+    return document.querySelector(`div[class^="round-starting_wrapper__"]`);
+};
+
 const getPlayAgainButton = () => {
     return document.querySelector(`button[data-qa="play-again-button"]`);
 };
