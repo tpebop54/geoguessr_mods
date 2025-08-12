@@ -508,6 +508,29 @@ const loadingScreenStyles = `
     }
 `;
 
+// Browser compatibility warning styles
+const browserWarningStyles = `
+    #gg-browser-warning {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #ffcc00;
+        color: #000;
+        padding: 10px 20px;
+        border: 2px solid #ff6600;
+        border-radius: 5px;
+        font-weight: bold;
+        font-size: 14px;
+        z-index: 10000;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        max-width: 500px;
+        text-align: center;
+        font-family: Arial, sans-serif;
+        transition: opacity 0.5s ease-out;
+    }
+`;
+
 // Utility styles (used by multiple mods)
 const utilityStyles = `
     #gg-guessmap-blocker {
@@ -532,6 +555,7 @@ const applyModStyles = () => {
         tileRevealStyles +
         lotteryStyles +
         loadingScreenStyles +
+        browserWarningStyles +
         utilityStyles;
         
     GM_addStyle(combinedStyles);

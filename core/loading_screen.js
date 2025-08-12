@@ -64,9 +64,40 @@ const clearLoadOverlay = () => {
                     }
                 }
                 _LOAD_OVERLAY = undefined;
+                
+                // Check browser compatibility and show warning if needed
+                const [isChromium, browserName] = isChromiumBased();
+                if (!isChromium) {
+                    createBrowserWarning(browserName);
+                }
             }
         }, 300);
     }
+};
+
+const createBrowserWarning = (browserName) => {
+    // Check if warning already exists
+    if (document.getElementById('gg-browser-warning')) {
+        return;
+    }
+    
+    const warningDiv = document.createElement('div');
+    warningDiv.id = 'gg-browser-warning';
+    warningDiv.innerHTML = `Warning: browser ${browserName} is not officially supported for these mods. Please use a Chromium-based browser.`;
+    
+    document.body.appendChild(warningDiv);
+    
+    // Auto-remove warning after 10 seconds
+    setTimeout(() => {
+        if (document.body.contains(warningDiv)) {
+            warningDiv.style.opacity = '0';
+            setTimeout(() => {
+                if (document.body.contains(warningDiv)) {
+                    document.body.removeChild(warningDiv);
+                }
+            }, 500);
+        }
+    }, 10000);
 };
 
 const createTextDiv = () => { // Loading... or a quote.
