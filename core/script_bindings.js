@@ -285,19 +285,19 @@ const onRoundStartSingleplayer = (evt) => { // Singleplayer only. TODO: clean up
     }));
 };
 
+// Note: GG_MAP is the min-map, GOOGLE_MAP is used for pulling funtionality from Google's map functions.
 const onRoundEndSingleplayer = (evt) => { // Singleplayer only. TODO: clean up, share with duels logic if possible.
     GG_ROUND = undefined;
     GG_CLICK = undefined;
     GG_MAP = undefined;
     _MODS_READY = false;
-}
+};
 
-GEF = GeoGuessrEventFramework;
-GEF.init().then(GEF => { // Note: GG_MAP is the min-map, GOOGLE_MAP is used for pulling funtionality from Google's map functions.
-    GEF.events.addEventListener('round_start', (evt) => onRoundStartSingleplayer(evt));
-    GEF.events.addEventListener('round_end', (evt) => onRoundEndSingleplayer(evt));
-}).catch(err => {
-    console.error(err);
+GEF.events.addEventListener('round_start', (evt) => {
+    onRoundStartSingleplayer(evt)
+});
+GEF.events.addEventListener('round_end', (evt) => {
+    onRoundEndSingleplayer(evt)
 });
 
 const addDebugger = () => {

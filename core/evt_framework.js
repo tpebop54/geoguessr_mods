@@ -214,3 +214,6 @@ const THE_WINDOW = unsafeWindow || window;
         console.debug('GeoGuessr Event Framework initialized: https://github.com/miraclewhips/geoguessr-event-framework');
     }
 })();
+
+GEF = GeoGuessrEventFramework;
+GEF.init();
