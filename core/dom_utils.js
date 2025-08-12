@@ -516,145 +516,25 @@ const isScoringMod = (mod) => {
     return !!(mod.isScoring || mod.scoreMode);
 };
 
-const disableOtherScoreMods = (mod) => { // This function needs to be called prior to defining SCORE_FUNC when a scoring mod is enabled.
-    SCORE_FUNC = undefined;
-    
-    for (const other of Object.values(MODS)) {
-        if (mod === other) {
-            continue;
-        }
-        if (isScoringMod(other)) {
-            disableMods(other);
-        }
-    }
-};
-
 const closeOptionMenu = () => {
     const menu = document.querySelector('#gg-option-menu');
     if (menu) {
         menu.parentElement.removeChild(menu);
-    } else {
     }
-    
-    // Clear the global reference
     _OPTION_MENU = null;
 };
 
-/**
- * Removes overlays for specific mods that have draggable displays/overlays
- */
-const removeModOverlays = (mod) => {
-    
-    try {
-        // Handle lottery mod overlays
-        if (mod.key === 'lottery') {
-            // Remove lottery display
-            if (typeof removeLotteryDisplay === 'function') {
-                removeLotteryDisplay();
-            }
-            // Remove lottery map overlays
-            if (typeof removeClickBlock === 'function') {
-                removeClickBlock();
-            }
-        }
-        
-        // Handle tilereveal mod overlays
-        if (mod.key === 'tilereveal') {
-            // Remove tile counter
-            if (typeof removeTileCounter === 'function') {
-                removeTileCounter();
-            }
-            // Remove tiles
-            if (typeof removeTiles === 'function') {
-                removeTiles();
-            }
-        }
-        
-        // Handle flashlight mod overlays - call the update function with false to disable
-        if (mod.key === 'flashlight') {
-            if (typeof updateFlashlight === 'function') {
-                updateFlashlight(false);
-            }
-        }
-        
-        // Handle display mod overlays
-        if (mod.key === 'fun-filters') {
-            if (typeof removeColorOverlay === 'function') {
-                removeColorOverlay();
-            }
-        }
-        
-        // Handle puzzle mod overlays - call the update function with false to disable
-        if (mod.key === 'puzzle') {
-            if (typeof updatePuzzle === 'function') {
-                updatePuzzle(false);
-            }
-        }
-        
-        // Generic DOM-based cleanup for any remaining overlays
-        const modSpecificSelectors = {
-            lottery: ['.gg-lottery-display', '.gg-lottery-overlay', '[class*="lottery-click-block"]'],
-            tilereveal: ['#gg-tile-counter', '#gg-tile-overlay', '.gg-tile'],
-            flashlight: ['#gg-flashlight-div', '#gg-flashlight'],
-            'fun-filters': ['.gg-color-overlay'],
-            puzzle: ['#gg-canvas-2d', '.gg-puzzle-tile', '.gg-puzzle-dragging'],
-            // Add more as needed
-        };
-        
-        const selectors = modSpecificSelectors[mod.key];
-        if (selectors) {
-            selectors.forEach(selector => {
-                const elements = document.querySelectorAll(selector);
-                elements.forEach(element => {
-                    element.remove();
-                });
-            });
-        }
-        
-    } catch (err) {
-        console.error('Error removing overlays for mod:', mod.name, err);
-    }
-};
-
-/**
- * Disable scoring mods when lottery is enabled, and disable lottery when scoring mods are enabled
- * This prevents conflicts between lottery and scoring functionality
- */
 const disableConflictingMods = (activatingMod) => {
-    
-    const isLottery = activatingMod?.key === 'lottery';
-    const isScoring = isScoringMod(activatingMod);
-    
-    if (isLottery) {
-        // Lottery is being enabled - disable all scoring mods
+    if (isScoring(activatingMod)) {
+        SCORE_FUNC = undefined;
         for (const other of Object.values(MODS)) {
-            if (other === activatingMod) continue;
+            if (mod === other) {
+                continue;
+            }
             if (isScoringMod(other)) {
                 disableMods(other);
-                removeModOverlays(other);
             }
         }
-    } else if (isScoring) {
-        // Scoring mod is being enabled - disable lottery and other scoring mods, remove all incompatible overlays
-        for (const other of Object.values(MODS)) {
-            if (other === activatingMod) continue;
-            if (isScoringMod(other) || other.key === 'lottery') {
-                disableMods(other);
-                removeModOverlays(other);
-            }
-        }
-        
-        // Remove overlays from other mods that might interfere with scoring
-        const modsWithOverlays = ['tilereveal', 'flashlight', 'fun-filters', 'puzzle'];
-        for (const other of Object.values(MODS)) {
-            if (other === activatingMod) continue;
-            if (modsWithOverlays.includes(other.key)) {
-                removeModOverlays(other);
-            }
-        }
-        
-        // Clear the score function for proper reinitialization
-        SCORE_FUNC = undefined;
     }
 };
 
