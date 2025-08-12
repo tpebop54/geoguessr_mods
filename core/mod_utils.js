@@ -107,6 +107,27 @@ const getScore = () => {
     return score;
 };
 
+const isScoringMod = (mod) => {
+    if (!mod) {
+        return false;
+    }
+    return !!(mod.isScoring || mod.isScoring);
+};
+
+const disableConflictingMods = (activatingMod) => {
+    if (isScoringMod(activatingMod)) {
+        SCORE_FUNC = undefined;
+        for (const other of Object.values(MODS)) {
+            if (mod === other) {
+                continue;
+            }
+            if (isScoringMod(other)) {
+                disableMods(other);
+            }
+        }
+    }
+};
+
 // TODO: is this necessary?
 // Async version of getScore that waits for GG_MAP to load (for cases where you need accurate data)
 const getScoreAsync = async () => {
@@ -185,9 +206,7 @@ const getCardinalDirection = (degrees, level = 0) => {
     return cardinalDirection;
 };
 
-/**
-  Map click listener. For scoring mods, SCORE_FUNC needs to be defined and then cleared when the mod is deactivated.
-*/
+// Map click listener. For scoring mods, SCORE_FUNC needs to be defined and then cleared when the mod is deactivated.
 const scoreListener = async (evt) => {
     let scoreString;
     if (SCORE_FUNC) { // See note about SCORE_FUNC in the globals.
@@ -238,10 +257,7 @@ const getRandomLat = (lat1, lat2) => {
     return lat
 };
 
-/**
-  Get random longitude. This one is complicated because it can cross the prime meridian.
-  Thank you ChatGPT... I am so screwed as a software engineer.
-*/
+// Get random longitude. This one is complicated because it can cross the prime meridian.
 const getRandomLng = (lng1, lng2) => {
     if (Math.abs(lng1) === 180 && Math.abs(lng2) === 180) { // If both +-180, we'll assume it's [-180, 180].
         lng1 = undefined;

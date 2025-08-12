@@ -79,7 +79,7 @@ let _IS_DRAGGING_GUESSMAP = false; // true when user is actively dragging the gu
 
 /**
   SCORE_FUNC is a function used to display the overlay that shows how well you clicked (score, direction, whatever).
-  This can only be used by one mod at a time, so in mods that use it we have to use disableOtherScoreModes to disable the other ones.
+  This can only be used by one mod at a time, so in mods that use it we have to use disableOtherisScorings to disable the other ones.
   It uses GG_ROUND, GG_LOC, and GG_CLICK to determine how well you clicked. SCORE_FUNC can be globally set for the active mod.
   By default, it will give the 0-5000 score, but some mods override it.
 */

@@ -496,33 +496,12 @@ const disableMods = (mods, forceHide = false) => {
     }
 };
 
-const isScoringMod = (mod) => {
-    if (!mod) {
-        return false;
-    }
-    return !!(mod.isScoring || mod.scoreMode);
-};
-
 const closeOptionMenu = () => {
     const menu = document.querySelector('#gg-option-menu');
     if (menu) {
         menu.parentElement.removeChild(menu);
     }
     _OPTION_MENU = null;
-};
-
-const disableConflictingMods = (activatingMod) => {
-    if (isScoring(activatingMod)) {
-        SCORE_FUNC = undefined;
-        for (const other of Object.values(MODS)) {
-            if (mod === other) {
-                continue;
-            }
-            if (isScoringMod(other)) {
-                disableMods(other);
-            }
-        }
-    }
 };
 
 // Additional utility functions
