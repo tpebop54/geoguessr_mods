@@ -301,18 +301,10 @@ const onRoundEndMultiplayer = () => {
 };
 
 GEF.events.addEventListener('round_start', (evt) => {
-    if (_IS_DUEL) {
-        onRoundStartMultiplayer(evt);
-    } else {
-        onRoundStartSingleplayer();
-    }
+    onRoundStartSingleplayer();
 });
 GEF.events.addEventListener('round_end', (evt) => {
-    if (_IS_DUEL) {
-        onRoundEndMultiplayer(evt);
-    } else {
-        onRoundEndSingleplayer()
-    }
+    onRoundEndSingleplayer();
 });
 
 const addDebugger = () => {

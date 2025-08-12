@@ -169,12 +169,12 @@ const MODS = {
         options: {
             radius: {
                 label: 'Radius',
-                default: 100,
+                default: 120,
                 tooltip: 'Radius of flashlight, in pixels.',
             },
             blur: {
                 label: 'Blur',
-                default: 50,
+                default: 30,
                 tooltip: 'Blur (in pixels) to add to the flashlight. Extends out from the radius.',
             }
         }
