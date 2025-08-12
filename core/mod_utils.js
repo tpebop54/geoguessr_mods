@@ -118,7 +118,7 @@ const disableConflictingMods = (activatingMod) => {
     if (isScoringMod(activatingMod)) {
         SCORE_FUNC = undefined;
         for (const other of Object.values(MODS)) {
-            if (mod === other) {
+            if (activatingMod === other) {
                 continue;
             }
             if (isScoringMod(other)) {

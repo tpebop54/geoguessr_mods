@@ -139,8 +139,8 @@ const makeTiles = (nRows, nCols) => {
     }
       
     waitForMapsReady();
-    const streetviewContainer = getStreetviewContainer();
-    if (!streetviewContainer) {
+    const canvas3d = getStreetviewCanvas();
+    if (!canvas3d) {
         return;
     }
 
@@ -169,7 +169,7 @@ const makeTiles = (nRows, nCols) => {
         tileOverlay.appendChild(tile);
     }
 
-    streetviewContainer.parentElement.insertBefore(tileOverlay, streetviewContainer.parentElement.firstChild);
+    canvas3d.parentElement.insertBefore(tileOverlay, canvas3d.parentElement.firstChild);
 };
 
 const updateTileReveal = (forceState = undefined) => {

@@ -44,8 +44,10 @@ const getState = () => {
     let stateObj;
     try {
         stateObj = JSON.parse(stateStr);
-        if (typeof stateObj !== 'object' || stateObj === null) {
-            throw new Error('Parsed state is not an object');
+        if (!stateObj || typeof stateObj !== 'object') {
+            console.log('Loading default state. Existing state was either cleared or invalid.')
+            clearState();
+            stateObj = {};
         }
     } catch (err) {
         console.error('Error parsing stored state:', err);
