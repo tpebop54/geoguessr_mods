@@ -30,7 +30,7 @@ const MODS = {
         show: true,
         key: 'fun-filters',
         name: 'Fun Filters',
-        tooltip: 'Various display options for page elements, colors, etc. Does not mess with gameplay.',
+        tooltip: 'Various display options for page elements, colors, etc.',
         allowInDuels: true,
         options: {
             satView: {

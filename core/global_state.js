@@ -59,9 +59,6 @@ const loadState = () => { // Load state from local storage if it exists, else us
     // Create a clean starting state, with the previous state if it existed.
     // Here, we only care about the active/inactive state, and the values of the options. Everything else comes from the default config.
     for (const [key, mod] of Object.entries(MODS)) {
-        if (!mod.options) {
-            continue;
-        }
         const storedMod = stateObj[key];
         if (!storedMod) {
             continue;
@@ -69,14 +66,16 @@ const loadState = () => { // Load state from local storage if it exists, else us
         
         mod.active = !!storedMod.active;
         
-        if (typeof storedMod.options !== 'object') {
-            storedMod.options = {};
-        }
-        const validKeys = new Set(Object.keys(mod.options));
-        for (const [optKey, storedOption] of Object.entries(storedMod.options)) {
-            if (validKeys.has(optKey) && storedOption.value != null) {
-                mod.options[optKey].value = storedOption.value;
-            } else if (!validKeys.has(optKey)) {
+        if (mod.options) {
+            if (typeof storedMod.options !== 'object') {
+                storedMod.options = {};
+            }
+            const validKeys = new Set(Object.keys(mod.options));
+            for (const [optKey, storedOption] of Object.entries(storedMod.options)) {
+                if (validKeys.has(optKey) && storedOption.value != null) {
+                    mod.options[optKey].value = storedOption.value;
+                } else if (!validKeys.has(optKey)) {
+                }
             }
         }
     }
