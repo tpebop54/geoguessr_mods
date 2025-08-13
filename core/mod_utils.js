@@ -14,10 +14,10 @@ const _MERCATOR_LNG_MAX = 180;
 
 const areModsAvailable = (path) => {
     path = path || THE_WINDOW.location.pathname;
-    if (path.includes('/multiplayer') && !THE_WINDOW.DISABLE_CHEAT_PROTECTION) {
+    if (path.includes('/multiplayer')) {
         return false;
     }
-    return path.includes('/game/') || path.includes('/live-challenge/') || path.includes('/multiplayer');
+    return path.includes('/game/') || path.includes('/challenge/') ||path.includes('/live-challenge/') || path.includes('/multiplayer');
 };
 
 const getActualLoc = () => {
