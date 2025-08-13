@@ -252,31 +252,6 @@ const createLoadOverlay = () => {
     createLoadOverlayDiv();
 };
 
-/**
-  Click around the map *after* it is loaded and idle, and the screen is blacked out.
-  This will be a callback in the google maps section of this script.
-  This will completely mess up the replay file. We have 1 second to do this.
-  Always end with a click at { lat: 0, lng: 0 }. This will be extremely obvious in replays, both for streaming and the actual replay files.
-  This function is sloppy, but it doesn't really matter as long as we screw up the replay.
-*/
-const clickGarbage = (nMilliseconds = 900) => {
-    if (THE_WINDOW.DISABLE_CHEAT_PROTECTION) {
-        return;
-    }
-
-    const nClicks = 20; // Approximately...
-    const start = Date.now(); // Unix epoch ms.
-    const end = start + nMilliseconds; // Stop clicking after this time (epoch ms).
-    for (let _ = 0; _ <= nClicks; _++) {
-        if (Date.now() > end) {
-            break;
-        }
-        const { lat, lng } = getRandomLoc();
-        clickAt(lat, lng);
-    }
-    clickAt(0, 0); // Race condition, but whatever.
-};
-
 const initLoadOverlay = () => {
     if (!areModsAvailable()) {
         return;

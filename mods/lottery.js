@@ -19,37 +19,6 @@ const removeLotteryDisplay = () => {
     }
 };
 
-function getRandomLoc() { // Generate uniform distribution within Mercator bounds.
-    const minLat = -85.05112878;
-    const maxLat = 85.05112878;
-    const u = Math.random() * (Math.sin(maxLat * Math.PI / 180) - Math.sin(minLat * Math.PI / 180)) + Math.sin(minLat * Math.PI / 180);
-    const lat = Math.asin(u) * (180 / Math.PI);
-    const lng = (Math.random() * 360) - 180;
-    return { lat, lng };
-};
-
-const getWeightedLoc = () => { // Uses pre-generated map distribution of a large number of coordinates to pick randomly from.
-    if (!LOTTERY_LATLNGS) {
-        debugger;
-    }
-    return LOTTERY_LATLNGS[Math.floor(Math.random() * LOTTERY_LATLNGS.length)];
-};
-
-const getLotteryLoc = (useMap, randomPct) => { // Randomized pick from map, full random, or both.
-    if (isNaN(randomPct) || randomPct < 0 || randomPct > 100) {
-        randomPct = 0;
-        useMap = true;
-    }
-    if (useMap) {
-        const random = Math.random() * randomPct;
-        if (random < randomPct) {
-            return getRandomLoc();
-        } else {
-            return getWeightedLoc();
-        }
-    }
-};
-
 const onClick = () => {
     if (_LOTTERY_COUNT === 0) {
         return;
@@ -89,7 +58,7 @@ const onClick = () => {
 
     let useMap = getOption(mod, 'useCoverageMap');
     let randomPct = getOption(mod, 'randomPct');
-    const loc = getLotteryLoc(useMap, randomPct);
+    const loc = getWeightedOrRandomLoc(useMap, randomPct);
     let { lat, lng } = loc;
 
     lat = Math.max(_MERCATOR_LAT_MIN, Math.min(_MERCATOR_LAT_MAX, lat));

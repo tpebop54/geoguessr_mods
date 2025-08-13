@@ -128,32 +128,6 @@ const disableConflictingMods = (activatingMod) => {
     }
 };
 
-// TODO: is this necessary?
-// Async version of getScore that waits for GG_GUESSMAP to load (for cases where you need accurate data)
-const getScoreAsync = async () => {
-    const actual = getActualLoc();
-    if (!actual) {
-        console.error('getScoreAsync: no actual location available');
-        return null;
-    }
-    const guess = GG_CLICK;
-    if (!guess) {
-        console.error('getScoreAsync: no guess click available');
-        return null;
-    }
-    const dist = getDistance(actual, guess);
-
-    const mapData = await getGGMapWithFallback(2000);
-    const maxErrorDist = mapData.maxErrorDistance;
-    const score = Math.round(5000 * Math.pow(Math.E, -10 * dist / maxErrorDist));
-    
-    if (!isGGMapLoaded()) {
-        console.warn('getScoreAsync: calculated with fallback maxErrorDistance, score:', score);
-    }
-    
-    return score;
-};
-
 const isInBounds = (loc, bounds) => {
     let { north, east, south, west } = bounds;
     let { lat, lng } = loc;
@@ -239,71 +213,6 @@ const scoreListener = async (evt) => {
             clearInterval(fadeEffect);
         }
     }, 50);
-};
-
-const getRandomLat = (lat1, lat2) => {
-    if (lat1 == null || lat2 == null) {
-        return Math.random() * 180 - 90;
-    }
-    if (lat1 === lat2) {
-        return lat1;
-    }
-    lat1 = Math.max(-90, Math.min(90, lat1));
-    lat2 = Math.max(-90, Math.min(90, lat2));
-    if (lat1 > lat2) {
-        [lat1, lat2] = [lat2, lat1];
-    }
-    const lat = Math.random() * (lat2 - lat1) + lat1;
-    return lat
-};
-
-// Get random longitude. This one is complicated because it can cross the prime meridian.
-const getRandomLng = (lng1, lng2) => {
-    if (Math.abs(lng1) === 180 && Math.abs(lng2) === 180) { // If both +-180, we'll assume it's [-180, 180].
-        lng1 = undefined;
-        lng2 = undefined;
-    }
-    if (lng1 == null || lng2 == null) {
-        return Math.random() * 360 - 180;
-    }
-    if (lng1 === lng2) {
-        return lng1;
-    }
-
-    // Normalize to [-180, 180].
-    lng1 = ((lng1 + 180) % 360 + 360) % 360 - 180;
-    lng2 = ((lng2 + 180) % 360 + 360) % 360 - 180;
-
-    // If lng1 > lng2, it overlaps the prime meridian and we pick a side randomly.
-    // If both are on the same side, it's straightforward.
-    // This logic will weight how much area is on each side of the prime meridian so it should behave the same anywhere.
-    if (lng1 > lng2) {
-        const range1Start = lng1;
-        const range1End = 180;
-        const range2Start = -180;
-        const range2End = lng2;
-
-        const width1 = range1End - range1Start; // e.g. 180 - 170 = 10
-        const width2 = range2End - range2Start; // e.g. -170 - (-180) = 10
-        const totalWidth = width1 + width2;
-
-        // Decide which segment to pick from.
-        const rand = Math.random();
-        if (rand < width1 / totalWidth) {
-            return Math.random() * width1 + range1Start;
-        } else {
-            return Math.random() * width2 + range2Start;
-        }
-    } else {
-        return Math.random() * (lng2 - lng1) + lng1;
-    }
-};
-
-// Get random { lat, lng } between the given bounds, or for the full Mercator projection if bounds are not provided.
-const getRandomLoc = (minLat = null, maxLat = null, minLng = null, maxLng = null) => {
-    const lat = getRandomLat(minLat, maxLat);
-    const lng = getRandomLng(minLng, maxLng);
-    return { lat, lng };
 };
 
 const clickAt = (lat, lng) => { // Trigger actual click on guessMap at { lat, lng }.
@@ -412,8 +321,7 @@ const getGGMapWithFallback = async (maxWaitTime = 5000) => {
     };
 };
 
-// Utility function for mods to wait for both 2D and 3D maps to be ready.
-const waitForMapsReady = (callback, options = {}) => {
+const waitForMapsReady = (callback, options = {}) => { // Wait for 2d and 3d maps to load fully, then issue callback.
     options = Object.assign(
         {},
         {
@@ -461,87 +369,8 @@ const waitForMapsReady = (callback, options = {}) => {
     return false;
 };
 
-/**
- * Get random latitude using sinusoidal projection for more even distribution.
- * This compensates for the fact that lines of longitude converge at the poles,
- * so uniform random lat/lng would cluster points near the poles.
- * Now uses safe Mercator bounds when no limits are specified.
- */
-const getRandomLatSinusoidal = (lat1, lat2) => {
-    if (lat1 == null || lat2 == null) {
-        // For full world, use safe Mercator bounds instead of poles
-        // Generate uniform random and apply asin transformation within Mercator limits
-        const maxSin = Math.sin(_MERCATOR_LAT_MAX * (Math.PI / 180));
-        const minSin = Math.sin(_MERCATOR_LAT_MIN * (Math.PI / 180));
-        
-        const u = Math.random(); // Uniform in [0, 1]
-        const sinLat = minSin + u * (maxSin - minSin);
-        return Math.asin(sinLat) * (180 / Math.PI);
-    }
-    if (lat1 === lat2) {
-        return lat1;
-    }
-    
-    // Clamp to valid Mercator latitude range
-    lat1 = Math.max(_MERCATOR_LAT_MIN, Math.min(_MERCATOR_LAT_MAX, lat1));
-    lat2 = Math.max(_MERCATOR_LAT_MIN, Math.min(_MERCATOR_LAT_MAX, lat2));
-    if (lat1 > lat2) {
-        [lat1, lat2] = [lat2, lat1];
-    }
-    
-    // Convert to radians for calculation
-    const lat1Rad = lat1 * (Math.PI / 180);
-    const lat2Rad = lat2 * (Math.PI / 180);
-    
-    // Convert to sine space for uniform distribution
-    const sin1 = Math.sin(lat1Rad);
-    const sin2 = Math.sin(lat2Rad);
-    
-    // Generate uniform random in sine space
-    const u = Math.random();
-    const sinLat = sin1 + u * (sin2 - sin1);
-    
-    // Convert back to latitude in degrees
-    const latRad = Math.asin(Math.max(-1, Math.min(1, sinLat)));
-    return latRad * (180 / Math.PI);
-};
-
-/**
- * Get random location using sinusoidal projection for more even distribution.
- * This creates a more uniform distribution over the Earth's surface compared to
- * uniform random lat/lng which clusters points near the poles.
- * Automatically clamps to safe Mercator projection bounds.
- */
-const getRandomLocSinusoidal = (minLat = null, maxLat = null, minLng = null, maxLng = null) => {
-    // Apply Mercator bounds to input parameters to ensure we never generate invalid coordinates
-    
-    // Clamp input bounds to Mercator limits
-    if (minLat !== null) minLat = Math.max(_MERCATOR_LAT_MIN, Math.min(_MERCATOR_LAT_MAX, minLat));
-    if (maxLat !== null) maxLat = Math.max(_MERCATOR_LAT_MIN, Math.min(_MERCATOR_LAT_MAX, maxLat));
-    
-    // If no bounds specified, use safe Mercator bounds instead of full globe
-    if (minLat === null && maxLat === null) {
-        minLat = _MERCATOR_LAT_MIN;
-        maxLat = _MERCATOR_LAT_MAX;
-    }
-    
-    const lat = getRandomLatSinusoidal(minLat, maxLat);
-    const lng = getRandomLng(minLng, maxLng); // Longitude distribution is fine as-is
-    
-    // Double-check and clamp the result to be absolutely sure
-    return clampToMercatorBounds(lat, lng);
-};
-
-/**
- * Calculate distance between two coordinates in meters using Haversine formula
- * @param {number} lat1 - First latitude
- * @param {number} lng1 - First longitude
- * @param {number} lat2 - Second latitude
- * @param {number} lng2 - Second longitude
- * @returns {number} Distance in meters
- */
-const calculateDistance = (lat1, lng1, lat2, lng2) => {
-    const R = 6371000; // Earth's radius in meters
+const calculateDistance = (lat1, lng1, lat2, lng2) => { // Give distance in meters.
+    const R = 6371000; // Earth's radius in meters.
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLng = (lng2 - lng1) * Math.PI / 180;
     const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
@@ -551,24 +380,42 @@ const calculateDistance = (lat1, lng1, lat2, lng2) => {
     return R * c;
 };
 
-/**
- * Clamp coordinates to safe Mercator projection bounds to ensure they never
- * fall outside the visible map area in standard world view.
- * 
- * @param {number} lat - Latitude in degrees
- * @param {number} lng - Longitude in degrees
- * @returns {Object} Clamped coordinates {lat, lng}
- */
 const clampToMercatorBounds = (lat, lng) => {
-    // Standard Web Mercator projection limits to avoid poles and ensure visibility
-    
-    // Clamp latitude to Mercator bounds
     const clampedLat = Math.max(_MERCATOR_LAT_MIN, Math.min(_MERCATOR_LAT_MAX, lat));
-    
-    // Clamp longitude to valid range
     let clampedLng = lng;
     if (clampedLng > _MERCATOR_LNG_MAX) clampedLng = _MERCATOR_LNG_MAX;
     if (clampedLng < _MERCATOR_LNG_MIN) clampedLng = _MERCATOR_LNG_MIN;
     
     return { lat: clampedLat, lng: clampedLng };
+};
+
+function getRandomLoc() { // Generate uniform distribution within Mercator bounds.
+    const minLat = -85.05112878;
+    const maxLat = 85.05112878;
+    const u = Math.random() * (Math.sin(maxLat * Math.PI / 180) - Math.sin(minLat * Math.PI / 180)) + Math.sin(minLat * Math.PI / 180);
+    const lat = Math.asin(u) * (180 / Math.PI);
+    const lng = (Math.random() * 360) - 180;
+    return { lat, lng };
+};
+
+const getWeightedLoc = () => { // Uses pre-generated map distribution of a large number of coordinates to pick randomly from.
+    if (!LOTTERY_LATLNGS) {
+        debugger;
+    }
+    return LOTTERY_LATLNGS[Math.floor(Math.random() * LOTTERY_LATLNGS.length)];
+};
+
+const getWeightedOrRandomLoc = (useMap, randomPct) => { // Randomized pick from map, full random, or both.
+    if (isNaN(randomPct) || randomPct < 0 || randomPct > 100) {
+        randomPct = 0;
+        useMap = true;
+    }
+    if (useMap) {
+        const random = Math.random() * randomPct;
+        if (random < randomPct) {
+            return getRandomLoc();
+        } else {
+            return getWeightedLoc();
+        }
+    }
 };
