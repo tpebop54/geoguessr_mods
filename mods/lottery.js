@@ -6,9 +6,6 @@
 // MOD: Lottery.
 // ===============================================================================================================================
 
-// TODO:
-// - API stuff
-// - Boolean to reset between rounds or not
 
 let _LOTTERY_DISPLAY; // Display elements for lottery mod. (counter and button).
 let _LOTTERY_COUNT; // How many remaining guesses you have.

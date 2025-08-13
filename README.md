@@ -26,18 +26,7 @@ When you refresh your GeoGuessr page, you can check that the new version is acti
 
 
 
-## Configuration
-
-#### GOOGLE_MAPS_API_KEY
-
-- This is an optional value to enable a few additional features. Some mods use Google Maps API but most do not.
-- Mods requiring API key will be automatically disabled if no key is provided.
-- See documentation below for setup instructions.
-
-#### DISABLE_CHEAT_PROTECTION
-
-- By default, the script will mess up the replay files so that it's obvious that a script is being used.
-- You can disable this by setting this value to true in the TamperMonkey file. Just promise to only use the script for good.
+## Configuration (installer file)
 
 #### ENABLE_QUOTES
 
@@ -45,42 +34,15 @@ When you refresh your GeoGuessr page, you can check that the new version is acti
 - By default, it just says "Loading...", but if you set this value to `true`, it will display a random quote/fact/joke/etc. instead.
 
 
-
-
 ## Version Management
 
-The version is used in many places both for clarity and cache breaking. When updating the version, just do a find-and-replace-all to the new version, e.g. `1.1.0` -> `1.2.0`
+The version is used in many places both for clarity and cache breaking. When updating the version, just do a find-and-replace-all to the new version, e.g. `1.1.1` -> `1.2.0`
 Occasionally in dev work, the minor increment (`1.1.x`) fails to clear the cache, so the major or intermediate increment (`1.2.0`) will break the browser cache. You may also have to delete and re-paste the TamperMonkey installer.
 
 To prevent browser caching, the `?v=` part at the end of each `@require` line should be updated if that particular dependency is updated. The versions don't have to match the master version, they just need to update so the browser doesn't use a cached file.
 
 
 
-
-
-## Google Maps API Key Setup (Optional)
-
-Most mods work without this, but some features require a Google Maps API key. Using this mod pack is very unlikely to hit your free usage limits, but you should still monitor your usage.
-
-### How to Get a Google Maps API Key:
-
-1. Go to https://console.cloud.google.com/
-2. Create a new project or select an existing one
-3. Enable the following APIs (in "APIs & Services" → "Library"):
-   - Maps JavaScript API
-   - Street View Static API
-4. Go to "APIs & Services" → "Credentials" → "Create Credentials" → "API key"
-5. Copy your API key and paste it in the installer file
-6. **RECOMMENDED**: Click "Restrict Key" and add these restrictions:
-   - Application restrictions: HTTP referrers
-   - Add referrer: `*.geoguessr.com/*`
-   - API restrictions: Select the APIs you enabled above
-
-### Security Notes:
-
-- Keep your API key private! Don't share your userscript file with others if it contains your key.
-- Consider setting up billing alerts in Google Cloud Console to monitor usage.
-- The free tier includes generous limits that should be sufficient for personal use (10,000 requests per month for the Maps JavaScript API).
 
 ## Global Keybindings
 
