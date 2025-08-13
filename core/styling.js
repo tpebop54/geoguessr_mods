@@ -152,7 +152,6 @@ const optionMenuStyles = `
         z-index: 1000;
     }
 
-    /* Common interactive button styles for hover, active, and click animations */
     .gg-interactive-button {
         cursor: pointer;
         transition: transform 0.1s ease, box-shadow 0.1s ease, opacity 0.2s ease;
@@ -360,7 +359,7 @@ const tileRevealStyles = `
         border-radius: 10px;
         padding: 5px 12px;
         color: white;
-        background: #c41e3a;
+        background: #211ec4ff;
         opacity: 75%;
     }
 
@@ -454,7 +453,7 @@ const lotteryStyles = `
         border-radius: 10px;
         padding: 5px 12px;
         color: white;
-        background: #c41e3a;
+        background: #211ec4ff;
         opacity: 75%;
     }
 `;
