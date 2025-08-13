@@ -11,9 +11,9 @@ const _isOpera = () => { // Opera can't render the 2D map as vector, so disable 
 };
 const IS_OPERA = _isOpera();
 
-    /** 
+/** 
     COMMON CONFIGURATION FOR MODS
-     
+    
     show: true, // false to hide this mod from the panel. Mostly used for dev, but you can change it to disable stuff.
     key: 'some-key', // Used for global state and document elements.
     name: 'Name in Menu', // Used for menus.
@@ -23,7 +23,7 @@ const IS_OPERA = _isOpera();
     options: {}, // Used when mod requires or allows configurable values. Can be null.
         Some additional configurations can be put in individual options to show or hide them in certain circumstances.
             - allowInDuels: some options may not work in duels, e.g. if knowing the coordinates is required. Default false.
-    */
+*/
 
 const MODS = {
 
@@ -91,10 +91,25 @@ const MODS = {
         tooltip: 'Get a random guess and you have to decide if you want it or not.',
         allowInDuels: true,
         options: {
-            nGuesses: {
-                label: 'Max. guesses',
+            nTokens: {
+                label: 'Num. tokens',
                 default: 20,
                 tooltip: 'Maximum number of random guesses you get before you have to take the guess.',
+            },
+            resetEachRound: {
+                label: 'Reset each round',
+                default: true,
+                tooltip: 'Reset the number of tokens for each round. If disabled, you have this many tokens for the full game.',
+            },
+            useCoverageMap: {
+                label: 'Use coverage map',
+                default: true,
+                tooltip: 'If enabled, use a guess distribution tailored to global world GeoGuessr coverage.\nIf disabled, guess anywhere.',
+            },
+            randomizationPct: {
+                label: 'Randomization (%)',
+                default: 0,
+                tooltip: 'This percent (0-100) of your guesses will not use the coverage map.',
             },
             nDegLat: {
                 label: 'Latitude margin (deg)',
@@ -107,11 +122,6 @@ const MODS = {
                 default: 180,
                 tooltip: 'Guess up to this many degrees longitude away from the target',
                 allowInDuels: false,
-            },
-            resetEachRound: {
-                label: 'Reset each round',
-                default: true,
-                tooltip: 'Reset the number of tokens for each round.',
             },
         },
     },

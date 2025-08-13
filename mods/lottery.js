@@ -232,7 +232,7 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     // Reset button functionality
     const onReset = () => {
         const mod = MODS.lottery;
-        _LOTTERY_COUNT = getOption(mod, 'nGuesses'); // Reset to original amount
+        _LOTTERY_COUNT = getOption(mod, 'nTokens'); // Reset to original amount
         counter.innerText = _LOTTERY_COUNT;
     };
     resetButton.addEventListener('click', onReset);
@@ -276,7 +276,7 @@ const addClickBlock = () => {
 
 const resetTokens = () => {
     const mod = MODS.lottery;
-    _LOTTERY_COUNT = getOption(mod, 'nGuesses');
+    _LOTTERY_COUNT = getOption(mod, 'nTokens');
 
     // Update the counter display if it exists
     const counter = document.getElementById('gg-lottery-counter');
@@ -303,7 +303,7 @@ const updateLottery = (forceState = undefined) => {
     }
 
     if (!_LOTTERY_DISPLAY) {
-        _LOTTERY_COUNT = getOption(mod, 'nGuesses');
+        _LOTTERY_COUNT = getOption(mod, 'nTokens');
         makeLotteryDisplay();
     }
 

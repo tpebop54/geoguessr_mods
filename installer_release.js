@@ -37,6 +37,8 @@
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/funfilters.js?v=1.1.1
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/mods/scratch.js?v=1.1.1
 
+// @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/data/lottery/heatmaps/world.js?v=1.1.1
+
 // @require      https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/release/core/script_bindings.js?v=1.1.1
 
 // ==/UserScript==
