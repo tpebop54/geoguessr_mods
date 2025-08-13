@@ -15,13 +15,11 @@ const getBindings = () => {
         try {
             _BINDINGS = [
                 [MODS.rotateMap, updateRotateMap],
-                [MODS.zoomInOnly, updateZoomInOnly],
                 [MODS.showScore, updateShowScore],
                 [MODS.flashlight, updateFlashlight],
                 [MODS.bopIt, updateBopIt],
                 [MODS.inFrame, updateInFrame],
                 [MODS.lottery, updateLottery],
-                [MODS.puzzle, updatePuzzle],
                 [MODS.tileReveal, updateTileReveal],
                 [MODS.funFilters, updateFunFilters],
                 [MODS.scratch, updateScratch],
