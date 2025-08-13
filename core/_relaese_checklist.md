@@ -11,7 +11,6 @@ In a Opera and at least one other Chromium-based broswer: (some behavior is diff
 * Check that things like GG_GUESSMAP are consistently being populated (debug right click on guessmap).
 * Toggle one or more on at a time and refresh the page to make sure the settings are persistent.
 * Toggle one or more on at a time and go to a new round to make sure the settings are persistent.
-* Add API key and disable cheat protection, make sure relevant settings are enabled.
 
 ## Private Duel:
 

@@ -23,7 +23,6 @@ const IS_OPERA = _isOpera();
     options: {}, // Used when mod requires or allows configurable values. Can be null.
         Some additional configurations can be put in individual options to show or hide them in certain circumstances.
             - allowInDuels: some options may not work in duels, e.g. if knowing the coordinates is required. Default false.
-            - requiresApiKey: some options may require a Google API key to function. Default false.
     */
 
 const MODS = {
@@ -114,19 +113,6 @@ const MODS = {
                 default: true,
                 tooltip: 'Reset the number of tokens for each round.',
             },
-            onlyStreetview: {
-                label: 'Only Street View',
-                default: false,
-                tooltip: 'Only generate guesses in locations with official Google Street View coverage. Requires Google Maps API key to be configured.',
-                requiresApiKey: true,
-            },
-            onlyLand: {
-                label: 'Only Land',
-                default: false,
-                tooltip: 'Only generate guesses on land (not in water). Requires Google Maps API key to be configured.',
-                requiresApiKey: true,
-            },
-
         },
     },
 

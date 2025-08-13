@@ -353,13 +353,6 @@ const setupGlobalKeyBindings = () => {
         if (evt.ctrlKey && evt.shiftKey && evt.key === '<') {
             debugMap();
         }
-
-        // Google Maps integration - only enabled if API key is configured
-        const hasApiKey = !!THE_WINDOW.GOOGLE_MAPS_API_KEY;
-        if (hasApiKey && evt.ctrlKey && (evt.key === '[' || evt.key === ']')) {
-            evt.preventDefault(); // Prevent browser shortcuts
-            handleGoogleMapsShortcut(evt.key);
-        }
     });
 };
 

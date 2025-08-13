@@ -260,14 +260,10 @@ const makeOptionMenu = (mod) => {
         _OPTION_MENU_DRAGGING_OFFSET_Y = undefined;
     });
 
-    const hasApiKey = THE_WINDOW.GOOGLE_MAPS_API_KEY && THE_WINDOW.GOOGLE_MAPS_API_KEY.trim().length > 0;
     const defaults = getDefaultMod(mod).options || {};
     const inputs = []; // Array of [key, type, input element].
     for (const [key, option] of Object.entries(defaults)) {
         if (_IS_DUEL && option.allowInDuels === false) {
-            continue;
-        }
-        if (option.requiresApiKey && !hasApiKey) {
             continue;
         }
         const value = getOption(mod, key);

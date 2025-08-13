@@ -47,5 +47,5 @@ To prevent browser caching, the `?v=` part at the end of each `@require` line sh
 ## Global Keybindings
 
 - **`Ctrl Shift .`** - Reset all mods to default state. If you get in a pickle, either disable the mod via TamperMonkey or use this shortcut.
-- **`Ctrl [`** - Open actual location in Google Maps (standard view). Requires Google Maps API key.
-- **`Ctrl ]`** - Open aerial view (if "Only Land") or Street View (if "Only Street View" or both enabled).
+- **`Ctrl Shift .`** - Open debugger (requires console open).
+

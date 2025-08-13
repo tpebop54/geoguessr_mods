@@ -196,62 +196,7 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
 
             // Generate location with criteria if any special options are enabled
             let location;
-            if (onlyStreetview || onlyLand) {
-                // Check if API key is available for these features
-                if (!hasGoogleApiKey()) {
-                    console.warn('Lottery mod: API-dependent features (Only Street View/Only Land) attempted without Google Maps API key');
-                    button.textContent = 'API key required';
-                    button.disabled = true;
-                    setTimeout(() => {
-                        button.textContent = 'Insert token';
-                        button.disabled = false;
-                    }, 2000);
-                    return;
-                }
-
-                // Show loading indicator with more specific message
-                const criteria = [];
-                if (onlyLand) criteria.push('land');
-                if (onlyStreetview) criteria.push('Street View');
-
-                button.textContent = `Finding ${criteria.join(' + ')}...`;
-                button.disabled = true;
-
-                try {
-                    // Add timeout protection (5 seconds max)
-                    location = await Promise.race([
-                        getRandomLocationWithCriteria(
-                            minLat, maxLat, minLng, maxLng,
-                            onlyStreetview, onlyLand
-                        ),
-                        new Promise((_, reject) =>
-                            setTimeout(() => reject(new Error('Location search timed out')), 5000)
-                        )
-                    ]);
-
-                    if (!location) {
-                        console.warn('Lottery: Could not find location meeting criteria, using fallback');
-                        location = getRandomLocSinusoidal(minLat, maxLat, minLng, maxLng);
-                    }
-                } catch (error) {
-                    console.error('Lottery: Error generating location with criteria:', error);
-                    location = getRandomLocSinusoidal(minLat, maxLat, minLng, maxLng);
-
-                    // Show brief error message to user
-                    button.textContent = 'Error - using fallback';
-                    setTimeout(() => {
-                        button.textContent = 'Insert token';
-                    }, 1500);
-                } finally {
-                    // Restore button (unless we're showing error message)
-                    if (!button.textContent.includes('Error')) {
-                        button.textContent = 'Insert token';
-                    }
-                    button.disabled = false;
-                }
-            } else {
-                location = getRandomLocSinusoidal(minLat, maxLat, minLng, maxLng);
-            }
+            location = getRandomLocSinusoidal(minLat, maxLat, minLng, maxLng);
 
             const { lat, lng } = location;
 
