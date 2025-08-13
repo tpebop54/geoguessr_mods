@@ -51,7 +51,7 @@ const onInsertToken = () => {
         minLng = normalizedLng - nDegLng;
         maxLng = normalizedLng + nDegLng;
     }
-    if (sNaN(minLng) || isNaN(maxLng)) {
+    if (isNaN(minLng) || isNaN(maxLng)) {
         minLng = -179.9999;
         maxLng = 179.9999;
     }
@@ -132,6 +132,7 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     const resetButton = document.createElement('button');
     resetButton.id = 'gg-lottery-reset-button';
     resetButton.classList.add('gg-interactive-button');
+    resetButton.classList.add('gg-reset-button');
     resetButton.innerHTML = '↻';
     resetButton.title = 'Reset token count';
     resetButton.addEventListener('mousedown', (evt) => { // Disble dragging.

@@ -417,5 +417,7 @@ const getWeightedOrRandomLoc = (useMap, randomPct) => { // Randomized pick from 
         } else {
             return getWeightedLoc();
         }
+    } else {
+        return getRandomLoc();
     }
 };

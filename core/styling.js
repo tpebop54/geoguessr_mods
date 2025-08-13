@@ -216,6 +216,15 @@ const optionMenuStyles = `
     input[type=number] {
         -moz-appearance:textfield;
     }
+
+    .reset-button {
+        font-size:y-re 25px;
+        border-radius: 10px;
+        padding: 5px 12px;
+        color: white;
+        background: #211ec4ff;
+        opacity: 75%;
+    }
 `;
 
 // Show Score mod styles
@@ -354,15 +363,6 @@ const tileRevealStyles = `
         pointer-events: none;
     }
 
-    #gg-tile-reset-button {
-        font-size: 25px;
-        border-radius: 10px;
-        padding: 5px 12px;
-        color: white;
-        background: #211ec4ff;
-        opacity: 75%;
-    }
-
     #gg-tile-overlay {
         position: relative;
         width: 100vw;
@@ -435,15 +435,6 @@ const lotteryStyles = `
         gap: 10px;
         align-items: center;
         margin-top: 0.5em;
-    }
-
-    #gg-lottery-reset-button {
-        font-size: 25px;
-        border-radius: 10px;
-        padding: 5px 12px;
-        color: white;
-        background: #211ec4ff;
-        opacity: 75%;
     }
 `;
 
