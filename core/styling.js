@@ -412,17 +412,6 @@ const lotteryStyles = `
         cursor: move;
     }
 
-    #gg-lottery-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: transparent;
-        z-index: 1000;
-        pointer-events: auto;
-    }
-
     #gg-lottery-counter-div {
         display: flex;
         justify-content: space-between;

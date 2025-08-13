@@ -105,13 +105,7 @@ const onClick = () => {
     _LOTTERY_COUNT -= 1;
     counter.innerText = _LOTTERY_COUNT;
 
-    // Temporarily disable click blocking for this programmatic click
-    THE_WINDOW._LOTTERY_ALLOWING_CLICK = true;
     clickAt(finalLat, finalLng);
-    // Re-enable click blocking after a short delay
-    setTimeout(() => {
-        THE_WINDOW._LOTTERY_ALLOWING_CLICK = false;
-    }, 100);
 
     setMapCenter(finalLat, finalLng);
 };
@@ -203,42 +197,6 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     _LOTTERY_DISPLAY = container;
 };
 
-const removeClickBlock = () => {
-    const container = getGuessmapContainer();
-    if (!container) {
-        return;
-    }
-    const overlay = container.querySelector('.gg-lottery-overlay');
-    if (!overlay) {
-        return;
-    }
-    if (overlay._overlayEventListeners) {
-        overlay._overlayEventListeners.forEach(({ event, handler, options }) => {
-            overlay.removeEventListener(event, handler, options);
-        });
-    }
-    overlay.remove();
-};
-
-const addClickBlock = () => {
-    removeClickBlock();
-
-    const overlay = document.createElement('div');
-    overlay.id = 'gg-lottery-overlay';
-
-    // Only block click events, allow all other interactions (drag, zoom, etc.)
-    const overlayClickHandler = (evt) => {
-        if (evt.type === 'click') {
-            evt.preventDefault();
-            evt.stopPropagation();
-        }
-    };
-    overlay.addEventListener('click', overlayClickHandler, true);
-
-    const container = getGuessmapContainer();
-    container.insertBefore(overlay, container.firstChild);
-};
-
 const resetTokens = () => {
     const mod = MODS.lottery;
     _LOTTERY_COUNT = getOption(mod, 'nTokens');
@@ -257,7 +215,6 @@ const updateLottery = (forceState = undefined) => {
 
     if (!active || !areModsAvailable()) {
         removeLotteryDisplay();
-        removeClickBlock();
         return;
     }
 
@@ -273,7 +230,6 @@ const updateLottery = (forceState = undefined) => {
     }
 
     waitForMapsReady();
-    addClickBlock();
 
     saveState();
 };
