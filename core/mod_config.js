@@ -106,7 +106,7 @@ const MODS = {
                 default: true,
                 tooltip: 'If enabled, use a guess distribution tailored to global world GeoGuessr coverage.\nIf disabled, guess anywhere.',
             },
-            randomizationPct: {
+            randomPct: {
                 label: 'Randomization (0-100%)',
                 default: 0,
                 tooltip: 'This percent (0-100) of your guesses will not use the coverage map.',

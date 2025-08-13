@@ -6,7 +6,6 @@
 // MOD: Lottery.
 // ===============================================================================================================================
 
-
 let _LOTTERY_DISPLAY; // Display elements for lottery mod. (counter and button).
 let _LOTTERY_COUNT; // How many remaining guesses you have.
 let _LOTTERY_DRAGGING = false; // Makes lottery display draggable because it overlaps the menu.
@@ -20,7 +19,7 @@ const removeLotteryDisplay = () => {
     }
 };
 
-function generateRandomCoordinates() { // Generate uniform distribution within Mercator bounds.
+function getRandomLoc() { // Generate uniform distribution within Mercator bounds.
     const minLat = -85.05112878;
     const maxLat = 85.05112878;
     const u = Math.random() * (Math.sin(maxLat * Math.PI / 180) - Math.sin(minLat * Math.PI / 180)) + Math.sin(minLat * Math.PI / 180);
@@ -29,20 +28,24 @@ function generateRandomCoordinates() { // Generate uniform distribution within M
     return { lat, lng };
 };
 
-const generateWeightedCoordinates = () => { // Uses pre-generated map distribution of a large number of coordinates to pick randomly from.
+const getWeightedLoc = () => { // Uses pre-generated map distribution of a large number of coordinates to pick randomly from.
     if (!LOTTERY_LATLNGS) {
         debugger;
     }
     return LOTTERY_LATLNGS[Math.floor(Math.random() * LOTTERY_LATLNGS.length)];
 };
 
-const generateLotteryCoordinates = (useMap, randomPct) => {
+const getLotteryLoc = (useMap, randomPct) => { // Randomized pick from map, full random, or both.
+    if (isNaN(randomPct) || randomPct < 0 || randomPct > 100) {
+        randomPct = 0;
+        useMap = true;
+    }
     if (useMap) {
         const random = Math.random() * randomPct;
-        if (random < percentage) {
-            return generateRandomCoordinates();
+        if (random < randomPct) {
+            return getRandomLoc();
         } else {
-            return generateWeightedCoordinates();
+            return getWeightedLoc();
         }
     }
 };
@@ -84,30 +87,19 @@ const onClick = () => {
         maxLng = 179.9999;
     }
 
-    let location;
-    location = getRandomLocSinusoidal(minLat, maxLat, minLng, maxLng);
+    let useMap = getOption(mod, 'useCoverageMap');
+    let randomPct = getOption(mod, 'randomPct');
+    const loc = getLotteryLoc(useMap, randomPct);
+    let { lat, lng } = loc;
 
-    const { lat, lng } = location;
-
-    // Must be within Mercator bounds.
-    const finalLat = Math.max(_MERCATOR_LAT_MIN, Math.min(_MERCATOR_LAT_MAX, lat));
-    const finalLng = Math.max(_MERCATOR_LNG_MIN, Math.min(_MERCATOR_LNG_MAX, lng));
-
-    // Validate that coordinates are valid numbers before proceeding
-    if (isNaN(finalLat) || isNaN(finalLng)) {
-        button.textContent = 'Coordinate error';
-        setTimeout(() => {
-            button.textContent = 'Insert token';
-        }, 2000);
-        return;
-    }
+    lat = Math.max(_MERCATOR_LAT_MIN, Math.min(_MERCATOR_LAT_MAX, lat));
+    lng = Math.max(_MERCATOR_LNG_MIN, Math.min(_MERCATOR_LNG_MAX, lng));
 
     _LOTTERY_COUNT -= 1;
     counter.innerText = _LOTTERY_COUNT;
 
-    clickAt(finalLat, finalLng);
-
-    setMapCenter(finalLat, finalLng);
+    clickAt(lat, lng);
+    setMapCenter(lat, lng);
 };
 button.addEventListener('click', onClick);
 
@@ -122,7 +114,6 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     if (!areModsAvailable()) {
         return;
     }
-
     removeLotteryDisplay();
 
     const container = document.createElement('div'); // Contains the full lottery display.
@@ -167,20 +158,17 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     button.classList.add('gg-interactive-button');
     button.textContent = 'Insert token';
 
-    // Prevent dragging when clicking the button
-    button.addEventListener('mousedown', (evt) => {
+    button.addEventListener('mousedown', (evt) => { // Disable dragging.
         evt.stopPropagation();
     });
 
-    // Reset button with circular arrow symbol
     const resetButton = document.createElement('button');
     resetButton.id = 'gg-lottery-reset-button';
     resetButton.classList.add('gg-interactive-button');
     resetButton.innerHTML = '↻';
     resetButton.title = 'Reset token count';
 
-    // Prevent dragging when clicking the reset button
-    resetButton.addEventListener('mousedown', (evt) => {
+    resetButton.addEventListener('mousedown', (evt) => { // Disble dragging.
         evt.stopPropagation();
     });
 
@@ -200,8 +188,6 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
 const resetTokens = () => {
     const mod = MODS.lottery;
     _LOTTERY_COUNT = getOption(mod, 'nTokens');
-
-    // Update the counter display if it exists
     const counter = document.getElementById('gg-lottery-counter');
     if (counter) {
         counter.innerText = _LOTTERY_COUNT;
@@ -217,19 +203,14 @@ const updateLottery = (forceState = undefined) => {
         removeLotteryDisplay();
         return;
     }
-
     disableConflictingMods(mod);
-
     if (getOption(mod, 'resetEachRound')) {
         resetTokens();
     }
-
     if (!_LOTTERY_DISPLAY) {
         _LOTTERY_COUNT = getOption(mod, 'nTokens');
         makeLotteryDisplay();
     }
-
     waitForMapsReady();
-
     saveState();
 };
