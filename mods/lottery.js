@@ -19,7 +19,7 @@ const removeLotteryDisplay = () => {
     }
 };
 
-const onClick = () => {
+const onInsertToken = () => {
     if (_LOTTERY_COUNT === 0) {
         return;
     }
@@ -70,14 +70,12 @@ const onClick = () => {
     clickAt(lat, lng);
     setMapCenter(lat, lng);
 };
-button.addEventListener('click', onClick);
 
-const onReset = () => {
+const onResetTokens = () => {
     const mod = MODS.lottery;
     _LOTTERY_COUNT = getOption(mod, 'nTokens');
     counter.innerText = _LOTTERY_COUNT;
 };
-resetButton.addEventListener('click', onReset);
 
 const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     if (!areModsAvailable()) {
@@ -122,29 +120,29 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     counterDiv.appendChild(counterLabel);
     counterDiv.appendChild(counter);
 
-    const button = document.createElement('button');
-    button.id = 'gg-lottery-button';
-    button.classList.add('gg-interactive-button');
-    button.textContent = 'Insert token';
-
-    button.addEventListener('mousedown', (evt) => { // Disable dragging.
+    const insertButton = document.createElement('button');
+    insertButton.id = 'gg-lottery-button';
+    insertButton.classList.add('gg-interactive-button');
+    insertButton.textContent = 'Insert token';
+    insertButton.addEventListener('mousedown', (evt) => { // Disable dragging.
         evt.stopPropagation();
     });
+    insertButton.addEventListener('click', onInsertToken);
 
     const resetButton = document.createElement('button');
     resetButton.id = 'gg-lottery-reset-button';
     resetButton.classList.add('gg-interactive-button');
     resetButton.innerHTML = '↻';
     resetButton.title = 'Reset token count';
-
     resetButton.addEventListener('mousedown', (evt) => { // Disble dragging.
         evt.stopPropagation();
     });
+    resetButton.addEventListener('click', onResetTokens);
 
     // Button container to hold both buttons side by side.
     const buttonContainer = document.createElement('div');
     buttonContainer.id = 'gg-lottery-button-container';
-    buttonContainer.appendChild(button);
+    buttonContainer.appendChild(insertButton);
     buttonContainer.appendChild(resetButton);
 
     container.appendChild(counterDiv);
