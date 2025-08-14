@@ -111,18 +111,6 @@ const MODS = {
                 default: 0,
                 tooltip: 'This percent (0-100) of your guesses will not use the coverage map.',
             },
-            nDegLat: {
-                label: 'Latitude margin (deg)',
-                default: 90,
-                tooltip: 'Guess up to this many degrees latitude away from the target',
-                allowInDuels: false,
-            },
-            nDegLng: {
-                label: 'Longitude margin (deg)',
-                default: 180,
-                tooltip: 'Guess up to this many degrees longitude away from the target',
-                allowInDuels: false,
-            },
         },
     },
 

@@ -27,45 +27,10 @@ const insertToken = () => {
     if (_LOTTERY_COUNT === 0) {
         return;
     }
-
     const mod = MODS.lottery;
-    const nDegLat = getOption(mod, 'nDegLat');
-    const nDegLng = getOption(mod, 'nDegLng');
-
-    const actual = getActualLoc();
-    if (!actual || nDegLat < 0 || nDegLat > 90) {
-        nDegLat = 0;
-    }
-    if (!actual || nDegLng < 0 || nDegLng > 180) {
-        nDegLng = 0;
-    }
-
-    // Calculate latitude bounds and clamp to safe Mercator projection limits
-    let minLat = Math.max(_MERCATOR_LAT_MIN, actual.lat - nDegLat);
-    let maxLat = Math.min(_MERCATOR_LAT_MAX, actual.lat + nDegLat);
-
-    // The logic gets confusing across the prime meridian with large lng ranges.
-    // Just assume that [-180, 180] means the entire world's longitude. Should be fine.
-    let minLng, maxLng;
-    if (nDegLng === 180) {
-        minLng = -179.9999;
-        maxLng = 179.9999;
-    } else {
-        const normalizedLng = ((actual.lng + 180) % 360 + 360) % 360 - 180;
-        minLng = normalizedLng - nDegLng;
-        maxLng = normalizedLng + nDegLng;
-    }
-    if (isNaN(minLng) || isNaN(maxLng)) {
-        minLng = -179.9999;
-        maxLng = 179.9999;
-    }
-
-    // Additional logic is applied if using the weighted map and the custom bounds.
-    const bounds = { minLat, maxLat, minLng, maxLng };
-
     let useMap = getOption(mod, 'useCoverageMap');
     let randomPct = getOption(mod, 'randomPct');
-    const loc = getWeightedOrRandomLoc(useMap, randomPct, bounds);
+    const loc = getWeightedOrRandomLoc(useMap, randomPct);
     let { lat, lng } = loc;
 
     lat = Math.max(_MERCATOR_LAT_MIN, Math.min(_MERCATOR_LAT_MAX, lat));
