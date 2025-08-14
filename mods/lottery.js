@@ -55,7 +55,7 @@ const insertToken = () => {
         minLng = normalizedLng - nDegLng;
         maxLng = normalizedLng + nDegLng;
     }
-    if (sNaN(minLng) || isNaN(maxLng)) {
+    if (isNaN(minLng) || isNaN(maxLng)) {
         minLng = -179.9999;
         maxLng = 179.9999;
     }
