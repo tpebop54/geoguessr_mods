@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Street View Coverage Map</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+        
+        .controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <script>
+        let map;
+        let streetViewLayer;
+        let infoWindow;
+
+        function initMap() {
+            // Initialize the infoWindow for tooltips
+            infoWindow = new google.maps.InfoWindow();
+
+            // Custom map style with black water, medium gray land, white roads
+            const customMapStyle = [
+                {
+                    "featureType": "all",
+                    "elementType": "labels",
+                    "stylers": [{"visibility": "off"}]
+                },
+                {
+                    "featureType": "water",
+                    "elementType": "geometry",
+                    "stylers": [{"color": "#000000"}]
+                },
+                {
+                    "featureType": "landscape",
+                    "elementType": "geometry.fill",
+                    "stylers": [{"color": "#808080"}]
+                },
+                {
+                    "featureType": "landscape",
+                    "elementType": "geometry.stroke",
+                    "stylers": [
+                        {"color": "#000000"},
+                        {"weight": 1}
+                    ]
+                },
+                {
+                    "featureType": "administrative.country",
+                    "elementType": "geometry.stroke",
+                    "stylers": [{"visibility": "off"}]
+                },
+                {
+                    "featureType": "administrative.land_parcel",
+                    "elementType": "geometry.stroke",
+                    "stylers": [{"visibility": "off"}]
+                },
+                {
+                    "featureType": "administrative.province",
+                    "elementType": "geometry.stroke",
+                    "stylers": [{"visibility": "off"}]
+                },
+                {
+                    "featureType": "road",
+                    "elementType": "geometry",
+                    "stylers": [{"color": "#ffffff"}]
+                },
+                {
+                    "featureType": "poi",
+                    "elementType": "geometry",
+                    "stylers": [{"visibility": "off"}]
+                },
+                {
+                    "featureType": "transit",
+                    "elementType": "geometry",
+                    "stylers": [{"visibility": "off"}]
+                }
+            ];
+
+            // Initialize the map with bounds set to Mercator limits
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: 0, lng: 0 }, // Center of world
+                zoom: 2,
+                mapTypeId: google.maps.MapTypeId.ROADMAP,
+                streetViewControl: true,
+                mapTypeControl: true,
+                fullscreenControl: true,
+                zoomControl: true,
+                styles: customMapStyle,
+                restriction: {
+                    latLngBounds: {
+                        north: 85.0511,
+                        south: -85.0511,
+                        west: -180,
+                        east: 180
+                    },
+                    strictBounds: true
+                }
+            });
+
+            // Create Street View layer with custom styling
+            streetViewLayer = new google.maps.StreetViewCoverageLayer();
+            
+            // Apply custom styling to make Street View lines white and thin
+            const streetViewStyle = {
+                strokeColor: '#ffffff',
+                strokeWeight: 1,
+                strokeOpacity: 0.9
+            };
+            
+            streetViewLayer.setMap(map);
+
+            // Add Mercator projection boundary rectangle
+            const mercatorBounds = new google.maps.LatLngBounds(
+                new google.maps.LatLng(-85.0511, -180), // Southwest corner
+                new google.maps.LatLng(85.0511, 180)    // Northeast corner
+            );
+
+            const mercatorRectangle = new google.maps.Rectangle({
+                bounds: mercatorBounds,
+                strokeColor: '#ffffff',
+                strokeOpacity: 1.0,
+                strokeWeight: 2,
+                fillColor: 'transparent',
+                fillOpacity: 0.0,
+                clickable: false
+            });
+            mercatorRectangle.setMap(map);
+
+            // Street View layer is always on - no toggle needed
+            // No toggle functionality needed
+
+            // Add click listener to show latitude/longitude tooltip
+            map.addListener('click', function(event) {
+                const lat = event.latLng.lat().toFixed(6);
+                const lng = event.latLng.lng().toFixed(6);
+                
+                infoWindow.setContent(`
+                    <div style="font-family: monospace; font-size: 12px;">
+                        <strong>Coordinates:</strong><br>
+                        Latitude: ${lat}°<br>
+                        Longitude: ${lng}°
+                    </div>
+                `);
+                infoWindow.setPosition(event.latLng);
+                infoWindow.open(map);
+            });
+        }
+
+        // Handle API load errors
+        window.gm_authFailure = function() {
+            document.getElementById('map').innerHTML = 
+                '<div style="padding: 20px; text-align: center; color: red;">' +
+                '<h3>Google Maps API Key Required</h3>' +
+                '<p>To use this map, you need to:</p>' +
+                '<ol style="text-align: left; display: inline-block;">' +
+                '<li>Get a Google Maps API key from the Google Cloud Console</li>' +
+                '<li>Enable the Maps JavaScript API and Street View Static API</li>' +
+                '<li>Replace "YOUR_API_KEY" in the script URL with your actual API key</li>' +
+                '</ol>' +
+                '<p>Visit <a href="https://developers.google.com/maps/documentation/javascript/get-api-key" target="_blank">' +
+                'Google Maps API documentation</a> for detailed instructions.</p>' +
+                '</div>';
+        };
+    </script>
+
+    <!-- Replace YOUR_API_KEY with your actual Google Maps API key -->
+    <script async defer 
+            src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap">
+    </script>
+</body>
+</html>
