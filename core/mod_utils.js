@@ -402,7 +402,8 @@ const getWeightedLoc = () => { // Uses pre-generated map distribution of a large
     if (!LOTTERY_LATLNGS) {
         debugger;
     }
-    return LOTTERY_LATLNGS[Math.floor(Math.random() * LOTTERY_LATLNGS.length)];
+    const latLng = LOTTERY_LATLNGS[Math.floor(Math.random() * LOTTERY_LATLNGS.length)];
+    return { lat: latLng[0], lng: latLng[1] };
 };
 
 const getWeightedOrRandomLoc = (useMap, randomPct) => { // Randomized pick from map, full random, or both.
