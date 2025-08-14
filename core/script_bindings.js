@@ -59,89 +59,98 @@ const _storeButtonsVisible = (visible) => {
     THE_WINDOW.localStorage.setItem(_buttonsVisibleKey, _BUTTONS_VISIBLE);
 };
 
-const addButtons = () => { // Add mod buttons to the active round, with a little button to toggle them.
+const makeModsContainer = () => {
+    const modsContainer = document.createElement('div'); // Header and buttons.
+    modsContainer.id = 'gg-mods-container';
+    const headerContainer = document.createElement('div'); // Header and button toggle.
+    headerContainer.id = 'gg-mods-header-container';
+    const headerText = document.createElement('div');
+    headerText.id = 'gg-mods-header';
+    headerText.textContent = `TPEBOP'S MODS`;
+    const version = (typeof MOD_VERSION !== 'undefined') ? MOD_VERSION : 'unknown';
+    headerText.title = `Version: ${version}\nPress "Ctrl Shift ." to disable all and refresh.`;
+    const modMenuToggle = document.createElement('button');
+    modMenuToggle.id = 'gg-mods-container-toggle';
+    modMenuToggle.textContent = '▼';
+    headerContainer.appendChild(headerText);
+    headerContainer.appendChild(modMenuToggle);
+
+    const buttonContainer = document.createElement('div'); // Mod buttons.
+    buttonContainer.id = 'gg-mods-button-container';
+
+    for (const mod of Object.values(MODS)) {
+        if (!mod.show) {
+            continue;
+        }
+        if (_IS_DUEL && !mod.allowInDuels) {
+            continue;
+        }
+        try {
+            const modButton = document.createElement('div');
+            modButton.id = getModButtonId(mod);
+            modButton.classList.add('gg-mod-button');
+            modButton.title = mod.tooltip;
+            const buttonText = getButtonText(mod);
+            modButton.textContent = buttonText;
+            buttonContainer.appendChild(modButton);
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    modsContainer.appendChild(headerContainer);
+    modsContainer.appendChild(buttonContainer);
+
+    const setMenuVisible = (show) => {
+        if (show) {
+            buttonContainer.classList.remove('hidden');
+            modMenuToggle.textContent = '▼';
+        } else {
+            buttonContainer.classList.add('hidden');
+            modMenuToggle.textContent = '▶';
+        }
+        _storeButtonsVisible(show);
+    };
+
+    modMenuToggle.addEventListener('click', function () {
+        _BUTTONS_VISIBLE = !_BUTTONS_VISIBLE;
+        setMenuVisible(_BUTTONS_VISIBLE);
+    });
+    setMenuVisible(!!_BUTTONS_VISIBLE);
+
+    return modsContainer;
+};
+
+const addButtons = () => { // Add mod buttons to the active round, with an arrow button to toggle them.
     try {
         if (!areModsAvailable()) {
             return false;
         }
-
         const streetviewContainer = getStreetviewContainer();
-        const modContainer = getModsContainer(); // Includes header and buttons.
-        if (modContainer || !streetviewContainer) { // Mods already loaded, or map not loaded yet.
-            return false;
+        if (!streetviewContainer) {
+            return;
         }
-
-        const modsContainer = document.createElement('div'); // Header and buttons.
-        modsContainer.id = 'gg-mods-container';
-        const headerContainer = document.createElement('div'); // Header and button toggle.
-        headerContainer.id = 'gg-mods-header-container';
-        const headerText = document.createElement('div');
-        headerText.id = 'gg-mods-header';
-        headerText.textContent = `TPEBOP'S MODS`;
-        const version = (typeof MOD_VERSION !== 'undefined') ? MOD_VERSION : 'unknown';
-        headerText.title = `Version: ${version}\nPress "Ctrl Shift ." to disable all and refresh.`;
-        const modMenuToggle = document.createElement('button');
-        modMenuToggle.id = 'gg-mods-container-toggle';
-        modMenuToggle.textContent = '▼';
-        headerContainer.appendChild(headerText);
-        headerContainer.appendChild(modMenuToggle);
-
-        const buttonContainer = document.createElement('div'); // Mod buttons.
-        buttonContainer.id = 'gg-mods-button-container';
-
-        for (const mod of Object.values(MODS)) {
-            if (!mod.show) {
-                continue;
-            }
-            if (_IS_DUEL && !mod.allowInDuels) {
-                continue;
-            }
-            try {
-                const modButton = document.createElement('div');
-                modButton.id = getModButtonId(mod);
-                modButton.classList.add('gg-mod-button');
-                modButton.title = mod.tooltip;
-                const buttonText = getButtonText(mod);
-                modButton.textContent = buttonText;
-                buttonContainer.appendChild(modButton);
-            } catch (err) {
-                console.error(err);
-            }
+        let modsContainer = getModsContainer();
+        if (modsContainer) {
+            return;
+        } else {
+            modsContainer = makeModsContainer();
         }
+        streetviewContainer.appendChild(modsContainer);
 
-        modsContainer.appendChild(headerContainer);
-        modsContainer.appendChild(buttonContainer);
+        runOnInterval(
+            bindButtons,
+            200,
+            5000,
+        );
 
         const addButtonContainer = () => {
-            if (!document.getElementById('gg-mods-container')) {
-                streetviewContainer.appendChild(modsContainer);
-                const verifyContainer = document.getElementById('gg-mods-container');
-                if (verifyContainer) {
-                    bindButtons();
-                } else {
-                    console.error('Container was not found after append - something went wrong');
-                }
+            if (getModsContainer()) {
+
             } else {
                 bindButtons();
             }
         };
-
-        const setMenuVisible = (show) => {
-            if (show) {
-                buttonContainer.classList.remove('hidden');
-                modMenuToggle.textContent = '▼';
-            } else {
-                buttonContainer.classList.add('hidden');
-                modMenuToggle.textContent = '▶';
-            }
-            _storeButtonsVisible(show);
-        };
-
-        modMenuToggle.addEventListener('click', function () {
-            _BUTTONS_VISIBLE = !_BUTTONS_VISIBLE;
-            setMenuVisible(_BUTTONS_VISIBLE);
-        });
-        setMenuVisible(!!_BUTTONS_VISIBLE);
 
         setTimeout(addButtonContainer, 100);
         _MODS_READY = true;
@@ -153,10 +162,10 @@ const addButtons = () => { // Add mod buttons to the active round, with a little
     }
 };
 
-const removeModMenu = () => {
-    const modContainer = getModsContainer();
-    if (modContainer) {
-        modContainer.remove();
+const removeModsContainer = () => {
+    const modsContainer = getModsContainer();
+    if (modsContainer) {
+        modsContainer.remove();
         return true;
     }
     return false;
