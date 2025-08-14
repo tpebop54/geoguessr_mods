@@ -389,7 +389,7 @@ const clampToMercatorBounds = (lat, lng) => {
     return { lat: clampedLat, lng: clampedLng };
 };
 
-function getRandomLoc() { // Generate uniform distribution within Mercator bounds.
+function getRandomLoc(bounds) { // Generate uniform distribution within Mercator bounds.
     const minLat = -85.05112878;
     const maxLat = 85.05112878;
     const u = Math.random() * (Math.sin(maxLat * Math.PI / 180) - Math.sin(minLat * Math.PI / 180)) + Math.sin(minLat * Math.PI / 180);
@@ -398,15 +398,20 @@ function getRandomLoc() { // Generate uniform distribution within Mercator bound
     return { lat, lng };
 };
 
-const getWeightedLoc = () => { // Uses pre-generated map distribution of a large number of coordinates to pick randomly from.
-    if (!LOTTERY_LATLNGS) {
-        debugger;
+const getWeightedLoc = (bounds = null) => { // Uses pre-generated map distribution of a large number of coordinates to pick randomly from.
+    const { minLat, maxLat, minLng, maxLng } = bounds || {};
+
+    let clickableLocs = LOTTERY_LATLNGS || [];
+
+    if (isNaN(minLat) || isNaN(maxLat) || isNaN(minLng) || isNaN(maxLng)) {
+
     }
+
     const latLng = LOTTERY_LATLNGS[Math.floor(Math.random() * LOTTERY_LATLNGS.length)];
     return { lat: latLng[0], lng: latLng[1] };
 };
 
-const getWeightedOrRandomLoc = (useMap, randomPct) => { // Randomized pick from map, full random, or both.
+const getWeightedOrRandomLoc = (useMap, randomPct, bounds = null) => { // Randomized pick from map, full random, or both.
     if (isNaN(randomPct) || randomPct < 0 || randomPct > 100) {
         randomPct = 0;
         useMap = true;
@@ -414,12 +419,12 @@ const getWeightedOrRandomLoc = (useMap, randomPct) => { // Randomized pick from 
     if (useMap) {
         const random = Math.random() * randomPct;
         if (random < randomPct) {
-            return getRandomLoc();
+            return getRandomLoc(bounds);
         } else {
-            return getWeightedLoc();
+            return getWeightedLoc(bounds);
         }
     } else {
-        return getRandomLoc();
+        return getRandomLoc(bounds);
     }
 };
 

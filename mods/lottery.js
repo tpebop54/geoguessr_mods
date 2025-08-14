@@ -60,9 +60,12 @@ const insertToken = () => {
         maxLng = 179.9999;
     }
 
+    // Additional logic is applied if using the weighted map and the custom bounds.
+    const bounds = { minLat, maxLat, minLng, maxLng };
+
     let useMap = getOption(mod, 'useCoverageMap');
     let randomPct = getOption(mod, 'randomPct');
-    const loc = getWeightedOrRandomLoc(useMap, randomPct);
+    const loc = getWeightedOrRandomLoc(useMap, randomPct, bounds);
     let { lat, lng } = loc;
 
     lat = Math.max(_MERCATOR_LAT_MIN, Math.min(_MERCATOR_LAT_MAX, lat));
