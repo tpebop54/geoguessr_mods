@@ -138,26 +138,13 @@ const addButtons = () => { // Add mod buttons to the active round, with an arrow
         }
         streetviewContainer.appendChild(modsContainer);
 
-        runOnInterval(
-            bindButtons,
-            200,
-            5000,
-        );
+        setTimeout(bindButtons, 200);
 
-        const addButtonContainer = () => {
-            if (getModsContainer()) {
-
-            } else {
-                bindButtons();
-            }
-        };
-
-        setTimeout(addButtonContainer, 100);
         _MODS_READY = true;
         return true;
 
     } catch (err) {
-        console.error('Error creating mod menu:', err);
+        console.error(err);
         return false;
     }
 };
