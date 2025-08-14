@@ -118,6 +118,7 @@ const optionMenuStyles = `
     .gg-option-label {
         white-space: nowrap;
         padding-right: 20px;
+        cursor: help;
     }
 
     .gg-option-input {

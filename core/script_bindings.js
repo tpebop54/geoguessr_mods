@@ -271,7 +271,7 @@ const onRoundStartSingleplayer = (evt) => { // Singleplayer only. TODO: clean up
                 GG_GUESSMAP = data;
             });
     } catch (err) {
-        console.err(err);
+        console.error(err);
     }
 
     waitForMapsReady(reactivateMods);
