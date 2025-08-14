@@ -357,8 +357,8 @@ const initializeGlobalKeybindings = () => {
 };
 initializeGlobalKeybindings();
 
-// For reloading mods on new rounds, we need to watch for the disappearance of specific elements
-// that indicate a new round is starting.
+// For reloading mods on new rounds, we need to watch for the disappearance of specific elements.
+// This will get called for every DOM change, but it's more robust than trying to intercept traffic.
 let _RESULT_MAP = null;
 let _ROUND_STARTING_WRAPPER = null;
 
@@ -374,11 +374,19 @@ const watchRoundEnd = () => {
             }
         } else {
             const currentResultMap = getResultMap();
+            const nextRoundButton = getSingleplayerNextRoundButton();
             if (currentResultMap) {
                 _RESULT_MAP = currentResultMap;
+                nextRoundButton.addEventListener('click', () => {
+                    runOnInterval(
+                        updateFunFilters,
+                        500,
+                        5000,
+                    );
+                });
             } else if (_RESULT_MAP) {
                 _RESULT_MAP = null; // Result map disappeared, new round starting.
-                onRoundStarSingleplayer();
+                onRoundStartSingleplayer();
             }
         }
     };

@@ -104,6 +104,10 @@ const getMultiplayerNextRoundButton = () => {
     return null;
 };
 
+const getSingleplayerNextRoundButton = () => {
+    return document.querySelector(`button[data-qa="close-round-result"]`);
+};
+
 const getSingleplayerGameResultsDiv = () => {
     return document.querySelector(`div[class^="result-overlay-"]`);
 };
