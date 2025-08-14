@@ -217,8 +217,8 @@ const optionMenuStyles = `
         -moz-appearance:textfield;
     }
 
-    .reset-button {
-        font-size:y-re 25px;
+    .gg-reset-button {
+        font-size: 25px;
         border-radius: 10px;
         padding: 5px 12px;
         color: white;

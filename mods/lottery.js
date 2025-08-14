@@ -19,7 +19,11 @@ const removeLotteryDisplay = () => {
     }
 };
 
-const onInsertToken = () => {
+const getLotteryCounter = () => {
+    return document.getElementById('gg-lottery-counter');
+};
+
+const insertToken = () => {
     if (_LOTTERY_COUNT === 0) {
         return;
     }
@@ -51,7 +55,7 @@ const onInsertToken = () => {
         minLng = normalizedLng - nDegLng;
         maxLng = normalizedLng + nDegLng;
     }
-    if (isNaN(minLng) || isNaN(maxLng)) {
+    if (sNaN(minLng) || isNaN(maxLng)) {
         minLng = -179.9999;
         maxLng = 179.9999;
     }
@@ -64,17 +68,24 @@ const onInsertToken = () => {
     lat = Math.max(_MERCATOR_LAT_MIN, Math.min(_MERCATOR_LAT_MAX, lat));
     lng = Math.max(_MERCATOR_LNG_MIN, Math.min(_MERCATOR_LNG_MAX, lng));
 
-    _LOTTERY_COUNT -= 1;
-    counter.innerText = _LOTTERY_COUNT;
-
+     _LOTTERY_COUNT -= 1;
+    const counter = getLotteryCounter();
+    if (counter) {
+        counter.innerText = _LOTTERY_COUNT;
+    }
+    saveState();
     clickAt(lat, lng);
     setMapCenter(lat, lng);
 };
 
-const onResetTokens = () => {
+const resetTokens = () => {
     const mod = MODS.lottery;
     _LOTTERY_COUNT = getOption(mod, 'nTokens');
-    counter.innerText = _LOTTERY_COUNT;
+    const counter = getLotteryCounter();
+    if (counter) {
+        counter.innerText = _LOTTERY_COUNT;
+    }
+    saveState();
 };
 
 const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
@@ -127,7 +138,7 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     insertButton.addEventListener('mousedown', (evt) => { // Disable dragging.
         evt.stopPropagation();
     });
-    insertButton.addEventListener('click', onInsertToken);
+    insertButton.addEventListener('click', insertToken);
 
     const resetButton = document.createElement('button');
     resetButton.id = 'gg-lottery-reset-button';
@@ -138,7 +149,7 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     resetButton.addEventListener('mousedown', (evt) => { // Disble dragging.
         evt.stopPropagation();
     });
-    resetButton.addEventListener('click', onResetTokens);
+    resetButton.addEventListener('click', resetTokens);
 
     // Button container to hold both buttons side by side.
     const buttonContainer = document.createElement('div');
@@ -151,16 +162,6 @@ const makeLotteryDisplay = () => { // Make the div and controls for the lottery.
     document.body.appendChild(container);
 
     _LOTTERY_DISPLAY = container;
-};
-
-const resetTokens = () => {
-    const mod = MODS.lottery;
-    _LOTTERY_COUNT = getOption(mod, 'nTokens');
-    const counter = document.getElementById('gg-lottery-counter');
-    if (counter) {
-        counter.innerText = _LOTTERY_COUNT;
-    }
-    saveState();
 };
 
 const updateLottery = (forceState = undefined) => {
