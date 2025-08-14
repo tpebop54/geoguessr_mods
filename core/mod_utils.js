@@ -407,8 +407,7 @@ const getWeightedOrRandomLoc = (useMap, randomPct) => { // Randomized pick from 
         useMap = true;
     }
     if (useMap) {
-        const random = Math.random() * randomPct;
-        if (random < randomPct) {
+        if (Math.random() < randomPct / 100) {
             return getRandomLoc();
         } else {
             return getWeightedLoc();
