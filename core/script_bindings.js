@@ -273,7 +273,7 @@ const onRoundStartSingleplayer = (evt) => { // Singleplayer only. TODO: clean up
     } catch (err) {
         console.error(err);
     }
-    
+
     waitForMapsReady(reactivateMods);
     THE_WINDOW.dispatchEvent(new CustomEvent('gg_round_start'));
 };
@@ -393,6 +393,16 @@ const watchRoundEnd = () => {
             for (const container of document.querySelectorAll('.gg-persistent-container')) {
                 container.parentElement.removeChild(container);
             }
+        }
+        const playAgainButton = getPlayAgainButton();
+        if (playAgainButton) {
+            playAgainButton.addEventListener('click', () => {
+                runOnInterval(
+                    addButtons,
+                    200,
+                    5000,
+                );
+            });
         }
     };
 
