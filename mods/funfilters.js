@@ -160,7 +160,7 @@ const getFilterStr = (mod) => { // Get string that can be applied to streetview 
     if (blurNumber > 0) {
         activeFilter.blur = `${blurNumber}px`;
     }
-    
+
     // For Opera, use more performance-friendly filters
     if (IS_OPERA) {
         // Limit filters to basic ones that perform better in Opera
@@ -171,7 +171,7 @@ const getFilterStr = (mod) => { // Get string that can be applied to streetview 
             }
         }
     }
-    
+
     let filterStr = '';
     for (const [key, value] of Object.entries(activeFilter)) {
         if (value == null) {
@@ -188,8 +188,8 @@ const applyScreenScaling = (percentage) => {
     if (!streetviewCanvas) {
         return;
     }
-    
-    if (percentage === 100 || !percentage || percentage <= 0) {    
+
+    if (percentage === 100 || !percentage || percentage <= 0) {
         // Reset canvas to original state
         streetviewCanvas.style.width = '';
         streetviewCanvas.style.height = '';
@@ -197,25 +197,25 @@ const applyScreenScaling = (percentage) => {
         streetviewCanvas.style.top = '';
         streetviewCanvas.style.left = '';
         streetviewCanvas.style.transformOrigin = '';
-        
+
         // Store that we're not scaling anymore
         streetviewCanvas.dataset.isScaled = 'false';
         streetviewCanvas.dataset.scalePercentage = '100';
     } else {
         const scale = percentage / 100;
-        
+
         const originalWidth = streetviewCanvas.width || streetviewCanvas.offsetWidth;
         const originalHeight = streetviewCanvas.height || streetviewCanvas.offsetHeight;
-        
+
         streetviewCanvas.style.transformOrigin = 'center center';
-        
+
         streetviewCanvas.style.position = 'fixed';
         streetviewCanvas.style.top = '50%';
         streetviewCanvas.style.left = '50%';
-        
+
         streetviewCanvas.dataset.isScaled = 'true';
         streetviewCanvas.dataset.scalePercentage = percentage.toString();
-        
+
         if (originalWidth && originalHeight) {
             streetviewCanvas.style.width = `${originalWidth}px`;
             streetviewCanvas.style.height = `${originalHeight}px`;
@@ -230,7 +230,7 @@ const applyDisplayFilters = (filterStr, transformStr) => {
         setTimeout(() => applyDisplayFilters(filterStr, transformStr), 200);
         return;
     }
-    
+
     // Build the complete transform string combining scaling and flip transforms
     const transforms = [];
     const isScaled = canvas3d.dataset.isScaled === 'true';
@@ -260,16 +260,16 @@ const updateFunFilters = (forceState = undefined) => {
 
     let filterStr = '';
     let transformStr = '';
-    
+
     if (active) {
         makeColorOverlay();
         filterStr = getFilterStr(mod);
-        
+
         // Handle flip transforms (these go on the canvas, not the container)
         const flipVertical = getOption(mod, 'flipVertical');
         const flipHorizontal = getOption(mod, 'flipHorizontal');
         const streetviewSize = getOption(mod, 'streetviewSize');
-        
+
         const transforms = [];
         if (flipVertical) {
             transforms.push('scaleY(-1)');
@@ -277,7 +277,7 @@ const updateFunFilters = (forceState = undefined) => {
         if (flipHorizontal) {
             transforms.push('scaleX(-1)');
         }
-        
+
         if (transforms.length > 0) {
             transformStr = transforms.join(' ');
         }
@@ -285,18 +285,14 @@ const updateFunFilters = (forceState = undefined) => {
 
         // Satellite mod is a special case, because the same 2d map object is used during the round end screen.
         // When the score page shows, something is forcing it back to roadmap view, so we need to revert that if satView is enabled.
-        if (getOption(mod, 'satView')) {
-            GOOGLE_MAP.setMapTypeId('satellite');
-            runOnInterval(
-                () => {
-                    if (GOOGLE_MAP.getMapTypeId() !== 'satellite') {
-                        GOOGLE_MAP.setMapTypeId('satellite');
-                    }
-                },
-                200,
-                5000,
-            );
-        }
+        runOnInterval(
+            () => {
+                const mapTypeId = getOption(mod, 'satView') ? 'satellite': 'roadmap';
+                GOOGLE_MAP.setMapTypeId(mapTypeId);
+            },
+            200,
+            5000,
+        );
     } else {
         removeColorOverlay();
         const canvas3d = getStreetviewCanvas();
@@ -305,7 +301,7 @@ const updateFunFilters = (forceState = undefined) => {
         }
         applyScreenScaling(100); // This will reset scaling and dataset attributes
     }
-    
+
     // Apply the filters and transforms (these go on the canvas)
     applyDisplayFilters(filterStr, transformStr);
 };
