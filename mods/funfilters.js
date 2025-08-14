@@ -282,6 +282,13 @@ const updateFunFilters = (forceState = undefined) => {
             transformStr = transforms.join(' ');
         }
         applyScreenScaling(streetviewSize);
+
+        // Satellite mod is a special case, because the same 2d map object is used during the round end screen.
+        // When the score page shows, something is forcing it back to roadmap view, so we need to revert that if satView is enabled.
+        if (getOption(mod, 'satView')) {
+            const map = getGoogleMap();
+            map.setMapTypeId('satellite');
+        }
     } else {
         removeColorOverlay();
         const canvas3d = getStreetviewCanvas();

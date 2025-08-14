@@ -273,12 +273,9 @@ const onRoundStartSingleplayer = (evt) => { // Singleplayer only. TODO: clean up
     } catch (err) {
         console.error(err);
     }
-
+    
     waitForMapsReady(reactivateMods);
-
-    THE_WINDOW.dispatchEvent(new CustomEvent('gg_round_start', {
-        detail: evt.detail || {}
-    }));
+    THE_WINDOW.dispatchEvent(new CustomEvent('gg_round_start'));
 };
 
 // Note: GG_GUESSMAP is the small guess map, GOOGLE_MAP is used for pulling funtionality from Google's map functions.
@@ -299,10 +296,10 @@ const onRoundEndMultiplayer = () => {
 };
 
 GEF.events.addEventListener('round_start', (evt) => {
-    onRoundStartSingleplayer();
+    onRoundStartSingleplayer(evt);
 });
 GEF.events.addEventListener('round_end', (evt) => {
-    onRoundEndSingleplayer();
+    onRoundEndSingleplayer(evt);
 });
 
 const addDebugger = () => {
