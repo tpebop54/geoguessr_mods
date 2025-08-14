@@ -83,11 +83,11 @@ def grid_indices_to_latlng(indices, grid_shape, bounds=MERCATOR_BOUNDS):
     return np.vstack((lats, lngs)).T
 
 
-def randomize_latlng(latlngs, max_offset=0.5):
+def randomize_latlng(latlngs, max_offset=0.2):
     """
         Randomizes each lat/lng within ±max_offset degrees for each point.
         latlngs: numpy array of shape (N, 2)
-        max_offset: maximum offset in degrees (default 0.5)
+        max_offset: maximum offset in degrees
         Returns numpy array of shape (N, 2) with randomized lat/lng.
     """
     offsets = np.random.uniform(-max_offset, max_offset, size=latlngs.shape)
@@ -133,7 +133,7 @@ def main(basename, nrows, ncols, nsamples, bin_size=2):
     weight_grid = read_weight_grid(fname_grid)
     indices = generate_weighted_indices(weight_grid, nsamples)
     latlngs = grid_indices_to_latlng(indices, (nrows, ncols))
-    latlngs_rnd = randomize_latlng(latlngs, max_offset=0.5)
+    latlngs_rnd = randomize_latlng(latlngs, max_offset=0.2)
     latlngs_rnd[:, 0] = np.clip(latlngs_rnd[:, 0], MERCATOR_BOUNDS.min_lat, MERCATOR_BOUNDS.max_lat)
     latlngs_rnd[:, 1] = np.clip(latlngs_rnd[:, 1], MERCATOR_BOUNDS.min_lng, MERCATOR_BOUNDS.max_lng)
     plot_heatmap(latlngs_rnd, bin_size=bin_size, basename=basename)
