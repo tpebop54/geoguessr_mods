@@ -458,7 +458,7 @@ const refreshAllMods = () => {
     for (const mod of Object.values(MODS)) {
         if (mod.show && mod.active && UPDATE_CALLBACKS[mod.key]) {
             try {
-                updateMod(mod, true);
+                updateMod(mod, mod.active);
             } catch (err) {
                 console.error(err);
             }

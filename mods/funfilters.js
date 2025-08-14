@@ -282,17 +282,6 @@ const updateFunFilters = (forceState = undefined) => {
             transformStr = transforms.join(' ');
         }
         applyScreenScaling(streetviewSize);
-
-        // Satellite mod is a special case, because the same 2d map object is used during the round end screen.
-        // When the score page shows, something is forcing it back to roadmap view, so we need to revert that if satView is enabled.
-        runOnInterval(
-            () => {
-                const mapTypeId = getOption(mod, 'satView') ? 'satellite': 'roadmap';
-                GOOGLE_MAP.setMapTypeId(mapTypeId);
-            },
-            200,
-            5000,
-        );
     } else {
         removeColorOverlay();
         const canvas3d = getStreetviewCanvas();
@@ -301,6 +290,17 @@ const updateFunFilters = (forceState = undefined) => {
         }
         applyScreenScaling(100); // This will reset scaling and dataset attributes
     }
+
+    // Satellite mod is a special case, because the same 2d map object is used during the round end screen.
+    // When the score page shows, something is forcing it back to roadmap view, so we need to revert that if satView is enabled.
+    runOnInterval(
+        () => {
+            const mapTypeId = getOption(mod, 'satView') ? 'satellite': 'roadmap';
+            GOOGLE_MAP.setMapTypeId(mapTypeId);
+        },
+        200,
+        5000,
+    );
 
     // Apply the filters and transforms (these go on the canvas)
     applyDisplayFilters(filterStr, transformStr);

@@ -176,10 +176,10 @@ const updateLottery = (forceState = undefined) => {
     if (getOption(mod, 'resetEachRound')) {
         resetTokens();
     }
-    if (!_LOTTERY_DISPLAY) {
+    if (_LOTTERY_COUNT == null) {
         _LOTTERY_COUNT = getOption(mod, 'nTokens');
-        makeLotteryDisplay();
     }
+    makeLotteryDisplay();
     waitForMapsReady();
     saveState();
 };
