@@ -93,7 +93,7 @@ const MODS = {
         options: {
             nTokens: {
                 label: 'Num. tokens',
-                default: 20,
+                default: 10,
                 tooltip: 'Maximum number of random guesses you get before you have to take the guess.',
             },
             resetEachRound: {

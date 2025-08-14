@@ -1,3 +1,4 @@
 .gitconfig
 scratch/
 scripts/venv
+.idea/
