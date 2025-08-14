@@ -454,7 +454,19 @@ const updateMod = (mod, forceState = undefined) => {
     return newState;
 };
 
-// Track registered map click listeners to avoid conflicts
+const refreshAllMods = () => {
+    for (const mod of Object.values(MODS)) {
+        if (mod.show && mod.active && UPDATE_CALLBACKS[mod.key]) {
+            try {
+                updateMod(mod, true);
+            } catch (err) {
+                console.error(err);
+            }
+        }
+    }
+};
+
+// Track registered map click listeners to avoid conflicts.
 const _MAP_CLICK_LISTENERS = new Set();
 
 const mapClickListener = (func, enable = true) => {

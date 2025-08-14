@@ -379,8 +379,8 @@ const watchRoundEnd = () => {
                 _RESULT_MAP = currentResultMap;
                 nextRoundButton.addEventListener('click', () => {
                     runOnInterval(
-                        updateFunFilters,
-                        500,
+                        refreshAllMods,
+                        200,
                         5000,
                     );
                 });
