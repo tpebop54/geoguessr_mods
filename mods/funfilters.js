@@ -287,6 +287,15 @@ const updateFunFilters = (forceState = undefined) => {
         // When the score page shows, something is forcing it back to roadmap view, so we need to revert that if satView is enabled.
         if (getOption(mod, 'satView')) {
             GOOGLE_MAP.setMapTypeId('satellite');
+            runOnInterval(
+                () => {
+                    if (GOOGLE_MAP.getMapTypeId() !== 'satellite') {
+                        GOOGLE_MAP.setMapTypeId('satellite');
+                    }
+                },
+                200,
+                5000,
+            );
         }
     } else {
         removeColorOverlay();

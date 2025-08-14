@@ -422,3 +422,16 @@ const getWeightedOrRandomLoc = (useMap, randomPct) => { // Randomized pick from 
         return getRandomLoc();
     }
 };
+
+const runOnInterval = (callback, intervalMs = 200, durationMs = 3000) => {
+    let startTime = Date.now();
+    let timeoutId;
+
+    function runInterval() {
+        if (Date.now() - startTime >= durationMs) return;
+        callback();
+        timeoutId = setTimeout(runInterval, intervalMs);
+    }
+    runInterval();
+    return () => timeoutId && clearTimeout(timeoutId);
+};
