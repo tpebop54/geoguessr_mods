@@ -36,8 +36,8 @@ When you refresh your GeoGuessr page, you can check that the new version is acti
 
 ## Version Management
 
-The version is used in many places both for clarity and cache breaking. When updating the version, just do a find-and-replace-all to the new version, e.g. `1.1.0` -> `1.2.0`
-Occasionally in dev work, the minor increment (`1.1.x`) fails to clear the cache, so the major or intermediate increment (`1.2.0`) will break the browser cache. You may also have to delete and re-paste the TamperMonkey installer.
+The version is used in many places both for clarity and cache breaking. When updating the version, just do a find-and-replace-all to the new version, e.g. `1.1.0` -> `1.2.1`
+Occasionally in dev work, the minor increment (`1.1.x`) fails to clear the cache, so the major or intermediate increment (`1.2.1`) will break the browser cache. You may also have to delete and re-paste the TamperMonkey installer.
 
 To prevent browser caching, the `?v=` part at the end of each `@require` line should be updated if that particular dependency is updated. The versions don't have to match the master version, they just need to update so the browser doesn't use a cached file.
 
