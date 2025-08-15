@@ -2,8 +2,8 @@
 // @author       tpebop
 // @match        *://*.geoguessr.com/*
 // @icon         https://www.google.com/s2/favicons?domain=geoguessr.com
-// @updateURL    https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/master/gg_coordinate_extractor.js
-// @downloadURL  https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/master/gg_coordinate_extractor.js
+// @updateURL    https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/gg_coordinate_extractor.js
+// @downloadURL  https://raw.githubusercontent.com/tpebop54/geoguessr_mods/refs/heads/main/gg_coordinate_extractor.js
 // @grant        unsafeWindow
 // @grant        GM_addStyle
 // @grant        GM_openInTab
