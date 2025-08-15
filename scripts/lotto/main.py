@@ -19,6 +19,7 @@ MERCATOR_BOUNDS = _MERCATOR_BOUNDS(
     max_lng=180
 )
 
+MAGIC_LAT_OFFSET = 15.36; # It's very hard to get the weight map to line up with google maps coordinates, so this is fixed by trial and error.
 
 def get_brightness_grid(image, nrows, ncols):
     """ Compute the average brightness of each grid cell in the image. """
@@ -77,7 +78,7 @@ def grid_indices_to_latlng(indices, grid_shape, bounds=MERCATOR_BOUNDS):
     """ Convert grid indices to latitude and longitude coordinates. """
 
     nrows, ncols = grid_shape
-    lat_step = (bounds.max_lat - bounds.min_lat) / nrows
+    lat_step = (bounds.max_lat - bounds.min_lat) / nrows + MAGIC_LAT_OFFSET
     lng_step = (bounds.max_lng - bounds.min_lng) / ncols
     lats = bounds.max_lat - indices[:, 0] * lat_step
     lngs = bounds.min_lng + indices[:, 1] * lng_step
@@ -133,16 +134,18 @@ def main(basename, nrows, ncols, nsamples, bin_size=2):
 
 _HEATMAP = namedtuple('_HEATMAPS', ['name', 'npoints'])
 
-_WORLD = _HEATMAP(name='world', npoints=64800) # 180*360
-_EUROPE = _HEATMAP(name='europe', npoints=10000)
+_TO_MAP = [
+    _HEATMAP(name='world', npoints=64800), # 180*360
+    _HEATMAP(name='europe', npoints=10000),
+]
 
 
 if __name__ == '__main__':
-    to_map = _WORLD
-    main(
-        basename=to_map.name,
-        nrows=np.floor(MERCATOR_BOUNDS.max_lat - MERCATOR_BOUNDS.min_lat), # Keep everything scaled the same for maps and sub-maps to avoid confusion.
-        ncols=np.floor(MERCATOR_BOUNDS.max_lng - MERCATOR_BOUNDS.min_lng),
-        nsamples=to_map.npoints,
+    for heatmap in _TO_MAP:
+        main(
+            basename=heatmap.name,
+            nrows=np.floor(MERCATOR_BOUNDS.max_lat - MERCATOR_BOUNDS.min_lat), # Keep everything scaled the same for maps and sub-maps to avoid confusion.
+            ncols=np.floor(MERCATOR_BOUNDS.max_lng - MERCATOR_BOUNDS.min_lng),
+            nsamples=heatmap.npoints,
         bin_size=1,
     )
