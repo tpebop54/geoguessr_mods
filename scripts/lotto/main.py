@@ -83,24 +83,12 @@ def grid_indices_to_latlng(indices, grid_shape, bounds=MERCATOR_BOUNDS):
     return np.vstack((lats, lngs)).T
 
 
-def randomize_latlng(latlngs, max_offset=0.2):
-    """
-        Randomizes each lat/lng within ±max_offset degrees for each point.
-        latlngs: numpy array of shape (N, 2)
-        max_offset: maximum offset in degrees
-        Returns numpy array of shape (N, 2) with randomized lat/lng.
-    """
-    offsets = np.random.uniform(-max_offset, max_offset, size=latlngs.shape)
-    randomized = latlngs + offsets
-    return randomized
-
-
 def write_latlngs_js(latlngs, basename):
     fname = f"./data_out/heatmaps_js/{basename}.js"
     with open(fname, 'w') as f:
         f.write('LOTTERY_LATLNGS = [\n')
         for lat, lng in latlngs:
-            f.write(f'    [{lat:.6f}, {lng:.6f}],\n')
+            f.write(f'    [{lat:.4f}, {lng:.4f}],\n')
         f.write('];\n')
 
 
@@ -133,11 +121,10 @@ def main(basename, nrows, ncols, nsamples, bin_size=2):
     weight_grid = read_weight_grid(fname_grid)
     indices = generate_weighted_indices(weight_grid, nsamples)
     latlngs = grid_indices_to_latlng(indices, (nrows, ncols))
-    latlngs_rnd = randomize_latlng(latlngs, max_offset=0.2)
-    latlngs_rnd[:, 0] = np.clip(latlngs_rnd[:, 0], MERCATOR_BOUNDS.min_lat, MERCATOR_BOUNDS.max_lat)
-    latlngs_rnd[:, 1] = np.clip(latlngs_rnd[:, 1], MERCATOR_BOUNDS.min_lng, MERCATOR_BOUNDS.max_lng)
-    plot_heatmap(latlngs_rnd, bin_size=bin_size, basename=basename)
-    write_latlngs_js(latlngs_rnd, basename)
+    latlngs[:, 0] = np.clip(latlngs[:, 0], MERCATOR_BOUNDS.min_lat, MERCATOR_BOUNDS.max_lat)
+    latlngs[:, 1] = np.clip(latlngs[:, 1], MERCATOR_BOUNDS.min_lng, MERCATOR_BOUNDS.max_lng)
+    plot_heatmap(latlngs, bin_size=bin_size, basename=basename)
+    write_latlngs_js(latlngs, basename)
 
 
 if __name__ == '__main__':
@@ -145,6 +132,6 @@ if __name__ == '__main__':
         basename='world',
         nrows=np.floor(MERCATOR_BOUNDS.max_lat - MERCATOR_BOUNDS.min_lat),
         ncols=np.floor(MERCATOR_BOUNDS.max_lng - MERCATOR_BOUNDS.min_lng),
-        nsamples=30000,
-        bin_size=0.5,
+        nsamples=129600,
+        bin_size=1,
     )
