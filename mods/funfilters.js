@@ -295,7 +295,7 @@ const updateFunFilters = (forceState = undefined) => {
     // When the score page shows, something is forcing it back to roadmap view, so we need to revert that if satView is enabled.
     runOnInterval(
         () => {
-            const mapTypeId = getOption(mod, 'satView') ? 'satellite': 'roadmap';
+            const mapTypeId = ismodactive(mod) && getOption(mod, 'satView') ? 'satellite': 'roadmap';
             GOOGLE_MAP.setMapTypeId(mapTypeId);
         },
         200,

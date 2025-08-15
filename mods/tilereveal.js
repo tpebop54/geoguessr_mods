@@ -183,7 +183,7 @@ const updateTileReveal = (forceState = undefined) => {
         return;
     }
 
-    if (getOption(mod, 'resetEachRound')) {
+    if (getOption(mod, 'resetEachRound') || forceState) {
         resetTileCount();
     }
 
