@@ -30,8 +30,9 @@ It's not random in the true sense, but it creates a distribution that roughly ma
 
 The resulting file will be put in the `data_out` directory, where it can be copied and pasted to the base `data` folder for the JavaScript side to injest as a simple array from which it will choose a random location.
 
-From there, there is additional randomization within each grid space, just so that the random guesses don't all follow a grid pattern.
+To weight certain areas more than others on the map, you can create additional point distributions for those areass. On the javascript side, all of the arrays in the heatmaps folder will be concatenated.
 
 ## To run it
 
 `python main.py` (you can go into the file and adjust settings as needed)
+
