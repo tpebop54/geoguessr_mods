@@ -17,7 +17,6 @@ const getBindings = () => {
                 [MODS.rotateMap, updateRotateMap],
                 [MODS.showScore, updateShowScore],
                 [MODS.flashlight, updateFlashlight],
-                [MODS.bopIt, updateBopIt],
                 [MODS.inFrame, updateInFrame],
                 [MODS.lottery, updateLottery],
                 [MODS.tileReveal, updateTileReveal],

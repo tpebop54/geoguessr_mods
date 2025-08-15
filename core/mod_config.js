@@ -204,22 +204,6 @@ const MODS = {
         options: {},
     },
 
-    bopIt: {
-        show: true,
-        key: 'bop-it',
-        name: 'Bop It',
-        tooltip: `Bop It mode where it tells you the intercardinal direction you need to go from your click. You'll figure it out...`,
-        isScoring: true,
-        allowInDuels: false,
-        options: {
-            threshold: {
-                label: 'Bop It Threshold (Points)',
-                default: 4900,
-                tooltip: 'Bop It when your click will earn this many points. (0 to 5000).',
-            },
-        }
-    },
-
     inFrame: {
         show: true,
         key: 'in-frame',
