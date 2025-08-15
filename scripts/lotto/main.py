@@ -19,8 +19,6 @@ MERCATOR_BOUNDS = _MERCATOR_BOUNDS(
     max_lng=180
 )
 
-MAGIC_LAT_OFFSET = 15.36 # It's very hard to get the weight map to line up with google maps coordinates, so this is fixed by trial and error.
-
 def get_brightness_grid(image, nrows, ncols):
     """ Compute the average brightness of each grid cell in the image. """
 
@@ -74,13 +72,32 @@ def generate_weighted_indices(weight_grid, nsamples):
     return np.vstack((rows, cols)).T
 
 
+# --- Mercator projection helpers ---
+def mercator_y_from_lat(lat):
+    """Convert latitude to Mercator Y."""
+    lat_rad = np.radians(lat)
+    return np.log(np.tan(np.pi / 4 + lat_rad / 2))
+
+def lat_from_mercator_y(y):
+    """Convert Mercator Y to latitude."""
+    return np.degrees(2 * np.arctan(np.exp(y)) - np.pi / 2)
+
 def grid_indices_to_latlng(indices, grid_shape, bounds=MERCATOR_BOUNDS):
-    """ Convert grid indices to latitude and longitude coordinates. """
+    """ Convert grid indices to latitude and longitude coordinates using Mercator projection. """
 
     nrows, ncols = grid_shape
-    lat_step = (bounds.max_lat - bounds.min_lat) / nrows
+
+    # Mercator Y bounds
+    y_max = mercator_y_from_lat(bounds.max_lat)
+    y_min = mercator_y_from_lat(bounds.min_lat)
+    y_step = (y_max - y_min) / nrows
+
+    # Compute Mercator Y for each row index
+    ys = y_max - indices[:, 0] * y_step
+    lats = lat_from_mercator_y(ys)
+
+    # Longitude is still linear
     lng_step = (bounds.max_lng - bounds.min_lng) / ncols
-    lats = bounds.max_lat - indices[:, 0] * lat_step + MAGIC_LAT_OFFSET
     lngs = bounds.min_lng + indices[:, 1] * lng_step
     return np.vstack((lats, lngs)).T
 
@@ -108,6 +125,7 @@ def plot_heatmap(latlngs, bin_size, basename):
         cmap='hot',
         range=[[MERCATOR_BOUNDS.min_lng, MERCATOR_BOUNDS.max_lng], [MERCATOR_BOUNDS.min_lat, MERCATOR_BOUNDS.max_lat]]
     )
+    plt.colorbar(label='Sample Count')
     plt.colorbar(label='Sample Count')
     plt.xlabel('Longitude')
     plt.ylabel('Latitude')
