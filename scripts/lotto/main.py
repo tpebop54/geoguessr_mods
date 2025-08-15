@@ -19,7 +19,7 @@ MERCATOR_BOUNDS = _MERCATOR_BOUNDS(
     max_lng=180
 )
 
-MAGIC_LAT_OFFSET = 15.36; # It's very hard to get the weight map to line up with google maps coordinates, so this is fixed by trial and error.
+MAGIC_LAT_OFFSET = 15.36 # It's very hard to get the weight map to line up with google maps coordinates, so this is fixed by trial and error.
 
 def get_brightness_grid(image, nrows, ncols):
     """ Compute the average brightness of each grid cell in the image. """
@@ -78,9 +78,9 @@ def grid_indices_to_latlng(indices, grid_shape, bounds=MERCATOR_BOUNDS):
     """ Convert grid indices to latitude and longitude coordinates. """
 
     nrows, ncols = grid_shape
-    lat_step = (bounds.max_lat - bounds.min_lat) / nrows + MAGIC_LAT_OFFSET
+    lat_step = (bounds.max_lat - bounds.min_lat) / nrows
     lng_step = (bounds.max_lng - bounds.min_lng) / ncols
-    lats = bounds.max_lat - indices[:, 0] * lat_step
+    lats = bounds.max_lat - indices[:, 0] * lat_step + MAGIC_LAT_OFFSET
     lngs = bounds.min_lng + indices[:, 1] * lng_step
     return np.vstack((lats, lngs)).T
 

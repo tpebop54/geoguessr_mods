@@ -13,7 +13,7 @@ let _LOTTERY_DRAGGING_OFFSET_X; // X offset from mouse to element edge when drag
 let _LOTTERY_DRAGGING_OFFSET_Y; // Y offset from mouse to element edge when dragging starts.
 
 // const _LOTTERY_LOCS = [].concat(...Object.values(THE_WINDOW.latlngs)) // Override this to test out specific sub-maps.
-const _LOTTERY_LOCS = THE_WINDOW.latlngs.europe;
+const _LOTTERY_LOCS = THE_WINDOW.latlngs.europe; // TODO: revert
 
 const removeLotteryDisplay = () => {
     if (_LOTTERY_DISPLAY) {
