@@ -12,8 +12,8 @@ let _LOTTERY_DRAGGING = false; // Makes lottery display draggable because it ove
 let _LOTTERY_DRAGGING_OFFSET_X; // X offset from mouse to element edge when dragging starts.
 let _LOTTERY_DRAGGING_OFFSET_Y; // Y offset from mouse to element edge when dragging starts.
 
-// const _LOTTERY_LOCS = [].concat(...Object.values(THE_WINDOW.latlngs)) // Override this to test out specific sub-maps.
-const _LOTTERY_LOCS = THE_WINDOW.latlngs.europe; // TODO: revert
+const _LOTTERY_LOCS = [].concat(...Object.values(THE_WINDOW.latlngs)) // Override this to test out specific sub-maps.
+// const _LOTTERY_LOCS = THE_WINDOW.latlngs.europe;
 
 const removeLotteryDisplay = () => {
     if (_LOTTERY_DISPLAY) {

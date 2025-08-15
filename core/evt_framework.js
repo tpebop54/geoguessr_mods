@@ -204,7 +204,7 @@ const THE_WINDOW = unsafeWindow || window;
             }
             this.saveState();
             this.events.dispatchEvent(new CustomEvent('round_end', { detail: this.state }));
-            if (this.state.current_round === 5) { // TODO: pull from game data.
+            if (this.state.current_round === 5) {
                 this.events.dispatchEvent(new CustomEvent('game_end', { detail: this.state }));
             }
         }
