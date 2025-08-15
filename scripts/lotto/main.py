@@ -4,6 +4,7 @@ import matplotlib
 from matplotlib import pyplot as plt
 
 import ast
+import shutil
 
 from collections import namedtuple
 
@@ -90,6 +91,8 @@ def write_latlngs_js(latlngs, basename):
         for lat, lng in latlngs:
             f.write(f'    [{lat:.4f}, {lng:.4f}],\n')
         f.write('];\n')
+    dest = f'../../data/lottery/heatmaps/{basename}.js'
+    shutil.copyfile(fname, dest)
 
 
 def plot_heatmap(latlngs, bin_size, basename):
