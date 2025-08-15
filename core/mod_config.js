@@ -108,7 +108,7 @@ const MODS = {
             },
             randomPct: {
                 label: 'Randomization (0-100%)',
-                default: 20,
+                default: 0,
                 tooltip: 'This percent (0-100) of your guesses will be completely random guesses (no weight map).',
             },
         },

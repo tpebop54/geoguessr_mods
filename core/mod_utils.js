@@ -398,9 +398,9 @@ const getRandomLoc = () => { // Generate uniform distribution within Mercator bo
 
 const getWeightedLoc = (jitter = null) => { // Uses pre-generated map distribution of a large number of coordinates to pick randomly from.
     const latLng = LOTTERY_LATLNGS[Math.floor(Math.random() * LOTTERY_LATLNGS.length)];
-    if (jitter) { // Jitter in degrees to avoid picking the same points repeatedly
-        latLng[0] += (Math.random() - 0.5) * jitter;
-        latLng[1] += (Math.random() - 0.5) * jitter;
+    if (jitter) { // Jitter in degrees to avoid picking the same points repeatedly.
+        latLng[0] += (Math.random() - 0.02) * jitter;
+        latLng[1] += (Math.random() - 0.02) * jitter;
     }
     return { lat: latLng[0], lng: latLng[1] };
 };
