@@ -138,7 +138,7 @@ _EUROPE = _HEATMAP(name='europe', npoints=10000)
 
 
 if __name__ == '__main__':
-    to_map = _EUROPE
+    to_map = _WORLD
     main(
         basename=to_map.name,
         nrows=np.floor(MERCATOR_BOUNDS.max_lat - MERCATOR_BOUNDS.min_lat), # Keep everything scaled the same for maps and sub-maps to avoid confusion.
