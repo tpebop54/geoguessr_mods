@@ -396,16 +396,16 @@ const getRandomLoc = () => { // Generate uniform distribution within Mercator bo
     return { lat, lng };
 };
 
-const getWeightedLoc = (jitter = null) => { // Uses pre-generated map distribution of a large number of coordinates to pick randomly from.
-    const latLng = LOTTERY_LATLNGS[Math.floor(Math.random() * LOTTERY_LATLNGS.length)];
-    if (jitter) { // Jitter in degrees to avoid picking the same points repeatedly.
+const getWeightedLoc = (latlngs, jitter = 0) => { // Uses pre-generated map distribution of a large number of coordinates to pick randomly from. [[lat1, lng1], [lat2, lng2], ... ]
+    const latLng = latlngs[Math.floor(Math.random() * latlngs.length)];
+    if (jitter) { // Optionally jitter in degrees to avoid picking the same points repeatedly.
         latLng[0] += (Math.random() - 0.02) * jitter;
         latLng[1] += (Math.random() - 0.02) * jitter;
     }
     return { lat: latLng[0], lng: latLng[1] };
 };
 
-const getWeightedOrRandomLoc = (useMap, randomPct, jitter = null) => { // Randomized pick from map, full random, or both.
+const getWeightedOrRandomLoc = (latlngs, useMap, randomPct, jitter = 0) => { // Randomized pick from map, full random, or both.
     if (isNaN(randomPct) || randomPct < 0 || randomPct > 100) {
         randomPct = 0;
         useMap = true;
@@ -414,7 +414,7 @@ const getWeightedOrRandomLoc = (useMap, randomPct, jitter = null) => { // Random
         if (Math.random() < randomPct / 100) {
             return getRandomLoc();
         } else {
-            return getWeightedLoc(jitter);
+            return getWeightedLoc(latlngs, jitter);
         }
     } else {
         return getRandomLoc();

@@ -87,7 +87,8 @@ def grid_indices_to_latlng(indices, grid_shape, bounds=MERCATOR_BOUNDS):
 def write_latlngs_js(latlngs, basename):
     fname = f"./data_out/heatmaps_js/{basename}.js"
     with open(fname, 'w') as f:
-        f.write('LOTTERY_LATLNGS = [\n')
+        f.write('THE_WINDOW.latlngs = THE_WINDOW.latlngs || {};\n\n')
+        f.write(f'THE_WINDOW.latlngs.{basename} = [\n')
         for lat, lng in latlngs:
             f.write(f'    [{lat:.4f}, {lng:.4f}],\n')
         f.write('];\n')
@@ -137,7 +138,7 @@ _EUROPE = _HEATMAP(name='europe', npoints=10000)
 
 
 if __name__ == '__main__':
-    to_map = _WORLD
+    to_map = _EUROPE
     main(
         basename=to_map.name,
         nrows=np.floor(MERCATOR_BOUNDS.max_lat - MERCATOR_BOUNDS.min_lat), # Keep everything scaled the same for maps and sub-maps to avoid confusion.

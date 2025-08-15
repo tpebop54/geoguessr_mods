@@ -12,6 +12,9 @@ let _LOTTERY_DRAGGING = false; // Makes lottery display draggable because it ove
 let _LOTTERY_DRAGGING_OFFSET_X; // X offset from mouse to element edge when dragging starts.
 let _LOTTERY_DRAGGING_OFFSET_Y; // Y offset from mouse to element edge when dragging starts.
 
+// const _LOTTERY_LOCS = [].concat(...Object.values(THE_WINDOW.latlngs)) // Override this to test out specific sub-maps.
+const _LOTTERY_LOCS = THE_WINDOW.latlngs.europe;
+
 const removeLotteryDisplay = () => {
     if (_LOTTERY_DISPLAY) {
         _LOTTERY_DISPLAY.parentElement.removeChild(_LOTTERY_DISPLAY);
@@ -30,7 +33,7 @@ const insertToken = () => {
     const mod = MODS.lottery;
     let useMap = getOption(mod, 'useCoverageMap');
     let randomPct = getOption(mod, 'randomPct');
-    const loc = getWeightedOrRandomLoc(useMap, randomPct, 0);
+    const loc = getWeightedOrRandomLoc(_LOTTERY_LOCS, useMap, randomPct, 0);
     let { lat, lng } = loc;
 
     lat = Math.max(_MERCATOR_LAT_MIN, Math.min(_MERCATOR_LAT_MAX, lat));
