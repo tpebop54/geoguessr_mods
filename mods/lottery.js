@@ -39,7 +39,7 @@ const insertToken = () => {
     lat = Math.max(_MERCATOR_LAT_MIN, Math.min(_MERCATOR_LAT_MAX, lat));
     lng = Math.max(_MERCATOR_LNG_MIN, Math.min(_MERCATOR_LNG_MAX, lng));
 
-     _LOTTERY_COUNT -= 1;
+    _LOTTERY_COUNT -= 1;
     const counter = getLotteryCounter();
     if (counter) {
         counter.innerText = _LOTTERY_COUNT;

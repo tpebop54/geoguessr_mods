@@ -56,7 +56,7 @@ const _COLOR_FILTERS = {
     grayscale: {
         grayscale: '100%',
     },
-    'black and white': 
+    'black and white': {
         grayscale: '100%',
         contrast: '1000%',
         brightness: '70%',
