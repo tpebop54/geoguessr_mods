@@ -30,7 +30,7 @@ const insertToken = () => {
     const mod = MODS.lottery;
     let useMap = getOption(mod, 'useCoverageMap');
     let randomPct = getOption(mod, 'randomPct');
-    const loc = getWeightedOrRandomLoc(useMap, randomPct);
+    const loc = getWeightedOrRandomLoc(useMap, randomPct, 0.5);
     let { lat, lng } = loc;
 
     lat = Math.max(_MERCATOR_LAT_MIN, Math.min(_MERCATOR_LAT_MAX, lat));
