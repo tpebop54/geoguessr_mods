@@ -130,11 +130,18 @@ def main(basename, nrows, ncols, nsamples, bin_size=2):
     write_latlngs_js(latlngs, basename)
 
 
+_HEATMAP = namedtuple('_HEATMAPS', ['name', 'npoints'])
+
+_WORLD = _HEATMAP(name='world', npoints=64800) # 180*360
+_EUROPE = _HEATMAP(name='europe', npoints=10000)
+
+
 if __name__ == '__main__':
+    to_map = _WORLD
     main(
-        basename='world',
-        nrows=np.floor(MERCATOR_BOUNDS.max_lat - MERCATOR_BOUNDS.min_lat),
+        basename=to_map.name,
+        nrows=np.floor(MERCATOR_BOUNDS.max_lat - MERCATOR_BOUNDS.min_lat), # Keep everything scaled the same for maps and sub-maps to avoid confusion.
         ncols=np.floor(MERCATOR_BOUNDS.max_lng - MERCATOR_BOUNDS.min_lng),
-        nsamples=129600,
+        nsamples=to_map.npoints,
         bin_size=1,
     )
