@@ -36,7 +36,7 @@ const modContainerStyles = `
         align-items: center;
         font-size: 18px;
         justify-content: space-between;
-        margin-top: 8px;
+        margin-top: 20px;
     }
 
     #gg-mods-header {

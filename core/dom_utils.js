@@ -527,7 +527,7 @@ const fixFormatting = () => {
         if (ticketBar) {
             Object.assign(ggHeader.style, {
                 position: 'absolute',
-                top: '-23px',
+                top: '-36px',
             });
         } else if (modsContainer) {
             Object.assign(modsContainer.style, {
