@@ -311,7 +311,7 @@ const addDebugger = () => {
     }
 };
 
-const setupGlobalKeyBindings = () => {
+const setUpGlobalKeyBindings = () => {
     document.addEventListener('keydown', (evt) => {
         // Check if user is interacting with form elements or options menu.
         const activeElement = document.activeElement;
@@ -347,9 +347,9 @@ const setupGlobalKeyBindings = () => {
 // Initialize global keybindings when DOM is ready, which it may be already.
 const initializeGlobalKeybindings = () => {
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', setupGlobalKeyBindings);
+        document.addEventListener('DOMContentLoaded', setUpGlobalKeyBindings);
     } else {
-        setupGlobalKeyBindings();
+        setUpGlobalKeyBindings();
     }
 };
 initializeGlobalKeybindings();
